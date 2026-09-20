@@ -1,4 +1,4 @@
-# Setup para trabajar con agentes de AI — Kercado
+# Setup para trabajar con agentes de AI — Masi
 
 Guía de instalación para el equipo (P1, P2, P3, P4). Son 4 pasos y toma ~20 minutos, más el tiempo de compilación de Rust.
 
@@ -68,9 +68,9 @@ stellar network add testnet \
   --network-passphrase "Test SDF Network ; September 2015"
 
 # Tu identidad de desarrollo (cada uno la suya, con tu nombre)
-stellar keys generate kercado-<tu-nombre> --network testnet
-stellar keys fund kercado-<tu-nombre> --network testnet
-stellar keys address kercado-<tu-nombre>
+stellar keys generate masi-<tu-nombre> --network testnet
+stellar keys fund masi-<tu-nombre> --network testnet
+stellar keys address masi-<tu-nombre>
 ```
 
 Guarda esa dirección: la vas a necesitar para invocar el contrato.
@@ -79,7 +79,7 @@ Guarda esa dirección: la vas a necesitar para invocar el contrato.
 
 ## Paso 2 — Clonar el repo de referencia
 
-Guía comunitaria de Stellar Perú. **No es nuestro proyecto** — es material de consulta, clónalo fuera de la carpeta de Kercado.
+Guía comunitaria de Stellar Perú. **No es nuestro proyecto** — es material de consulta, clónalo fuera de la carpeta de Masi.
 
 ```bash
 cd ~/Projects
@@ -114,7 +114,7 @@ Dentro de una sesión de Claude Code:
 
 Te da 8 skills: `smart-contracts`, `dapp`, `assets`, `data`, `standards`, `cross-chain`, `agentic-payments`, `zk-proofs`.
 
-**Los que importan para Kercado:**
+**Los que importan para Masi:**
 - **P1 (contrato)** → `stellar-dev:smart-contracts` — storage, TTL, `require_auth`, tests, deploy
 - **P2 (cuentas)** → `stellar-dev:dapp`, y dentro de él el archivo `smart-accounts.md` (passkeys + relayer de OpenZeppelin)
 - **P3 y P4 (frontend)** → `stellar-dev:dapp` — stellar-sdk, invocar contratos, Wallets Kit
@@ -145,7 +145,7 @@ Debe aparecer `stellar-dev`. Y al escribir `/` deben salir los `stellar-dev:*` e
 Raven es un servidor remoto que le da a tu agente búsqueda **en vivo** sobre docs de Stellar y datos del ecosistema. Los skills son conocimiento fijo; Raven es para lo que cambia (qué librerías están mantenidas, qué proyectos existen, qué dice la doc hoy).
 
 ```bash
-# Desde la carpeta del proyecto Kercado
+# Desde la carpeta del proyecto Masi
 cd ~/Projects/masi
 claude mcp add --transport http -s project stellar-raven https://raven.stellar.buzz/mcp
 ```
@@ -183,10 +183,10 @@ Si responde con fuentes y links reales, estás listo. Si dice que no tiene esas 
 
 ## Cómo trabajar con el agente en este proyecto
 
-**Antes de cualquier tarea, dale el scope.** El documento `kercado-scope.md` tiene los 9 estados, la tabla de funciones del contrato y el cronograma. Sin eso, el agente va a proponer una arquitectura distinta a la que acordamos.
+**Antes de cualquier tarea, dale el scope.** El documento `masi-scope.md` tiene los 9 estados, la tabla de funciones del contrato y el cronograma. Sin eso, el agente va a proponer una arquitectura distinta a la que acordamos.
 
 ```
-Lee kercado-scope.md antes de empezar. No cambies la arquitectura
+Lee masi-scope.md antes de empezar. No cambies la arquitectura
 (escrow Soroban + passkeys + relayer), solo implementa lo que dice.
 ```
 
@@ -198,7 +198,7 @@ Lee kercado-scope.md antes de empezar. No cambies la arquitectura
 
 **P1 — Contrato**
 ```
-Lee kercado-scope.md, la tabla de funciones del contrato escrow.
+Lee masi-scope.md, la tabla de funciones del contrato escrow.
 Usa el skill stellar-dev:smart-contracts.
 Implementa create_job, accept, fund y start con sus tests unitarios.
 Storage persistente con extensión de TTL en cada escritura.
@@ -206,7 +206,7 @@ Storage persistente con extensión de TTL en cada escritura.
 
 **P2 — Cuentas**
 ```
-Lee kercado-scope.md, la sección "Passkeys y relayer".
+Lee masi-scope.md, la sección "Passkeys y relayer".
 Lee el archivo smart-accounts.md del skill stellar-dev:dapp.
 Usa Raven para verificar cuál de passkey-kit o smart-account-kit está
 mantenida hoy y cuál tiene ejemplo funcionando en testnet.
@@ -214,14 +214,14 @@ mantenida hoy y cuál tiene ejemplo funcionando en testnet.
 
 **P3 — Marketplace**
 ```
-Lee kercado-scope.md, la sección "Frontend y marketplace".
+Lee masi-scope.md, la sección "Frontend y marketplace".
 Arma el JSON de 8 proveedores y las pantallas de búsqueda y perfil
 con datos falsos. Nada de conexión a la cadena todavía.
 ```
 
 **P4 — Flujo**
 ```
-Lee kercado-scope.md, las secciones "Flujo del cliente" y los 9 estados.
+Lee masi-scope.md, las secciones "Flujo del cliente" y los 9 estados.
 Usa el skill stellar-dev:dapp.
 Arma las pantallas de cliente y proveedor con datos falsos,
 listas para conectarse al contrato el 21.

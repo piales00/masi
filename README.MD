@@ -1,4 +1,6 @@
-# Kercado
+# Masi
+
+> *Tu hogar en buenas manos*
 
 Marketplace de servicios donde todo pago va protegido. El cliente bloquea el dinero en un contrato Soroban, el trabajador recibe un adelanto para materiales al empezar y el saldo al aprobar. Las calificaciones solo las puede dejar quien pagó por el contrato.
 
@@ -34,18 +36,19 @@ En construcción. Entrega el 25 de septiembre de 2026.
 
 ## Limitaciones
 
-- **La recarga de saldo es simulada.** En producción la haría un anchor vía SEP-24, autenticando nuestras cuentas de contrato con SEP-45. Kercado nunca toca soles, y por eso no necesita licencia.
+- **La recarga de saldo es simulada.** En producción la haría un anchor vía SEP-24, autenticando nuestras cuentas de contrato con SEP-45. Masi nunca toca soles, y por eso no necesita licencia.
 - Las calificaciones se pueden falsear, pero cada reseña falsa cuesta la comisión de un trabajo real.
-- El árbitro de las disputas es Kercado. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales.
+- El árbitro de las disputas es Masi. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales.
 - Recuperación de cuenta: depende de la sincronización de passkeys con Google o iCloud.
 
 ## Documentación
 
 | Archivo | Qué tiene |
 |---|---|
-| [`kercado-scope.md`](./kercado-scope.md) | Alcance completo: estados, funciones del contrato, cronograma, riesgos |
+| [`masi-scope.md`](./masi-scope.md) | Alcance completo: estados, funciones del contrato, cronograma, riesgos |
 | [`SETUP_AGENTES.md`](./SETUP_AGENTES.md) | Instalación del entorno y de los agentes de AI |
 | [`CLAUDE.md`](./CLAUDE.md) | Reglas que los agentes deben respetar |
+| [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) | Colores, tipografía y tono de voz — obligatorio antes de tocar interfaz |
 
 ## Equipo
 

@@ -1,8 +1,8 @@
-# Kercado — reglas del proyecto
+# Masi — reglas del proyecto
 
 Marketplace de servicios con pago protegido en un contrato Soroban. Hackathon Stellar Odyssey Perú 2026, track 6 (Open Build). Entrega: **25 de septiembre**.
 
-**Lee `kercado-scope.md` antes de cualquier tarea.** Tiene los 9 estados, la tabla de funciones del contrato y el cronograma. No propongas una arquitectura distinta a la que está ahí.
+**Lee `masi-scope.md` antes de cualquier tarea.** Tiene los 9 estados, la tabla de funciones del contrato y el cronograma. No propongas una arquitectura distinta a la que está ahí.
 
 ## Arquitectura — no se cambia
 
@@ -24,6 +24,10 @@ Si algo de esto no funciona, el scope ya tiene el fallback definido. No inventes
 Los usuarios tienen direcciones de contrato, no direcciones G clásicas. **No necesitan trustline**: el saldo vive en el storage del SAC. La recarga es un `mint` del SAC firmado por la cuenta emisora. La función `trust()` es un no-op para direcciones C.
 
 Si copias un ejemplo de pagos clásicos de Stellar, no va a funcionar. Detalle completo en la sección "PEN-test y direcciones C" del scope.
+
+## Interfaz
+
+**Lee `STYLE_GUIDE.md` antes de crear o modificar cualquier pantalla.** Paleta cerrada (azul marino `#1E3A8A`, azul `#2563EB`, naranja `#F59E0B` solo en acentos, crema `#FEF3C7`, gris `#E5E7EB`), tipografía Montserrat, tuteo, contraste mínimo WCAG AA. No inventes colores ni fuentes fuera de esos tokens.
 
 ## Skills y herramientas
 

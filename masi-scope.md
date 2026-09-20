@@ -1,10 +1,10 @@
-# Kercado — Scope Stellar Odyssey Perú 2026
+# Masi — Scope Stellar Odyssey Perú 2026
 
 2026-09-19
 
 ## Resumen
 
-Kercado es un marketplace de servicios donde todo pago va protegido: el cliente bloquea el dinero en un contrato Soroban, el trabajador recibe un adelanto para materiales al empezar y el saldo al aprobar. Las calificaciones solo las puede dejar quien pagó por el contrato, así que no se pueden inventar gratis.
+Masi es un marketplace de servicios donde todo pago va protegido: el cliente bloquea el dinero en un contrato Soroban, el trabajador recibe un adelanto para materiales al empezar y el saldo al aprobar. Las calificaciones solo las puede dejar quien pagó por el contrato, así que no se pueden inventar gratis.
 
 **Caso del demo:** María busca un pintor en Surco, elige a Juan y acuerdan pintar su departamento por S/1,200, con 30% para materiales.
 
@@ -16,7 +16,7 @@ Kercado es un marketplace de servicios donde todo pago va protegido: el cliente 
 
 ## Dónde entra Stellar
 
-Stellar se usa solo donde una base de datos no alcanza: retener el dinero sin que Kercado lo custodie y guardar reseñas que Kercado no pueda editar. Todo lo demás (búsqueda, perfiles, textos) vive fuera de la cadena.
+Stellar se usa solo donde una base de datos no alcanza: retener el dinero sin que Masi lo custodie y guardar reseñas que Masi no pueda editar. Todo lo demás (búsqueda, perfiles, textos) vive fuera de la cadena.
 
 ```mermaid
 flowchart TD
@@ -44,15 +44,15 @@ flowchart TD
     RPC --> UI
 ```
 
-| Pieza de Stellar | Dónde se usa en Kercado | Por qué no basta una base de datos |
+| Pieza de Stellar | Dónde se usa en Masi | Por qué no basta una base de datos |
 | --- | --- | --- |
-| Contrato Soroban `escrow` | `fund`, `start`, `approve`, `auto_release`, `resolve` | El dinero lo retiene el contrato, no Kercado: no hay custodia de fondos de terceros |
-| Almacenamiento persistente | `rate`, `jobs_of`, `rating_of` | Reseñas e historial que Kercado no puede borrar ni inventar |
+| Contrato Soroban `escrow` | `fund`, `start`, `approve`, `auto_release`, `resolve` | El dinero lo retiene el contrato, no Masi: no hay custodia de fondos de terceros |
+| Almacenamiento persistente | `rate`, `jobs_of`, `rating_of` | Reseñas e historial que Masi no puede borrar ni inventar |
 | SAC + token | Todo movimiento de dinero (PEN-test en el demo, USDC en producción) | Dinero programable: el reparto materiales / saldo / comisión ocurre en la misma transacción |
 | Passkeys (secp256r1) + contrato de cuenta | Pagar y aprobar con huella | Sin wallet, sin frase semilla |
 | Relayer | Todas las escrituras | El usuario nunca necesita XLM |
 | Eventos + Stellar RPC | Estado en vivo de cliente y proveedor | Actualizaciones sin backend propio |
-| Explorador (stellar.expert) | Links desde el perfil y el README | Cualquiera verifica un pago sin pedirle permiso a Kercado |
+| Explorador (stellar.expert) | Links desde el perfil y el README | Cualquiera verifica un pago sin pedirle permiso a Masi |
 | Rampa (solo producción) | Recarga y cobro en soles | Un anchor vía SEP-24, autenticando cuentas de contrato con SEP-45; en el demo se simula |
 
 **Frase para el README:** usamos blockchain porque el dinero y las reseñas no pueden quedar bajo el control de la plataforma, y Stellar porque tiene stablecoins nativas, rampas a dinero real y passkeys. **El pago se libera al instante**; la conversión a soles depende de la rampa.
@@ -156,11 +156,11 @@ La cuenta emisora de PEN-test es, por defecto, la administradora del SAC, así q
 # Desplegar el SAC del activo (una sola vez)
 stellar contract asset deploy \
   --asset PENT:<G_DEL_EMISOR> \
-  --source-account kercado-issuer --network testnet
+  --source-account masi-issuer --network testnet
 
 # Acreditar S/1,200 a un usuario (7 decimales → stroops)
 stellar contract invoke \
-  --id <SAC_ID> --source-account kercado-issuer --network testnet \
+  --id <SAC_ID> --source-account masi-issuer --network testnet \
   -- mint --to <C_DEL_USUARIO> --amount 12000000000
 ```
 
@@ -198,7 +198,7 @@ Se intentan con una prueba de 3 horas el 20 de septiembre; si el 22 en la noche 
 
 **Condiciones:** HTTPS y dominio definitivo desde el día 1 (la passkey queda atada al dominio exacto). Se hostea en Netlify, que da HTTPS automático: se elige el subdominio `*.netlify.app` hoy y no se renombra nunca, porque al cambiarlo las cuentas creadas antes dejan de entrar. Se prueba siempre en la URL principal, nunca en un deploy preview (`deploy-preview-N--...`), que es otro origen. El dominio tiene que estar fijo **antes** de sembrar los trabajos del 24. En `localhost` las passkeys funcionan sin HTTPS, así que el riesgo aparece recién al pasar al celular.
 
-**Pendiente de verificar hoy:** cuál de las dos librerías hermanas usar — [`passkey-kit`](https://github.com/stellar/passkey-kit) (modelo de firmantes plano) o [`smart-account-kit`](https://github.com/stellar/smart-account-kit) (context rules de OpenZeppelin sobre la cuenta auditada de `stellar-contracts`). **No son intercambiables:** usan modelos de autorización on-chain distintos, así que cambiar de una a otra después obliga a rehacer el contrato de cuenta. Para Kercado basta el modelo plano; `smart-account-kit` solo se justifica si hiciera falta límites de gasto o umbrales. Verificar además que el ejemplo corra en testnet y que el relayer esté operativo: el [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/stellar) reemplazó al Launchtube deprecado y tiene instancia hosteada de testnet en `https://channels.openzeppelin.com/testnet` (API keys en `/gen`).
+**Pendiente de verificar hoy:** cuál de las dos librerías hermanas usar — [`passkey-kit`](https://github.com/stellar/passkey-kit) (modelo de firmantes plano) o [`smart-account-kit`](https://github.com/stellar/smart-account-kit) (context rules de OpenZeppelin sobre la cuenta auditada de `stellar-contracts`). **No son intercambiables:** usan modelos de autorización on-chain distintos, así que cambiar de una a otra después obliga a rehacer el contrato de cuenta. Para Masi basta el modelo plano; `smart-account-kit` solo se justifica si hiciera falta límites de gasto o umbrales. Verificar además que el ejemplo corra en testnet y que el relayer esté operativo: el [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/stellar) reemplazó al Launchtube deprecado y tiene instancia hosteada de testnet en `https://channels.openzeppelin.com/testnet` (API keys en `/gen`).
 
 **Fallback, en orden:**
 
@@ -213,9 +213,9 @@ Se intentan con una prueba de 3 horas el 20 de septiembre; si el 22 en la noche 
 
 Nada de esto se construye esta semana, aunque sobre tiempo: chat, registro de proveedores, panel de administración, notificaciones, mapas o geolocalización, fotos de evidencia, calificaciones del proveedor al cliente, integración real con un anchor, path payments, pagos por varios hitos y cualquier producto de crédito.
 
-**Explícitamente prohibido:** levantar el Anchor Platform. Ese software lo corre el anchor —la empresa con licencia, cuentas bancarias y KYC—, no la app. Kercado está del lado wallet y solo *consumiría* un anchor por SEP-24. Sin licencia de la SBS no mueve un sol, así que intentarlo cuesta un día y no produce nada.
+**Explícitamente prohibido:** levantar el Anchor Platform. Ese software lo corre el anchor —la empresa con licencia, cuentas bancarias y KYC—, no la app. Masi está del lado wallet y solo *consumiría* un anchor por SEP-24. Sin licencia de la SBS no mueve un sol, así que intentarlo cuesta un día y no produce nada.
 
-**Prior art que confirma esto:** [pagame-pe](https://github.com/lothesito/pagame-pe) (equipo peruano, mayo 2026) sí levantó el Anchor Platform: Docker + Postgres, SEP-12/31/38 habilitados y un business server completo con cinco archivos de rutas. El banco, al final de toda esa cadena, sigue siendo un `setTimeout` de dos segundos (`BANK_API_SIMULATOR_DELAY`) que responde "ya deposité"; el on-ramp es Coinbase en sandbox liquidando en Base, no en Stellar; y el tipo de cambio es un `3.75` escrito a mano. Meses de trabajo para llegar al mismo botón simulado. Además **no tienen ningún contrato Soroban**: toda su lógica vive en un servidor que controlan. Esa es justamente la diferencia que Kercado sí tiene y la que el track Open Build mira.
+**Prior art que confirma esto:** [pagame-pe](https://github.com/lothesito/pagame-pe) (equipo peruano, mayo 2026) sí levantó el Anchor Platform: Docker + Postgres, SEP-12/31/38 habilitados y un business server completo con cinco archivos de rutas. El banco, al final de toda esa cadena, sigue siendo un `setTimeout` de dos segundos (`BANK_API_SIMULATOR_DELAY`) que responde "ya deposité"; el on-ramp es Coinbase en sandbox liquidando en Base, no en Stellar; y el tipo de cambio es un `3.75` escrito a mano. Meses de trabajo para llegar al mismo botón simulado. Además **no tienen ningún contrato Soroban**: toda su lógica vive en un servidor que controlan. Esa es justamente la diferencia que Masi sí tiene y la que el track Open Build mira.
 
 ## Equipo y cronograma
 
@@ -250,11 +250,11 @@ Si falta tiempo se recorta en este orden: disputa y `resolve` → passkeys (pasa
 
 **Limitaciones que el README dice explícitamente**
 
-- La recarga es simulada. En producción la haría un anchor vía **SEP-24** (el usuario paga en soles por Yape o transferencia en la ventana del anchor y recibe el saldo), autenticando nuestras cuentas de contrato con **SEP-45** — el estándar para direcciones C que el [Anchor Platform](https://developers.stellar.org/docs/platforms/anchor-platform) de SDF ya soporta. Kercado nunca toca soles, y por eso no necesita licencia. Candidatos: **MoneyGram Ramps** (API sobre Stellar + USDC, 30+ países para depósito y 170+ para retiro, lanzada en mayo 2025) y **Anclap**, que emitió la primera stablecoin del sol peruano sobre Stellar ([CoinDesk, sept 2021](https://www.coindesk.com/business/2021/09/28/stablecoin-pegged-to-perus-currency-launches-on-stellar)). **Sin verificar:** que MoneyGram cubra Perú (los países de LatAm nombrados son El Salvador y Colombia) y que la PEN de Anclap siga activa. No construimos nada de esto: el Anchor Platform lo corre el anchor, no nosotros.
+- La recarga es simulada. En producción la haría un anchor vía **SEP-24** (el usuario paga en soles por Yape o transferencia en la ventana del anchor y recibe el saldo), autenticando nuestras cuentas de contrato con **SEP-45** — el estándar para direcciones C que el [Anchor Platform](https://developers.stellar.org/docs/platforms/anchor-platform) de SDF ya soporta. Masi nunca toca soles, y por eso no necesita licencia. Candidatos: **MoneyGram Ramps** (API sobre Stellar + USDC, 30+ países para depósito y 170+ para retiro, lanzada en mayo 2025) y **Anclap**, que emitió la primera stablecoin del sol peruano sobre Stellar ([CoinDesk, sept 2021](https://www.coindesk.com/business/2021/09/28/stablecoin-pegged-to-perus-currency-launches-on-stellar)). **Sin verificar:** que MoneyGram cubra Perú (los países de LatAm nombrados son El Salvador y Colombia) y que la PEN de Anclap siga activa. No construimos nada de esto: el Anchor Platform lo corre el anchor, no nosotros.
 - Las calificaciones se pueden falsear, pero cada reseña falsa cuesta la comisión de un trabajo real.
-- Las comisiones en XLM y el alquiler del almacenamiento los paga Kercado vía el relayer; se cubren con la comisión.
+- Las comisiones en XLM y el alquiler del almacenamiento los paga Masi vía el relayer; se cubren con la comisión.
 - Recuperación de cuenta: depende de la sincronización de passkeys con Google o iCloud.
-- El árbitro es Kercado; sus decisiones son públicas y solo afectan el saldo.
+- El árbitro es Masi; sus decisiones son públicas y solo afectan el saldo.
 
 ## Demo y checkpoint
 
@@ -265,7 +265,7 @@ El video dura 3 minutos y muestra en pantalla cada transacción con su hash.
 | 25 s | María busca "pintor en Surco" y ve el perfil de Juan: estrellas y trabajos verificables |
 | 30 s | Solicita el trabajo; Juan acepta S/1,200; María paga protegido con su huella |
 | 25 s | Juan ve "Pago asegurado", inicia y recibe S/360 para materiales |
-| 35 s | Juan termina; María aprueba: saldo a Juan y comisión a Kercado |
+| 35 s | Juan termina; María aprueba: saldo a Juan y comisión a Masi |
 | 20 s | María califica con 5 estrellas y el perfil de Juan se actualiza |
 | 25 s | Segundo caso: el cliente no responde y el saldo se libera solo |
 | 20 s | Hashes en el explorador de testnet |
