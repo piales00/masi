@@ -1,0 +1,14 @@
+# Local development tools and generated artifacts
+.tools/
+target/
+**/node_modules/
+**/dist/
+**/test-results/
+**/playwright-report/
+test_snapshots/
+**/test_snapshots/
+.env
+.env.*
+!.env.example
+*.log
+
