@@ -78,14 +78,22 @@ El pago del saldo a Juan ya había funcionado en esa misma transacción, pero al
 
 La causa es la asimetría que el scope describe, aplicada a una cuenta nuestra: **las direcciones G necesitan trustline, las C no.** Es fácil acordarse para los usuarios y olvidarlo para la cuenta de comisiones.
 
-Dos formas de evitarlo, y conviene decidir cuál antes de sembrar los trabajos del 24:
+### Decisión tomada: la cuenta de comisiones sigue siendo G por ahora
 
-1. Crear la trustline de la cuenta de plataforma una vez, como se hizo aquí:
-   ```bash
-   stellar tx new change-trust --source-account masi-platform \
-     --network testnet --line "PENT:<G_DEL_EMISOR>"
-   ```
-2. Mejor: **que la cuenta de plataforma sea también una dirección C**, y así ninguna cuenta del sistema necesita trustline.
+Se evaluó convertirla a dirección C para que ninguna cuenta del sistema necesitara trustline. **Se descartó hacerlo hoy**, por esta razón:
+
+Para que una dirección C transfiera tokens, el SAC exige que el propio contrato invoque la transferencia, o sea que tenga código para hacerlo. Un contrato cualquiera puesto como cuenta de comisiones recibiría el dinero sin problema y lo dejaría **bloqueado para siempre**, sin forma de autorizar una salida. Eso cambia un fallo ruidoso y de una sola vez por uno silencioso e irreversible.
+
+La forma correcta es que la cuenta de comisiones sea **una smart wallet como la de los usuarios**: un contrato de cuenta con passkey, que sí sabe firmar transferencias. Es lo que P2 levanta con `passkey-kit`, así que **se hará cuando esa pieza funcione**, y hasta entonces la cuenta G con su trustline cumple.
+
+La trustline ya está puesta y verificada:
+
+```bash
+stellar tx new change-trust --source-account masi-platform \
+  --network testnet --line "PENT:<G_DEL_EMISOR>"
+```
+
+**Si se despliega en un entorno nuevo, este paso no se puede olvidar** o `approve` revertirá.
 
 ---
 
