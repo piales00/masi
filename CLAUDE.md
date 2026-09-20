@@ -18,6 +18,7 @@ Si algo de esto no funciona, el scope ya tiene el fallback definido. No inventes
 - **El adelanto de materiales no se puede disputar** una vez entregado.
 - **Cada función de escritura exige `require_auth`** del rol indicado en la tabla.
 - **No levantar el Anchor Platform.** Ver "Fuera del alcance" en el scope.
+- **Los agentes no se firman como co-autores.** Nada de `Co-Authored-By` ni de líneas de atribución generadas en los commits ni en las descripciones de PR. El commit lo firma la persona.
 
 ## Direcciones C — el error más fácil de cometer
 
