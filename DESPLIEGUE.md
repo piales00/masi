@@ -44,6 +44,7 @@ Las llaves privadas están en `~/.config/stellar/identity/*.toml` de la máquina
 | `init` | `26cf108387834235b15b41811e9d855f3df07cbca4195f58d41d0d1ec597b5df` |
 | `mint` de S/1.260 a María | `b8ea9a223b59fa9dfb4534a36ffbafae9c022fc1d0f89a8c4ddccb5f6cd85fa7` |
 | `rate` (5 estrellas al trabajo 1) | `b1c9de01bc84fb3c4a7c7ac899d2257a9d354b52747c882a3e638edcaf6a6c66` |
+| `auto_release` (trabajo 2, cliente ausente) | `e63a2c774ae4c4f79181218e54a056139d047db52657c7c21cc696198f0355cf` |
 
 Los hashes de subida, despliegue e `init` de arriba corresponden al **primer** despliegue. El SAC, el emisor y las cuentas no cambiaron; solo se redesplegó el escrow.
 
@@ -136,8 +137,39 @@ stellar contract invoke --id <CONTRATO> --source-account masi --network testnet 
 
 ---
 
+## Segundo caso: el cliente no responde
+
+Es la sexta escena del vídeo. Trabajo 2, idéntico al primero salvo en el plazo de revisión: **60 segundos** en vez de 86.400, para poder verlo dentro de una sesión.
+
+`create_job` → `accept` → `fund` → `start` → `submit`, y a partir de ahí María no hace nada.
+
+**Antes de vencer el plazo**, `auto_release` se rechaza:
+
+```
+Error(Contract, #12)  → ReviewPeriodActive
+```
+
+Eso es lo que impide que nadie adelante el cobro.
+
+**Pasado el plazo**, lo dispara una cuenta llamada `bot`, que no es ni el cliente ni el proveedor — el scope dice que `auto_release` lo puede llamar cualquiera, y probarlo con una cuenta ajena es la única forma de demostrarlo. Si lo lanzara Juan no sabríamos si funciona por ser el proveedor o por valer para todos.
+
+```
+estado: Released | released_at: 1789930342 | pendiente: 0
+```
+
+El plazo vencía en `1789930322`, así que se liberó 20 segundos después. El reparto es idéntico al de una aprobación manual: saldo al proveedor y comisión a la plataforma.
+
+Saldos acumulados tras los dos trabajos de este contrato, más el del despliegue anterior:
+
+| Cuenta | Saldo |
+|---|---|
+| Juan | S/3.600,00 — tres trabajos de S/1.200 |
+| Masi (plataforma) | S/180,00 — tres comisiones de S/60 |
+| Contrato | S/0,00 |
+
+Y `rating_of(juan)` devuelve `completed_jobs: 2, rating_count: 1, stars_sum: 5`: los dos trabajos de este contrato cuentan como completados, pero solo el primero está calificado. **Cobrar y calificar son cosas distintas**, que es justo lo que hace que las estrellas signifiquen algo.
+
 ## Lo que este despliegue todavía no prueba
 
 - `dispute` y `resolve` siguen siendo stubs: devuelven `NotImplemented` y no mueven fondos. Son los primeros de la lista de recortes.
-- `auto_release` no se ejecutó, porque exige esperar `review_secs`. Para probarlo, crea un trabajo con `review_secs` corto (60 segundos) en vez de 86.400.
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
