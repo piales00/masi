@@ -1,0 +1,98 @@
+[
+  {
+    "id": "juan",
+    "address": "CAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQC526",
+    "name": "Juan Ramírez",
+    "trade": "Pintura",
+    "profession": "Pintor",
+    "district": "Surco",
+    "reference_price_pen": 1200,
+    "photo": "/images/juan.jpg",
+    "specialty": "Pintura de interiores y acabados",
+    "description": "Dale una nueva vida a tus paredes, con atención a cada detalle."
+  },
+  {
+    "id": "carlos",
+    "address": "CABAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAFNSZ",
+    "name": "Carlos Mendoza",
+    "trade": "Electricidad",
+    "profession": "Electricista",
+    "district": "Miraflores",
+    "reference_price_pen": 180,
+    "photo": "/images/carlos.jpg",
+    "specialty": "Instalaciones y mantenimiento eléctrico",
+    "description": "Soluciones para que la electricidad de tu hogar funcione bien."
+  },
+  {
+    "id": "luis",
+    "address": "CABQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGCK3",
+    "name": "Luis Torres",
+    "trade": "Gasfitería",
+    "profession": "Gasfitero",
+    "district": "Surco",
+    "reference_price_pen": 150,
+    "photo": "/images/luis.jpg",
+    "specialty": "Fugas, griferías y tuberías",
+    "description": "Me encargo de esas fugas y reparaciones que no pueden esperar."
+  },
+  {
+    "id": "rosa",
+    "address": "CACAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAINCW",
+    "name": "Rosa Quispe",
+    "trade": "Limpieza",
+    "profession": "Especialista en limpieza",
+    "district": "San Borja",
+    "reference_price_pen": 160,
+    "photo": "/images/rosa.jpg",
+    "specialty": "Limpieza profunda de hogares",
+    "description": "Cada rincón limpio y listo para que disfrutes de tu casa."
+  },
+  {
+    "id": "miguel",
+    "address": "CACQKBIFAUCQKBIFAUCQKBIFAUCQKBIFAUCQKBIFAUCQKBIFAUCQLC2U",
+    "name": "Miguel Salazar",
+    "trade": "Carpintería",
+    "profession": "Carpintero",
+    "district": "La Molina",
+    "reference_price_pen": 350,
+    "photo": "/images/miguel.jpg",
+    "specialty": "Muebles, puertas y acabados en madera",
+    "description": "Reparo y renuevo tus muebles con dedicación y buenos acabados."
+  },
+  {
+    "id": "pedro",
+    "address": "CADAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMBQGAYDAMSST",
+    "name": "Pedro Flores",
+    "trade": "Cerrajería",
+    "profession": "Cerrajero",
+    "district": "San Isidro",
+    "reference_price_pen": 120,
+    "photo": "/images/pedro.jpg",
+    "specialty": "Cerraduras y mantenimiento",
+    "description": "Cerraduras, chapas y pequeños ajustes para tu tranquilidad."
+  },
+  {
+    "id": "ana",
+    "address": "CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR",
+    "name": "Ana Rojas",
+    "trade": "Instalaciones",
+    "profession": "Técnica de instalaciones",
+    "district": "Miraflores",
+    "reference_price_pen": 100,
+    "photo": "/images/ana.jpg",
+    "specialty": "Cortinas, repisas y montaje",
+    "description": "Te ayudo a instalar esos detalles que hacen más cómoda tu casa."
+  },
+  {
+    "id": "diego",
+    "address": "CAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQMCJ",
+    "name": "Diego Vargas",
+    "trade": "Reparaciones",
+    "profession": "Técnico de reparaciones",
+    "district": "Surco",
+    "reference_price_pen": 130,
+    "photo": "/images/diego.jpg",
+    "specialty": "Mantenimiento y arreglos del hogar",
+    "description": "Una mano para esos arreglos pendientes de tu hogar."
+  }
+]
