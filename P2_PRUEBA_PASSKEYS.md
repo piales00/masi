@@ -143,6 +143,61 @@ Esto es lo que se usa para decidir el 22. Anótalo aunque salga mal — sobre to
 
 ---
 
+## Resultados de la primera prueba — 20/09, Android
+
+**Funcionó: se desplegó una smart wallet real desde un celular.**
+
+```
+Deploy wallet ✓   tx ca45f786…96546cc3
+```
+
+Con esto la pregunta del 22 ya tiene respuesta provisional y es que sí. Lo que queda no es "¿se puede?", sino repetirlo en el dominio bueno y con el relayer.
+
+### Hallazgo 1 — pide la huella dos veces, y es correcto
+
+No es un fallo del kit ni de la configuración. Son **dos ceremonias distintas de WebAuthn**:
+
+| Paso | Llamada | Qué pide |
+|---|---|---|
+| 1 | `createWallet` | *Registro*: crear la llave. Es la pantalla "Crea una llave de acceso" |
+| 2 | `connectWallet` | *Autenticación*: una **fresh assertion**, para comprobar que controlas la llave que acaba de quedar on-chain |
+
+El kit lo exige a propósito: entre una cosa y la otra hay un despliegue en la red, y sin el segundo paso la app se fiaría de algo que no ha verificado. `confirmWalletCreation` no pide huella; la que la pide es `connectWallet`.
+
+**Cómo hacer que en Masi se sienta como una sola.** No hay obligación de llamar a `connectWallet` justo después de registrar. Deja entrar al usuario tras el registro y pide la huella recién cuando vaya a hacer algo de verdad — que es el momento en que el scope ya prevé que la toque, **al pagar**. Así la segunda ceremonia deja de ser un trámite repetido y pasa a ser la firma del pago.
+
+### Hallazgo 2 — "Create wallet failed" puede mentir
+
+En la prueba salió esto:
+
+```
+4:55:00  Deploy wallet ✓  tx ca45f786…96546cc3
+4:55:03  Create wallet failed: Passkey authentication failed  WebAuthnError [3002]
+```
+
+**El despliegue funcionó.** Lo que falló tres segundos después fue la segunda ceremonia, la de autenticación — los códigos `3xxx` son del grupo WebAuthn. La wallet existe en testnet aunque el mensaje diga lo contrario.
+
+Si vuelve a pasar: usa **"Sign in (passkey)"** con la misma llave en vez de crear otra. Crear una segunda wallet porque la primera "falló" deja cuentas huérfanas.
+
+### Hallazgo 3 — la prueba se hizo en otro dominio
+
+Se probó en `prismatic-crumble-a96f0e.netlify.app`, no en `masiapp.netlify.app`. El propio diálogo de Google lo dice: *"Esta llave de acceso se usará para prismatic-crumble-a96f0e.netlify.app"*.
+
+Son orígenes distintos, así que **ninguna cuenta creada ahí existirá en el nuestro**.
+
+Para probar está bien y no hay que rehacer nada. Pero:
+
+- [ ] Todo lo creado en ese sitio es **desechable**; no lo uses como referencia de "ya tengo cuenta".
+- [ ] **Repetir la prueba en `masiapp.netlify.app` antes de sembrar los trabajos del 24.** Si se siembran perfiles con cuentas de otro dominio, el día de grabar no entra nadie.
+
+### Lo que sigue pendiente
+
+- [ ] Firmar una transacción con el relayer pagando las comisiones (fase 2).
+- [ ] Repetir en el dominio definitivo.
+- [ ] Probar en iPhone.
+
+---
+
 ## Si no sale
 
 **No pasa nada y no es un fracaso.** El fallback está definido desde el principio y es cambio solo de frontend: el contrato, las reseñas on-chain y el relayer no se tocan.
