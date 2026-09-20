@@ -10,6 +10,14 @@ export interface Profile {
 
 const STORAGE_KEY = 'masi.demo.v1';
 
+/** Quien inicia sesión ya tenía cuenta, así que entra con su perfil listo. */
+export const RETURNING_PROFILE: Profile = {
+  firstName: 'María',
+  lastName: 'Torres',
+  phone: '999 888 777',
+  district: 'Chorrillos, Lima',
+};
+
 /** Survives a reload so deep links like /solicitud/:id keep working. */
 function readProfile(): Profile | null {
   try {

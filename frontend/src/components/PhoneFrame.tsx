@@ -1,9 +1,10 @@
 import { Outlet } from 'react-router-dom';
 
 /**
- * Full screen on phones. From 640px up the same fluid app is shown inside a device
- * mockup — a development aid only, which also fakes the notch insets so the safe-area
- * padding of every screen is visible on a desktop browser.
+ * NO se usa en la app: el árbol de rutas monta AppLayout. Se conserva como maqueta de
+ * celular para grabar el video o revisar el safe area desde el escritorio, donde
+ * sobrescribe --masi-safe-top/--masi-safe-bottom con valores fijos para simular el notch.
+ * Para usarlo, envuelve las rutas con este componente en lugar de AppLayout.
  */
 export function PhoneFrame() {
   return <div className="flex min-h-dvh justify-center sm:items-center sm:bg-linear-160 sm:from-masi-blue-50 sm:via-masi-bg sm:to-masi-cream sm:p-8">

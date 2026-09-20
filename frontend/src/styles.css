@@ -43,7 +43,7 @@
 }
 
 @layer base {
-  /* El marco de escritorio los sobrescribe con valores fijos para simular un celular con notch. */
+  /* Insets reales del dispositivo; dependen de viewport-fit=cover en el meta viewport. */
   :root {
     --masi-safe-top: env(safe-area-inset-top);
     --masi-safe-bottom: env(safe-area-inset-bottom);

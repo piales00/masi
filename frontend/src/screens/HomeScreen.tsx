@@ -1,9 +1,20 @@
-import { Bell, MapPin } from 'lucide-react';
+import { Bell, MapPin, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Screen } from '../components/Screen';
 import { useDemo } from '../demo/DemoContext';
 
 export function HomeScreen() {
-  const { profile } = useDemo();
+  const { profile, reset } = useDemo();
+  const navigate = useNavigate();
+
+  /**
+   * Provisional aquí hasta que exista la pestaña Perfil. Va a /bienvenida y no a /splash
+   * porque al quedarse sin perfil RequireProfile redirige ahí de todos modos.
+   */
+  const restart = () => {
+    reset();
+    navigate('/bienvenida', { replace: true });
+  };
 
   return <Screen header={
     <header className="shrink-0 border-b border-masi-gray bg-white px-4 pt-[calc(0.75rem+var(--masi-safe-top))] pb-3">
@@ -23,6 +34,10 @@ export function HomeScreen() {
   }>
     <div className="px-4 py-6">
       <h2 className="text-2xl leading-tight font-bold text-masi-navy">¿Qué necesitas resolver hoy?</h2>
+      <button
+        onClick={restart}
+        className="mt-8 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-masi-blue transition-colors duration-200 ease-out hover:bg-masi-blue-50"
+      ><RotateCcw size={16} aria-hidden="true" />Reiniciar demo</button>
     </div>
   </Screen>;
 }

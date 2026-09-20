@@ -7,6 +7,7 @@ import { Field } from '../components/Field';
 import { MasiLogo } from '../components/MasiLogo';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { RETURNING_PROFILE, useDemo } from '../demo/DemoContext';
 import { cn } from '../cn';
 
 type Mode = 'entrar' | 'crear';
@@ -22,11 +23,19 @@ function GoogleMark() {
 
 export function AccessScreen() {
   const navigate = useNavigate();
+  const { saveProfile } = useDemo();
   const [mode, setMode] = useState<Mode>('entrar');
+
+  /** Entrar salta la configuración: ese perfil ya existe. Crear cuenta pasa por ella. */
+  const advance = () => {
+    if (mode === 'crear') return navigate('/configuracion');
+    saveProfile(RETURNING_PROFILE);
+    navigate('/home', { replace: true });
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    navigate('/configuracion');
+    advance();
   };
 
   return <Screen header={<ScreenHeader title="Bienvenido a Masi" subtitle="Entra o crea tu cuenta" />}>
@@ -71,7 +80,7 @@ export function AccessScreen() {
         <span className="h-px flex-1 bg-masi-gray" />
       </div>
 
-      <Button variant="secondary" onClick={() => navigate('/configuracion')}>
+      <Button variant="secondary" onClick={advance}>
         <GoogleMark />Continuar con Google
       </Button>
 
