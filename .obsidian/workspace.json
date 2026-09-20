@@ -190,6 +190,17 @@
   },
   "active": "798605cee0710be3",
   "lastOpenFiles": [
+    "INTEGRACION.md",
+    "INTEGRACION.md.tmp.177275.88c1fed0f933",
+    "CLAUDE.md.tmp.177275.d15a8997026e",
+    "frontend/src/screens/WelcomeScreen.tsx",
+    "frontend/src/screens/SplashScreen.tsx",
+    "frontend/src/screens/SetupScreen.tsx",
+    "frontend/src/screens/RoleScreen.tsx",
+    "frontend/src/screens/ProviderSoonScreen.tsx",
+    "frontend/src/screens/HomeScreen.tsx",
+    "frontend/src/screens/AccessScreen.tsx",
+    "frontend/src/screens",
     "P2_PASSKEYS.md"
   ]
 }

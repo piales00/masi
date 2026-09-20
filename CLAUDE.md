@@ -20,6 +20,20 @@ Si algo de esto no funciona, el scope ya tiene el fallback definido. No inventes
 - **No levantar el Anchor Platform.** Ver "Fuera del alcance" en el scope.
 - **Los agentes no se firman como co-autores.** Nada de `Co-Authored-By` ni de líneas de atribución generadas en los commits ni en las descripciones de PR. El commit lo firma la persona.
 
+## Contrato desplegado — úsalo, no lo inventes
+
+Vivo en **testnet** desde el 20 de septiembre:
+
+| | |
+| --- | --- |
+| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
+| Red | `Test SDF Network ; September 2015` · RPC `https://soroban-testnet.stellar.org` |
+
+`CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` es un despliegue **viejo y superado**; si lo encuentras en algún sitio, está mal.
+
+**Para conectar el frontend al contrato, lee [`INTEGRACION.md`](./INTEGRACION.md).** Los tipos están en `shared/escrow.ts` y son la referencia; el ABI real es el código Rust.
+
 ## Direcciones C — el error más fácil de cometer
 
 Los usuarios tienen direcciones de contrato, no direcciones G clásicas. **No necesitan trustline**: el saldo vive en el storage del SAC. La recarga es un `mint` del SAC firmado por la cuenta emisora. La función `trust()` es un no-op para direcciones C.
