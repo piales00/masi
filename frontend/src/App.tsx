@@ -1,13 +1,18 @@
 import type { ReactElement } from 'react';
+import { Activity, ClipboardList } from 'lucide-react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AuthLayout } from './components/AuthLayout';
 import { useDemo } from './demo/DemoContext';
 import { AccessScreen } from './screens/AccessScreen';
 import { HomeScreen } from './screens/HomeScreen';
+import { NewRequestScreen } from './screens/NewRequestScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { ProvidersScreen } from './screens/ProvidersScreen';
 import { ProviderSoonScreen } from './screens/ProviderSoonScreen';
 import { RoleScreen } from './screens/RoleScreen';
 import { SetupScreen } from './screens/SetupScreen';
+import { SoonScreen } from './screens/SoonScreen';
 import { SplashScreen } from './screens/SplashScreen';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 
@@ -34,8 +39,13 @@ export function App() {
       <Route path="configuracion" element={<SkipIfProfile><SetupScreen /></SkipIfProfile>} />
     </Route>
 
-    <Route element={<AppShell />}>
-      <Route path="home" element={<RequireProfile><HomeScreen /></RequireProfile>} />
+    <Route element={<RequireProfile><AppShell /></RequireProfile>}>
+      <Route path="home" element={<HomeScreen />} />
+      <Route path="solicitudes" element={<SoonScreen title="Solicitudes" icon={ClipboardList} text="Aquí seguirás cada trabajo que solicites, desde que lo pides hasta que lo apruebas." />} />
+      <Route path="solicitudes/nueva" element={<NewRequestScreen />} />
+      <Route path="profesionales" element={<ProvidersScreen />} />
+      <Route path="actividad" element={<SoonScreen title="Actividad" icon={Activity} text="Aquí verás el detalle de cada pago y cada paso de tus trabajos." />} />
+      <Route path="perfil" element={<ProfileScreen />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/splash" replace />} />

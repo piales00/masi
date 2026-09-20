@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowRight, Lock, Mail } from 'lucide-react';
+import { ArrowRight, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -84,11 +84,7 @@ export function AccessScreen() {
         <GoogleMark />Continuar con Google
       </Button>
 
-      <p className="mt-6 flex items-start gap-2 rounded-masi-input bg-masi-blue-50 p-3 text-xs leading-relaxed text-masi-navy">
-        <Lock size={15} aria-hidden="true" className="mt-0.5" />
-        <span>Esta es una demostración: no se envía ni se guarda ninguna contraseña.</span>
-      </p>
-      <p className="mt-3 flex items-center justify-center gap-2 text-xs text-masi-muted">
+      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-masi-muted">
         <Mail size={14} aria-hidden="true" />Te escribiremos solo por tus solicitudes.
       </p>
     </form>
