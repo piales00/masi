@@ -13,6 +13,15 @@ use types::Config;
 const BPS_DENOMINATOR: i128 = 10_000;
 const MAX_DESCRIPTION_BYTES: u32 = 1_024;
 
+/// The materials advance is irreversible once `start` delivers it: it cannot be
+/// disputed or refunded. Capping it at half the price keeps the scope's promise
+/// that the client's worst case stays bounded by this percentage, and keeps a
+/// balance in escrow that is worth approving.
+const MAX_MATERIALS_BPS: u32 = 5_000;
+/// The client pays the fee on top of the price, so an uncapped value could
+/// silently double the charge.
+const MAX_FEE_BPS: u32 = 1_000;
+
 #[contract]
 pub struct Escrow;
 
@@ -78,7 +87,7 @@ impl Escrow {
         if amount <= 0 {
             return Err(ContractError::InvalidAmount);
         }
-        if materials_bps > 10_000 || fee_bps > 10_000 {
+        if materials_bps > MAX_MATERIALS_BPS || fee_bps > MAX_FEE_BPS {
             return Err(ContractError::InvalidBps);
         }
         if review_secs == 0 {

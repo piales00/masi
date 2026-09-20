@@ -116,16 +116,17 @@ Un solo contrato Soroban maneja pagos, calificaciones e historial. El token es P
 
 | Función | Quién | Estado requerido | Qué hace |
 | --- | --- | --- | --- |
-| `init(arbiter, platform, token)` | despliegue | — | Configura árbitro, cuenta de comisiones y token |
+| `__constructor(admin)` | despliegue | — | Fija el administrador en el mismo acto del despliegue |
+| `init(arbiter, platform, token)` | admin | — | Configura árbitro, cuenta de comisiones y token; una sola vez |
 | `create_job(client, provider, amount, materials_bps, fee_bps, review_secs, description)` | cliente | — | Crea el trabajo en `Requested` y devuelve `job_id` |
 | `accept(job_id)` | proveedor | Requested | Acepta el precio |
 | `fund(job_id)` | cliente | Accepted | Bloquea `amount` + comisión (la comisión la paga el cliente) |
 | `start(job_id)` | proveedor | Funded | Transfiere `amount × materials_bps` al proveedor |
 | `submit(job_id)` | proveedor | Started | Marca terminado y guarda `submitted_at` |
 | `approve(job_id)` | cliente | Submitted | Saldo al proveedor, comisión a la plataforma |
-| `auto_release(job_id)` | cualquiera | Submitted y pasó `review_secs` | Igual que `approve` |
-| `cancel(job_id)` | cliente o proveedor | Requested, Accepted o Funded | Reembolso completo si estaba fondeado |
-| `dispute(job_id)` | cliente o proveedor | Started o Submitted | Congela el saldo |
+| `auto_release(job_id, caller)` | cualquiera | Submitted y pasó `review_secs` | Igual que `approve` |
+| `cancel(job_id, caller)` | cliente o proveedor | Requested, Accepted o Funded | Reembolso completo si estaba fondeado |
+| `dispute(job_id, caller)` | cliente o proveedor | Started o Submitted | Congela el saldo |
 | `resolve(job_id, provider_bps)` | árbitro | Disputed | Reparte solo el saldo; la comisión va a la plataforma |
 | `rate(job_id, stars, comment_hash)` | cliente | Released o Resolved | 1–5 estrellas, una vez por trabajo |
 | `get_job(job_id)` | lectura | — | Datos y estado del trabajo |
@@ -137,6 +138,8 @@ Un solo contrato Soroban maneja pagos, calificaciones e historial. El token es P
 - El adelanto para materiales no se puede disputar: una vez entregado, es del proveedor. El riesgo máximo del cliente queda acotado a ese porcentaje.
 - `auto_release` corre desde `submit`, no desde la creación. Si el proveedor nunca envía, el cliente puede disputar.
 - Cada función de escritura exige `require_auth` del rol indicado.
+- **Las funciones que admiten más de un rol reciben `caller` como parámetro.** `cancel`, `dispute` y `auto_release` no pueden deducir a quién exigirle la firma, así que quien llama se identifica y el contrato comprueba que sea parte del trabajo. Es la única forma de que `require_auth` signifique algo cuando el rol no es único.
+- **`materials_bps` no puede pasar de 5.000 y `fee_bps` no puede pasar de 1.000.** El adelanto es irreversible una vez entregado, así que el tope es lo que hace cierta la regla de que el riesgo del cliente queda acotado; y como la comisión la paga el cliente por encima del precio, sin tope podría duplicar el cobro.
 
 **Calificaciones on-chain:** solo el cliente de un trabajo pagado puede calificar, una vez. El comentario se guarda fuera de la cadena y en el contrato queda su hash, para que no se pueda editar después. Inventar una reseña cuesta la comisión de un trabajo real.
 

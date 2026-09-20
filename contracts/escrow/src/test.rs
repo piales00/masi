@@ -201,15 +201,21 @@ fn init_requires_bound_admin_and_cannot_be_repeated() {
     assert!(f.escrow().try_init(&f.arbiter, &f.platform, &f.token).is_err());
     f.env.mock_all_auths();
     assert_eq!(f.escrow().try_init(&f.arbiter, &f.platform, &f.token), Err(Ok(ContractError::AlreadyInitialized)));
+    // A second Env needs its own addresses: objects cannot cross Env boundaries.
     let env = Env::default();
     env.mock_all_auths();
     let admin = Address::generate(&env);
+    let arbiter = Address::generate(&env);
+    let platform = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
     let contract = env.register(Escrow, (&admin,));
     let escrow = EscrowClient::new(&env, &contract);
     env.mock_auths(&[]);
-    assert!(escrow.try_init(&f.arbiter, &f.platform, &f.token).is_err());
+    assert!(escrow.try_init(&arbiter, &platform, &token).is_err());
     env.mock_all_auths();
-    escrow.init(&f.arbiter, &f.platform, &f.token);
+    escrow.init(&arbiter, &platform, &token);
     assert_eq!(env.auths()[0].0, admin);
     assert_ne!(f.admin, f.client);
 }
@@ -322,11 +328,11 @@ fn all_seven_events_have_stable_topics_and_payloads() {
         job_id: id, provider: f.provider.clone(),
     }.to_xdr(&f.env, &f.contract)]);
     f.escrow().fund(&id);
-    assert!(f.env.events().all().iter().any(|e| e == &events::Funded {
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Funded {
         job_id: id, client: f.client.clone(), amount: AMOUNT, fee_amount: FEE,
     }.to_xdr(&f.env, &f.contract)));
     f.escrow().start(&id);
-    assert!(f.env.events().all().iter().any(|e| e == &events::Started {
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Started {
         job_id: id, provider: f.provider.clone(), materials_amount: MATERIALS, remaining_amount: AMOUNT - MATERIALS,
     }.to_xdr(&f.env, &f.contract)));
     f.escrow().submit(&id);
@@ -334,7 +340,7 @@ fn all_seven_events_have_stable_topics_and_payloads() {
         job_id: id, provider: f.provider.clone(), submitted_at: 1_000, release_at: 1_000 + REVIEW,
     }.to_xdr(&f.env, &f.contract)]);
     f.escrow().approve(&id);
-    assert!(f.env.events().all().iter().any(|e| e == &events::Released {
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Released {
         job_id: id, provider: f.provider.clone(), remaining_amount: AMOUNT - MATERIALS, fee_amount: FEE, automatic: false,
     }.to_xdr(&f.env, &f.contract)));
     let cancelled = f.create();
@@ -367,15 +373,23 @@ fn inputs_and_i128_arithmetic_are_checked() {
     for amount in [0, -1, i128::MIN] {
         assert_eq!(create(amount, 3_000, 500, REVIEW), Err(Ok(ContractError::InvalidAmount)));
     }
+    // The advance is irreversible, so it is capped well below the full price.
+    assert_eq!(create(AMOUNT, MAX_MATERIALS_BPS + 1, 500, REVIEW), Err(Ok(ContractError::InvalidBps)));
     assert_eq!(create(AMOUNT, 10_001, 500, REVIEW), Err(Ok(ContractError::InvalidBps)));
+    assert_eq!(create(AMOUNT, 3_000, MAX_FEE_BPS + 1, REVIEW), Err(Ok(ContractError::InvalidBps)));
     assert_eq!(create(AMOUNT, 3_000, 10_001, REVIEW), Err(Ok(ContractError::InvalidBps)));
     assert_eq!(create(AMOUNT, 3_000, 500, 0), Err(Ok(ContractError::InvalidReviewPeriod)));
     assert_eq!(create(i128::MAX, 3_000, 500, REVIEW), Err(Ok(ContractError::ArithmeticOverflow)));
     assert_eq!(create(AMOUNT, 3_000, 500, u64::MAX), Err(Ok(ContractError::ArithmeticOverflow)));
     assert_eq!(portion(i128::MAX, 10_000), Ok(i128::MAX));
     assert_eq!(portion(101, 3_000), Ok(30));
-    let id = create(i128::MAX, 10_000, 0, REVIEW).unwrap().unwrap();
-    assert_eq!(f.escrow().get_job(&id).materials_amount, i128::MAX);
+    // Both caps are inclusive, and the i128 ceiling still holds at the boundary.
+    let id = create(i128::MAX, MAX_MATERIALS_BPS, 0, REVIEW).unwrap().unwrap();
+    assert_eq!(
+        f.escrow().get_job(&id).materials_amount,
+        portion(i128::MAX, MAX_MATERIALS_BPS).unwrap(),
+    );
+    assert!(create(AMOUNT, MAX_MATERIALS_BPS, MAX_FEE_BPS, REVIEW).is_ok());
 }
 
 #[test]
