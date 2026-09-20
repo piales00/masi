@@ -1,0 +1,116 @@
+# Despliegue en testnet
+
+**20 de septiembre de 2026.** Red: `Test SDF Network ; September 2015`. Protocolo 28.
+
+Contrato desplegado, inicializado y con el flujo principal ejecutado de punta a punta. Cubre el punto "Contract ID en testnet" del checkpoint del 23.
+
+---
+
+## Identificadores
+
+| Qué | ID |
+|---|---|
+| **Contrato `escrow`** | `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` |
+| **SAC de PEN-test** | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
+| Hash del WASM | `f193c1de3c3305bbd8326bbf310124add253cfd662ef2ffb894104f05411e59d` |
+| Activo | `PENT:GBEL5YQVA7322R26DWRQTJSZPZ7ODD5NSCQZ6TDPD5MP4FAUDXNITYAE` |
+
+- Explorador: [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO)
+- Tamaño del WASM: 16.028 bytes, muy por debajo del límite de 128 KB de la red.
+
+## Cuentas
+
+| Alias | Rol | Dirección |
+|---|---|---|
+| `masi` | admin y árbitro | `GBGZZ3XKNJSMX3MNXB2J26WVV76ZJAKKOH2C35ZF5G4W2COZAMC7I77C` |
+| `masi-issuer` | emisor de PEN-test | `GBEL5YQVA7322R26DWRQTJSZPZ7ODD5NSCQZ6TDPD5MP4FAUDXNITYAE` |
+| `masi-platform` | comisiones | `GDY6ZZ4TKCEO4SPQE2JNKK2WKCQDITYDJYCTRB5MSYBKEDQXG74RNZMK` |
+| `maria` | cliente de prueba | `GBMETOUI6GYTMGBLN37II44FMNCFRXM7X4CGXG4NUQUQS6UT2PUSGX6V` |
+| `juan` | proveedor de prueba | `GCBAMAMWPM5NJRIOGLONHNOYNC6Q3HHRWD3L7XYPRQYVHDKCVQVICHDR` |
+
+Las llaves privadas están en `~/.config/stellar/identity/*.toml` de la máquina donde se desplegó, **fuera del repo**. Si alguien más necesita desplegar, genera las suyas: estas son de testnet y desechables.
+
+`maria` y `juan` son direcciones G solo para esta prueba por CLI. Los usuarios reales tendrán direcciones C (contratos de cuenta con passkey), que **no necesitan trustline**.
+
+## Transacciones
+
+| Paso | Hash |
+|---|---|
+| Subida del WASM | `a4d86bf65402f7cb00ed5ace1d3f9159c5697f983bfa30249bbd9f999f4354e4` |
+| Despliegue del contrato | `74eca7ccaff7fb62755ab1645a60aeb8fece8c86ab2e075678e64f71e633b584` |
+| Despliegue del SAC | `af3f4d8c8e4e8399bae8ea6b6326c1f1f24fe78265ce09481f60d3cdc9f60fd9` |
+| `init` | `26cf108387834235b15b41811e9d855f3df07cbca4195f58d41d0d1ec597b5df` |
+| `mint` de S/1.260 a María | `b8ea9a223b59fa9dfb4534a36ffbafae9c022fc1d0f89a8c4ddccb5f6cd85fa7` |
+| `approve` (cierre del trabajo 1) | `2e14cdabb57c3f21b494e530ebf8136a39916c8cb8b9a8d23a90b5211b751ad9` |
+
+Cualquiera verifica un hash en `https://stellar.expert/explorer/testnet/tx/<hash>`.
+
+---
+
+## El caso del demo, ejecutado
+
+Trabajo 1: pintar un departamento en Surco por **S/1.200**, con 30% de materiales y 5% de comisión.
+
+`create_job` → `accept` → `fund` → `start` → `submit` → `approve`, cada paso firmado por el rol que le toca.
+
+Reparto final, verificado leyendo los saldos del SAC:
+
+| Cuenta | Saldo | Por qué |
+|---|---|---|
+| María (cliente) | S/0,00 | Pagó S/1.260: precio más comisión |
+| Juan (proveedor) | **S/1.200,00** | S/360 de materiales al iniciar + S/840 de saldo al aprobar |
+| Masi (plataforma) | **S/60,00** | 5% de S/1.200 |
+| Contrato | S/0,00 | Queda vacío: no retiene nada tras liberar |
+
+Estado del trabajo: `Released`. `jobs_of(juan)` devuelve `[1]` y `rating_of(juan)` devuelve `completed_jobs: 1`, así que el historial on-chain del perfil ya tiene de dónde leer.
+
+---
+
+## Trampa encontrada: la cuenta de comisiones necesita trustline
+
+`approve` falló la primera vez con `Error(Contract, #13)` y este diagnóstico:
+
+```
+"trustline entry is missing for account", GDY6ZZ4T…  ← masi-platform
+```
+
+El pago del saldo a Juan ya había funcionado en esa misma transacción, pero al fallar la comisión **revirtió todo**, que es el comportamiento correcto: o se reparte entero o no se reparte.
+
+La causa es la asimetría que el scope describe, aplicada a una cuenta nuestra: **las direcciones G necesitan trustline, las C no.** Es fácil acordarse para los usuarios y olvidarlo para la cuenta de comisiones.
+
+Dos formas de evitarlo, y conviene decidir cuál antes de sembrar los trabajos del 24:
+
+1. Crear la trustline de la cuenta de plataforma una vez, como se hizo aquí:
+   ```bash
+   stellar tx new change-trust --source-account masi-platform \
+     --network testnet --line "PENT:<G_DEL_EMISOR>"
+   ```
+2. Mejor: **que la cuenta de plataforma sea también una dirección C**, y así ninguna cuenta del sistema necesita trustline.
+
+---
+
+## Reproducir el despliegue
+
+Requiere `stellar` CLI 28.x. En Arch, instálalo desde el binario oficial de la release — `cargo install stellar-cli` falla al enlazar Binaryen contra el LLVM del sistema.
+
+```bash
+stellar contract build
+
+stellar contract deploy \
+  --wasm target/wasm32v1-none/release/masi_escrow.wasm \
+  --source-account masi --network testnet \
+  -- --admin masi
+
+stellar contract invoke --id <CONTRATO> --source-account masi --network testnet -- \
+  init --arbiter <G_ARBITRO> --platform <G_PLATAFORMA> --token <SAC>
+```
+
+`init` solo corre una vez: la segunda devuelve `AlreadyInitialized`.
+
+---
+
+## Lo que este despliegue todavía no prueba
+
+- `dispute`, `resolve` y `rate` son stubs: devuelven `NotImplemented` y no mueven fondos. Están en el plan del 21.
+- `auto_release` no se ejecutó, porque exige esperar `review_secs`. Para probarlo, crea un trabajo con `review_secs` corto (60 segundos) en vez de 86.400.
+- Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
