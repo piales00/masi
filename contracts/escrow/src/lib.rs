@@ -129,6 +129,8 @@ impl Escrow {
             submitted_at: None,
             released_at: None,
             rated: false,
+            stars: 0,
+            comment_hash: None,
         };
         env.storage().instance().set(&DataKey::NextJobId, &next);
         storage::append_job(&env, &job);
@@ -290,16 +292,52 @@ impl Escrow {
         Err(ContractError::NotImplemented)
     }
 
+    /// Only the client who paid for the job, once, and only after the money moved.
     pub fn rate(
         env: Env,
         job_id: u64,
         stars: u32,
         comment_hash: BytesN<32>,
     ) -> Result<(), ContractError> {
-        let job = storage::job(&env, job_id)?;
+        let mut job = storage::job(&env, job_id)?;
         job.client.require_auth();
-        let _ = (stars, comment_hash);
-        Err(ContractError::NotImplemented)
+        if job.state != JobState::Released && job.state != JobState::Resolved {
+            return Err(ContractError::InvalidState);
+        }
+        if job.rated {
+            return Err(ContractError::AlreadyRated);
+        }
+        if !(1..=5).contains(&stars) {
+            return Err(ContractError::InvalidStars);
+        }
+
+        let mut rating = storage::rating_of(&env, &job.provider);
+        rating.stars_sum = rating
+            .stars_sum
+            .checked_add(stars)
+            .ok_or(ContractError::ArithmeticOverflow)?;
+        rating.rating_count = rating
+            .rating_count
+            .checked_add(1)
+            .ok_or(ContractError::ArithmeticOverflow)?;
+
+        job.rated = true;
+        job.stars = stars;
+        job.comment_hash = Some(comment_hash.clone());
+
+        storage::save_rating(&env, &job.provider, &rating);
+        storage::save_job(&env, &job);
+        events::Rated {
+            job_id,
+            provider: job.provider,
+            client: job.client,
+            stars,
+            comment_hash,
+            stars_sum: rating.stars_sum,
+            rating_count: rating.rating_count,
+        }
+        .publish(&env);
+        Ok(())
     }
 
     pub fn get_job(env: Env, job_id: u64) -> Result<Job, ContractError> {

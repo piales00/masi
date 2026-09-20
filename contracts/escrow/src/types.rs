@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, Address, String};
+use soroban_sdk::{contracterror, contracttype, Address, BytesN, String};
 
 #[contracttype]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -34,6 +34,11 @@ pub struct Job {
     pub submitted_at: Option<u64>,
     pub released_at: Option<u64>,
     pub rated: bool,
+    /// 1..=5 once rated, 0 before. Kept on the job so the history survives:
+    /// events expire from RPC, persistent storage does not.
+    pub stars: u32,
+    /// Hash of the off-chain comment, so it cannot be edited after the fact.
+    pub comment_hash: Option<BytesN<32>>,
 }
 
 /// Exact rating_of ABI; all fields are u32 and therefore safe JS numbers.
@@ -72,4 +77,6 @@ pub enum ContractError {
     ReviewPeriodActive = 12,
     NotImplemented = 13,
     InvalidConfiguration = 14,
+    AlreadyRated = 15,
+    InvalidStars = 16,
 }

@@ -10,13 +10,15 @@ Contrato desplegado, inicializado y con el flujo principal ejecutado de punta a 
 
 | Qué | ID |
 |---|---|
-| **Contrato `escrow`** | `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` |
+| **Contrato `escrow`** | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
 | **SAC de PEN-test** | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
-| Hash del WASM | `f193c1de3c3305bbd8326bbf310124add253cfd662ef2ffb894104f05411e59d` |
+| Hash del WASM | `d37dfd73161cd59a244687c612d78974a66c916a019bc5440b8a766b69038bb7` |
 | Activo | `PENT:GBEL5YQVA7322R26DWRQTJSZPZ7ODD5NSCQZ6TDPD5MP4FAUDXNITYAE` |
 
-- Explorador: [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO)
-- Tamaño del WASM: 16.028 bytes, muy por debajo del límite de 128 KB de la red.
+- Explorador: [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV)
+- Tamaño del WASM: 17 KB, muy por debajo del límite de 128 KB de la red.
+
+> **Despliegue anterior, ya superado:** `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO`, sin `rate`. El contrato no tiene función de actualización, así que añadir `rate` obligó a desplegar de nuevo. **Usa siempre el ID de arriba.**
 
 ## Cuentas
 
@@ -41,7 +43,9 @@ Las llaves privadas están en `~/.config/stellar/identity/*.toml` de la máquina
 | Despliegue del SAC | `af3f4d8c8e4e8399bae8ea6b6326c1f1f24fe78265ce09481f60d3cdc9f60fd9` |
 | `init` | `26cf108387834235b15b41811e9d855f3df07cbca4195f58d41d0d1ec597b5df` |
 | `mint` de S/1.260 a María | `b8ea9a223b59fa9dfb4534a36ffbafae9c022fc1d0f89a8c4ddccb5f6cd85fa7` |
-| `approve` (cierre del trabajo 1) | `2e14cdabb57c3f21b494e530ebf8136a39916c8cb8b9a8d23a90b5211b751ad9` |
+| `rate` (5 estrellas al trabajo 1) | `b1c9de01bc84fb3c4a7c7ac899d2257a9d354b52747c882a3e638edcaf6a6c66` |
+
+Los hashes de subida, despliegue e `init` de arriba corresponden al **primer** despliegue. El SAC, el emisor y las cuentas no cambiaron; solo se redesplegó el escrow.
 
 Cualquiera verifica un hash en `https://stellar.expert/explorer/testnet/tx/<hash>`.
 
@@ -62,7 +66,22 @@ Reparto final, verificado leyendo los saldos del SAC:
 | Masi (plataforma) | **S/60,00** | 5% de S/1.200 |
 | Contrato | S/0,00 | Queda vacío: no retiene nada tras liberar |
 
-Estado del trabajo: `Released`. `jobs_of(juan)` devuelve `[1]` y `rating_of(juan)` devuelve `completed_jobs: 1`, así que el historial on-chain del perfil ya tiene de dónde leer.
+Estado del trabajo: `Released`. `jobs_of(juan)` devuelve `[1]`, así que el historial on-chain del perfil ya tiene de dónde leer.
+
+### Calificación, verificada en testnet
+
+María calificó el trabajo con **5 estrellas** y el hash SHA-256 de su comentario:
+
+```
+comment_hash: e1b41f0883aa4bed728748a779a0d580cc73a53578ecb0c2f80dcb21da29e360
+rating_of(juan) → {"completed_jobs":1,"disputes":0,"rating_count":1,"stars_sum":5}
+```
+
+El promedio del perfil sale de `stars_sum / rating_count`. Ambos viven en storage persistente, no en eventos, porque los eventos caducan del RPC a los pocos días.
+
+El hash del comentario queda **en el propio trabajo** (`get_job` lo devuelve), por la misma razón: así el texto guardado fuera de la cadena no se puede editar después sin que se note.
+
+Intentar calificar una segunda vez devuelve `Error(Contract, #15)` — `AlreadyRated`. Una calificación por trabajo, y solo del cliente que pagó.
 
 ---
 
@@ -119,6 +138,6 @@ stellar contract invoke --id <CONTRATO> --source-account masi --network testnet 
 
 ## Lo que este despliegue todavía no prueba
 
-- `dispute`, `resolve` y `rate` son stubs: devuelven `NotImplemented` y no mueven fondos. Están en el plan del 21.
+- `dispute` y `resolve` siguen siendo stubs: devuelven `NotImplemented` y no mueven fondos. Son los primeros de la lista de recortes.
 - `auto_release` no se ejecutó, porque exige esperar `review_secs`. Para probarlo, crea un trabajo con `review_secs` corto (60 segundos) en vez de 86.400.
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.

@@ -7,7 +7,7 @@ use soroban_sdk::{
         MockAuthInvoke,
     },
     token::{StellarAssetClient, TokenClient},
-    Address, BytesN, Env, IntoVal, String, Symbol,
+    Address, BytesN, Env, Event as _, IntoVal, String, Symbol,
 };
 
 use super::*;
@@ -356,7 +356,8 @@ fn stubs_are_in_abi_and_never_report_success_or_move_funds() {
     let id = f.submitted();
     assert_eq!(f.escrow().try_dispute(&id, &f.client), Err(Ok(ContractError::NotImplemented)));
     assert_eq!(f.escrow().try_resolve(&id, &5_000), Err(Ok(ContractError::NotImplemented)));
-    assert_eq!(f.escrow().try_rate(&id, &5, &BytesN::from_array(&f.env, &[0; 32])), Err(Ok(ContractError::NotImplemented)));
+    // rate ya esta implementado: aqui rechaza por estado, no por stub.
+    assert_eq!(f.escrow().try_rate(&id, &5, &BytesN::from_array(&f.env, &[0; 32])), Err(Ok(ContractError::InvalidState)));
     assert_eq!(f.escrow().get_job(&id).state, JobState::Submitted);
     assert_eq!(f.token().balance(&f.provider), MATERIALS);
     assert_eq!(f.token().balance(&f.contract), AMOUNT - MATERIALS + FEE);
@@ -405,4 +406,86 @@ fn rounding_dust_goes_to_final_provider_payment() {
     assert_eq!(f.token().balance(&f.provider), 101);
     assert_eq!(f.token().balance(&f.platform), 5);
     assert_eq!(f.token().balance(&f.contract), 0);
+}
+
+#[test]
+fn only_the_paying_client_can_rate_once_after_the_money_moved() {
+    let f = Fixture::new();
+    let hash = BytesN::from_array(&f.env, &[7; 32]);
+    let id = f.submitted();
+
+    // Antes de liberar no se puede calificar, aunque el trabajo exista.
+    assert_eq!(f.escrow().try_rate(&id, &5, &hash), Err(Ok(ContractError::InvalidState)));
+
+    f.escrow().approve(&id);
+    assert_eq!(f.escrow().rating_of(&f.provider), RatingSummary {
+        stars_sum: 0, rating_count: 0, completed_jobs: 1, disputes: 0,
+    });
+
+    f.escrow().rate(&id, &5, &hash);
+    f.assert_auth(&f.client, "rate", (id, 5u32, hash.clone()).into_val(&f.env));
+
+    // El promedio sale de stars_sum / rating_count, ambos en storage persistente.
+    assert_eq!(f.escrow().rating_of(&f.provider), RatingSummary {
+        stars_sum: 5, rating_count: 1, completed_jobs: 1, disputes: 0,
+    });
+
+    // El hash queda en el trabajo, no solo en el evento: los eventos caducan.
+    let job = f.escrow().get_job(&id);
+    assert!(job.rated);
+    assert_eq!(job.stars, 5);
+    assert_eq!(job.comment_hash, Some(hash.clone()));
+
+    // Una sola vez por trabajo.
+    assert_eq!(f.escrow().try_rate(&id, &4, &hash), Err(Ok(ContractError::AlreadyRated)));
+}
+
+#[test]
+fn rate_rejects_stars_outside_one_to_five() {
+    let f = Fixture::new();
+    let hash = BytesN::from_array(&f.env, &[0; 32]);
+    let id = f.submitted();
+    f.escrow().approve(&id);
+    for stars in [0u32, 6, u32::MAX] {
+        assert_eq!(f.escrow().try_rate(&id, &stars, &hash), Err(Ok(ContractError::InvalidStars)));
+    }
+    // Y tras los rechazos el trabajo sigue sin calificar.
+    assert!(!f.escrow().get_job(&id).rated);
+    f.escrow().rate(&id, &1, &hash);
+    assert_eq!(f.escrow().rating_of(&f.provider).stars_sum, 1);
+}
+
+#[test]
+fn ratings_accumulate_per_provider_across_jobs() {
+    let f = Fixture::new();
+    let hash = BytesN::from_array(&f.env, &[1; 32]);
+    // Dos trabajos del mismo proveedor: 5 y 3 estrellas.
+    StellarAssetClient::new(&f.env, &f.token).mint(&f.client, &(AMOUNT + FEE));
+    for stars in [5u32, 3] {
+        let id = f.submitted();
+        f.escrow().approve(&id);
+        f.escrow().rate(&id, &stars, &hash);
+    }
+    assert_eq!(f.escrow().rating_of(&f.provider), RatingSummary {
+        stars_sum: 8, rating_count: 2, completed_jobs: 2, disputes: 0,
+    });
+    assert_eq!(f.escrow().jobs_of(&f.provider).len(), 2);
+}
+
+#[test]
+fn rate_emits_the_event_the_profile_screen_needs() {
+    let f = Fixture::new();
+    let hash = BytesN::from_array(&f.env, &[9; 32]);
+    let id = f.submitted();
+    f.escrow().approve(&id);
+    f.escrow().rate(&id, &4, &hash);
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Rated {
+        job_id: id,
+        provider: f.provider.clone(),
+        client: f.client.clone(),
+        stars: 4,
+        comment_hash: hash.clone(),
+        stars_sum: 4,
+        rating_count: 1,
+    }.to_xdr(&f.env, &f.contract)));
 }

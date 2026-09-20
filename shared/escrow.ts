@@ -51,6 +51,10 @@ export interface Job {
   submitted_at: bigint | undefined;
   released_at: bigint | undefined;
   rated: boolean;
+  /** 1..=5 once rated, 0 before. */
+  stars: number;
+  /** Hash of the off-chain comment; undefined until rated. */
+  comment_hash: Uint8Array | undefined;
 }
 
 /** Arguments only: signing and transaction submission belong to the P4 adapter. */

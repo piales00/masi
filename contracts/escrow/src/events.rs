@@ -1,4 +1,4 @@
-use soroban_sdk::{contractevent, Address};
+use soroban_sdk::{contractevent, Address, BytesN};
 
 #[contractevent]
 pub struct Requested {
@@ -64,4 +64,17 @@ pub struct Cancelled {
     pub job_id: u64,
     pub caller: Address,
     pub refund_amount: i128,
+}
+
+#[contractevent]
+pub struct Rated {
+    #[topic]
+    pub job_id: u64,
+    #[topic]
+    pub provider: Address,
+    pub client: Address,
+    pub stars: u32,
+    pub comment_hash: BytesN<32>,
+    pub stars_sum: u32,
+    pub rating_count: u32,
 }
