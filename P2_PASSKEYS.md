@@ -185,11 +185,13 @@ Comprueba:
 
 ---
 
-## Bloqueado: el subdominio de Netlify
+## Dominio: fijado ✅
 
-**Esto lo tiene que decidir una persona, hoy.** No es una decisión técnica, es elegir un nombre — y una vez elegido no se toca nunca.
+**`https://masiapp.netlify.app`** — confirmado y respondiendo (HTTP 200, 20 de septiembre).
 
-La passkey queda atada al origen exacto. Si el subdominio se renombra, todas las cuentas creadas antes dejan de entrar. Tiene que estar fijo **antes** de sembrar los trabajos del 24.
+**Este es el origen de todas las passkeys. No se renombra nunca.** Si cambia, todas las cuentas creadas antes dejan de entrar.
+
+Es el origen contra el que hay que probar y sembrar los trabajos del 24.
 
 - Probar siempre en la URL principal. **Nunca** en un deploy preview (`deploy-preview-N--...`): es otro origen y la passkey no funciona ahí.
 - `localhost` sirve para desarrollar (WebAuthn lo permite sin HTTPS), pero no prueba nada sobre el dominio real.
