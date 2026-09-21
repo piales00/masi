@@ -107,11 +107,11 @@ La verificación de arriba es de escritorio. Esto solo se comprueba ejecutando.
 
 ### Antes de empezar: la regla que lo explica todo
 
-**Una passkey pertenece a un origen y solo a ese origen.** El origen es esquema + dominio + puerto: `https://masi.netlify.app` y `https://deploy-preview-3--masi.netlify.app` son orígenes distintos, y `http://localhost:5173` es un tercero.
+**Una passkey pertenece a un origen y solo a ese origen.** El origen es esquema + dominio + puerto: `https://masiapp.vercel.app` y `https://masiapp-git-rama-….vercel.app` son orígenes distintos, y `http://localhost:5173` es un tercero.
 
 De ahí salen las tres consecuencias que ordenan la prueba:
 
-1. Una cuenta creada en `localhost` **no existe** en el dominio de Netlify. Es desechable.
+1. Una cuenta creada en `localhost` **no existe** en el dominio de producción. Es desechable.
 2. Lo mismo con un túnel (ngrok, Cloudflare). Sirve para ver si el flujo corre, no para crear cuentas que duren.
 3. **Las únicas cuentas que sobreviven son las creadas en el dominio definitivo.** Por eso el subdominio se congela hoy, antes de sembrar los trabajos del 24.
 
@@ -149,7 +149,7 @@ En el escritorio funciona por el permiso especial de `localhost`. El celular no 
 
 Tres caminos, en orden de preferencia:
 
-**A. El dominio de Netlify (el que vale).** Despliega el demo al subdominio definitivo y prueba ahí. Es la única prueba que mide lo que realmente vamos a usar, y de paso confirma que el dominio quedó bien. Es el camino recomendado porque el subdominio hay que fijarlo hoy de todas formas.
+**A. El dominio de producción (el que vale).** Despliega el demo al subdominio definitivo y prueba ahí. Es la única prueba que mide lo que realmente vamos a usar, y de paso confirma que el dominio quedó bien. Es el camino recomendado porque el subdominio hay que fijarlo hoy de todas formas.
 
 **B. Reenvío de puertos de Chrome (Android).** Conserva el origen `localhost`, así que WebAuthn funciona sin HTTPS:
 
@@ -187,7 +187,7 @@ Comprueba:
 
 ## Dominio: fijado ✅
 
-**`https://masiapp.netlify.app`** — confirmado y respondiendo (HTTP 200, 20 de septiembre).
+**`https://masiapp.vercel.app`** — confirmado y respondiendo (HTTP 200, 20 de septiembre).
 
 **Este es el origen de todas las passkeys. No se renombra nunca.** Si cambia, todas las cuentas creadas antes dejan de entrar.
 

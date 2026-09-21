@@ -43,7 +43,7 @@ En construcción. Entrega el 25 de septiembre de 2026.
 
 | | |
 |---|---|
-| App | https://masiapp.netlify.app |
+| App | https://masiapp.vercel.app |
 | Contrato `escrow` | [`CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV`](https://stellar.expert/explorer/testnet/contract/CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV) |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 

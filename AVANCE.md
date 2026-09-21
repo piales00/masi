@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-**Actualizado: 21 de septiembre de 2026, mañana.** Entrega el 25. Checkpoint el 23.
+**Actualizado: 21 de septiembre de 2026, mediodía.** Entrega el 25. Checkpoint el 23.
 
 En una línea: **el contrato está terminado en testnet y el frontend ya cubre la mitad del flujo, pero la parte que usa Stellar —pagar, iniciar, terminar, aprobar, calificar— todavía no tiene ninguna pantalla.**
 
@@ -12,8 +12,8 @@ La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md
 
 | | |
 |---|---|
-| App | https://masiapp.netlify.app |
-| Demo de passkeys | https://masiapp.netlify.app/passkey-test/ |
+| App | https://masiapp.vercel.app |
+| Demo de passkeys | https://masiapp.vercel.app/passkey-test/ |
 | Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
@@ -62,7 +62,7 @@ Avanzó mucho: el técnico ya no es un muro, tiene su propio recorrido completo 
 Dos problemas:
 
 - **Los datos viven en el `localStorage` del navegador.** Lo que publica María en su teléfono no llega al de Juan. Solo funciona con los dos roles en el mismo navegador.
-- **Se perdieron los tests.** `npm test` responde "No test files found". El build sí compila.
+- **No hay tests del frontend.** `npm test` responde "No test files found", y nunca hubo archivos de test en git: hay que escribirlos, no recuperarlos. El build sí compila.
 
 ---
 
@@ -76,16 +76,19 @@ Dos problemas:
 
 **4. La cuenta de comisiones sigue siendo una dirección G** hasta que `passkey-kit` permita convertirla en smart wallet sin bloquear los fondos.
 
+**5. Hosting en Vercel y un backend mínimo.** El 21 Netlify se quedó en 30 de 300 créditos (cada despliegue a producción cuesta 15) y el período no se renueva hasta el 19 de octubre. Se migró a Vercel Hobby **antes de crear ninguna wallet definitiva**, así que el cambio de dominio no rompió nada. El dominio congelado es ahora `https://masiapp.vercel.app`. `main` está protegido por un ruleset: todo entra por PR. El modelo de ofertas necesita datos compartidos antes del contrato, así que se añade un backend mínimo (Vercel Functions + Vercel Blob), aunque el scope original decía "sin backend propio".
+
 ---
 
 ## Tareas para encargar hoy
 
-Ordenadas por dependencia: las de arriba desbloquean las de abajo.
+Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle para cada programador está en `TAREAS_21SEP_BACKEND.md` y `TAREAS_21SEP_FRONTEND.md` (PR #4).
 
 ### 0. Decidir, antes de repartir nada
 
 - [ ] **¿Se construye `dispute`?** Recomendación: sí. **Añadirlo cambia el contract ID**, porque el contrato no tiene función de actualización. Si se hace después de conectar el frontend o de sembrar el día 24, se pierde ese trabajo.
-- [ ] **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Netlify Blobs detrás de una Netlify Function.
+- [x] **Hosting:** Vercel, `https://masiapp.vercel.app`.
+- [ ] **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Vercel Blob detrás de una Vercel Function.
 - [ ] **Plazo de revisión por defecto.** Recomendación: 72 h.
 
 ### P1 — Contrato
@@ -95,8 +98,8 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo.
 
 ### P2 — Cuentas
 
-- [ ] Wallets de María y Juan en `masiapp.netlify.app`, con huella real.
-- [ ] Relayer en una Netlify Function. La clave nunca en el bundle.
+- [ ] Wallets de María y Juan en `masiapp.vercel.app`, con huella real.
+- [ ] Relayer en una Vercel Function. La clave nunca en el bundle.
 
 ### P3 / P4 — Frontend
 
@@ -104,7 +107,7 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo.
 - [ ] **Cotización final** (M4–M5). El técnico carga total y monto de materiales; el cliente la ve y acepta. Ese botón dispara `create_job`.
 - [ ] **Pantalla de trabajo, una por rol,** con los cinco botones de firma: pagar, iniciar, terminar, aprobar y calificar. Se puede empezar hoy contra los 9 estados de `shared/escrow.ts` con datos de prueba y conectar después.
 - [ ] **Almacén compartido** para solicitudes, postulaciones, cotizaciones y texto de reseñas, si se decide en el punto 0.
-- [ ] Recuperar los tests del frontend.
+- [ ] Escribir los tests del frontend.
 
 ### Después de lo anterior
 

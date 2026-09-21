@@ -37,7 +37,7 @@ Hay que partirlo en dos, porque son dos cosas distintas:
 - **Lo que ya es un trabajo** (desde `create_job`): vive en el contrato. `get_job` y `jobs_of` lo devuelven a cualquier dispositivo. Esto ya está resuelto.
 - **Lo que todavía no es un trabajo** (solicitud, ofertas, cotización, texto de las reseñas): necesita un almacén compartido fuera de la cadena.
 
-Recomendación: **Netlify Blobs detrás de una Netlify Function.** Ya estamos en Netlify y el relayer también va a necesitar una Function, así que no suma servicios nuevos. Si no llega a tiempo, el plan B es grabar el vídeo con los dos roles en el mismo dispositivo, que es lo que hoy funciona.
+Recomendación: **Vercel Blob detrás de una Vercel Function.** Ya estamos en Vercel y el relayer también va a necesitar una Function, así que no suma servicios nuevos. Si no llega a tiempo, el plan B es grabar el vídeo con los dos roles en el mismo dispositivo, que es lo que hoy funciona.
 
 **Decisión que falta:** cuál de las dos. Condiciona la pregunta 8.
 
@@ -133,5 +133,5 @@ Mi opinión donde afecta a la implementación:
 ## Lo que hay que decidir hoy
 
 1. **¿Se construye `dispute`?** Recomendación: sí, y antes de conectar el frontend, por el cambio de contract ID.
-2. **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Netlify Blobs.
+2. **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Vercel Blob.
 3. **Plazo de revisión por defecto.** Recomendación: 72 h mientras no exista `dispute`.
