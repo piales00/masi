@@ -5,6 +5,8 @@
 
 > **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. F7 ya está hecha en el PR #5 (`frontend/vercel.json`). F5 se prueba contra la API desplegada en Vercel.
 
+> **✅ Decisiones del PO cerradas (21/09, tarde):** (b) se construye la disputa — **B2 y B3 ya están hechas y desplegadas** (PR #6), no las repitas; el contract ID definitivo es **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**. `resolve` **cuenta como trabajo completado** y como disputa. (c) plazo de revisión por defecto **24 h** (`review_secs = 86400`). Datos **compartidos** con la API. Siguen abiertas, y mientras tanto se usa la recomendación: tras publicar se va al detalle de la solicitud, botón "Tengo un problema" en la pantalla de trabajo, comentario de reseña opcional, y API sin autenticación declarada en el README.
+
 ---
 
 ## 0. Antes de empezar
@@ -59,7 +61,7 @@ F6 tests (a lo largo del día)     F7 vercel.json 🔒a     F8 conectar al contr
 **Por qué importa.** Las tres pantallas siguientes muestran dinero y errores. Un redondeo distinto entre la pantalla y el contrato hace que el cliente vea S/360 de adelanto y el contrato entregue otra cifra.
 
 **Archivos.**
-- Nuevo: `frontend/src/config.ts`: `CONTRACT_ID` (hoy `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV`; cambia si se hace B3), `PEN_SAC_ID`, `RPC_URL`, `NETWORK_PASSPHRASE` y `EXPLORER_TX = 'https://stellar.expert/explorer/testnet/tx/'`. `FEE_BPS`, `MAX_MATERIALS_BPS` y `DEFAULT_REVIEW_SECS` se reexportan de `shared/api.ts`, no se duplican. **Es el único archivo que toca el backend cuando cambie el ID.**
+- Nuevo: `frontend/src/config.ts`: `CONTRACT_ID` (hoy `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`; cambia si se hace B3), `PEN_SAC_ID`, `RPC_URL`, `NETWORK_PASSPHRASE` y `EXPLORER_TX = 'https://stellar.expert/explorer/testnet/tx/'`. `FEE_BPS`, `MAX_MATERIALS_BPS` y `DEFAULT_REVIEW_SECS` se reexportan de `shared/api.ts`, no se duplican. **Es el único archivo que toca el backend cuando cambie el ID.**
 - Nuevo: `frontend/src/money.ts`:
   - `solesToStroops(input: string): bigint`: acepta `"1200"` o `"1200.5"` (máximo 2 decimales) y lanza error si no. **Sin pasar por `number`.**
   - `formatSoles(stroops: bigint): string`, con el mismo formato que `formatPrice` de `frontend/src/marketplace.ts` (`S/ 1,200`).

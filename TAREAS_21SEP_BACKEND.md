@@ -7,6 +7,8 @@ Documento hermano: [`TAREAS_21SEP_FRONTEND.md`](./TAREAS_21SEP_FRONTEND.md).
 
 > **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. B7 está hecha: el proyecto ya existe en Vercel. **B4b, B5b y B6 quedan desbloqueadas** y se implementan sobre Vercel Functions + Vercel Blob. B6: las wallets de María y Juan se crean en `https://masiapp.vercel.app/passkey-test/`, nunca en una URL de preview (`masiapp-git-…`).
 
+> **✅ Decisiones del PO cerradas (21/09, tarde):** (b) se construye la disputa — **B2 y B3 ya están hechas y desplegadas** (PR #6), no las repitas; el contract ID definitivo es **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**. `resolve` **cuenta como trabajo completado** y como disputa. (c) plazo de revisión por defecto **24 h** (`review_secs = 86400`). Datos **compartidos** con la API. Siguen abiertas, y mientras tanto se usa la recomendación: tras publicar se va al detalle de la solicitud, botón "Tengo un problema" en la pantalla de trabajo, comentario de reseña opcional, y API sin autenticación declarada en el README.
+
 ---
 
 ## 0. Antes de empezar
