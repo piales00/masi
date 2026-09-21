@@ -19,7 +19,7 @@ Si la respuesta es sí, seguimos. Si es no, el 22 pasamos a Blux y no se pierde 
 | Cosa | Decisión | Por qué |
 |---|---|---|
 | Librería | **`passkey-kit`** | Modelo de firmantes plano, que es lo que necesitamos. Ver `P2_PASSKEYS.md` |
-| Dominio | **`https://masiapp.netlify.app`** | Fijo y no se cambia nunca |
+| Dominio | **`https://masiapp.vercel.app`** | Fijo y no se cambia nunca |
 | Relayer | **OpenZeppelin Relayer** (Stellar Channels) | Verificado operativo el 20/09 |
 | Red | **testnet** | Protocolo 28 |
 
@@ -30,7 +30,7 @@ No uses `smart-account-kit`: usa otro modelo de autorización on-chain y cambiar
 1. **El repo `kalepail/passkey-kit` está archivado.** Es el que tiene las 499 estrellas y al que apuntan casi todos los tutoriales y respuestas de foros. El bueno es **`stellar/passkey-kit`**. El paquete de npm ya sale del repo nuevo, así que instalar está bien; el peligro es copiar código o issues del viejo.
 2. **Launchtube está deprecado.** Si un ejemplo lo menciona, es viejo. Lo reemplazó el relayer de OpenZeppelin.
 3. **Ninguna variable `VITE_` puede llevar un secreto.** Todo lo que empieza por `VITE_` se empaqueta en el bundle y queda público. La clave del relayer vive solo en el servidor.
-4. **Los deploy preview de Netlify (`deploy-preview-3--…`) son otro origen.** Una passkey creada ahí no sirve en el dominio principal. Prueba siempre en la URL principal.
+4. **Las URLs de preview de Vercel (`masiapp-git-…vercel.app`, `masiapp-abc123-…vercel.app`) son otro origen.** Una passkey creada ahí no sirve en el dominio principal. Prueba siempre en la URL principal.
 
 ---
 
@@ -40,14 +40,14 @@ No uses `smart-account-kit`: usa otro modelo de autorización on-chain y cambiar
 
 ```
 http://localhost:5173              ← origen A
-https://masiapp.netlify.app        ← origen B
-https://deploy-preview-3--masi…    ← origen C
+https://masiapp.vercel.app        ← origen B
+https://masiapp-git-rama-….vercel.app ← origen C (preview)
 ```
 
 Una cuenta creada en A **no existe** en B. Consecuencias prácticas:
 
 - Lo que crees en `localhost` es desechable. Sirve para ver si el flujo corre, no para cuentas que duren.
-- **Las únicas cuentas que sobreviven son las creadas en `masiapp.netlify.app`.**
+- **Las únicas cuentas que sobreviven son las creadas en `masiapp.vercel.app`.**
 - Por eso ese dominio está congelado: si se renombra, todas las cuentas dejan de entrar.
 
 WebAuthn además exige contexto seguro: **HTTPS, o `localhost`**, al que el navegador le da un permiso especial aunque sea HTTP. Ese permiso es justo lo que hace que todo funcione en tu escritorio y se rompa en el celular.
@@ -109,7 +109,7 @@ En el escritorio funciona por el permiso especial de `localhost`. El celular ent
 
 Tres caminos, en orden de preferencia:
 
-**A. El dominio de Netlify — el que vale.** Despliega el demo a `masiapp.netlify.app` y prueba ahí. Es la única prueba que mide lo que realmente vamos a usar, y de paso confirma que el dominio quedó bien configurado.
+**A. El dominio de producción — el que vale.** Despliega el demo a `masiapp.vercel.app` y prueba ahí. Es la única prueba que mide lo que realmente vamos a usar, y de paso confirma que el dominio quedó bien configurado.
 
 **B. Reenvío de puertos de Chrome (solo Android).** Conserva el origen `localhost`, así que WebAuthn funciona sin HTTPS:
 
@@ -181,14 +181,14 @@ Si vuelve a pasar: usa **"Sign in (passkey)"** con la misma llave en vez de crea
 
 ### Hallazgo 3 — la prueba se hizo en otro dominio
 
-Se probó en `prismatic-crumble-a96f0e.netlify.app`, no en `masiapp.netlify.app`. El propio diálogo de Google lo dice: *"Esta llave de acceso se usará para prismatic-crumble-a96f0e.netlify.app"*.
+Se probó en `prismatic-crumble-a96f0e.netlify.app`, no en `masiapp.vercel.app`. El propio diálogo de Google lo dice: *"Esta llave de acceso se usará para prismatic-crumble-a96f0e.netlify.app"*.
 
 Son orígenes distintos, así que **ninguna cuenta creada ahí existirá en el nuestro**.
 
 Para probar está bien y no hay que rehacer nada. Pero:
 
 - [ ] Todo lo creado en ese sitio es **desechable**; no lo uses como referencia de "ya tengo cuenta".
-- [ ] **Repetir la prueba en `masiapp.netlify.app` antes de sembrar los trabajos del 24.** Si se siembran perfiles con cuentas de otro dominio, el día de grabar no entra nadie.
+- [ ] **Repetir la prueba en `masiapp.vercel.app` antes de sembrar los trabajos del 24.** Si se siembran perfiles con cuentas de otro dominio, el día de grabar no entra nadie.
 
 ### Hallazgo 4 — funciona en el celular pero no en la laptop
 
@@ -235,7 +235,7 @@ Lo que ya está vivo en testnet, por si quieres probar la firma contra nuestro c
 
 | | |
 |---|---|
-| Contrato `escrow` | `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` |
+| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
 Eso es un extra, no parte de la prueba. La prueba es el demo de `passkey-kit`.

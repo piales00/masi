@@ -234,7 +234,7 @@ listas para conectarse al contrato el 21.
 Estas ya están en el scope, pero repítelas cuando el agente se desvíe:
 
 - **En la interfaz nunca aparecen** las palabras *wallet*, *XLM*, *gas* ni *seed phrase*. Todo en soles.
-- **El dominio de Netlify no se cambia.** Las huellas quedan amarradas a la dirección exacta del sitio; si se renombra, todas las cuentas creadas antes dejan de entrar.
+- **El dominio `masiapp.vercel.app` no se cambia.** Las huellas quedan amarradas a la dirección exacta del sitio; si se renombra, todas las cuentas creadas antes dejan de entrar.
 - **Prueba siempre en la URL principal**, nunca en un deploy preview (`deploy-preview-4--...`) — es otra dirección y las huellas de ahí no sirven en producción.
 - **No dependas de los eventos del RPC para el historial.** Solo se guardan un tiempo limitado; el historial va en storage persistente.
 - El adelanto de materiales **no se puede disputar** una vez entregado.

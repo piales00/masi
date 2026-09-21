@@ -4,7 +4,7 @@
 
 ## Objetivo
 
-Que al final del día existan **dos direcciones `C…` creadas con huella en `https://masiapp.netlify.app`**: una para María (cliente) y otra para Juan (proveedor).
+Que al final del día existan **dos direcciones `C…` creadas con huella en `https://masiapp.vercel.app`**: una para María (cliente) y otra para Juan (proveedor).
 
 Eso es todo. No hace falta que la app esté bonita ni completa.
 
@@ -18,7 +18,7 @@ Y hay una dependencia que manda: el **24 se siembra el historial de Juan** —lo
 
 La prueba del 20 funcionó, pero se hizo en `prismatic-crumble-a96f0e.netlify.app`. Una passkey pertenece al origen exacto donde se creó, así que **esa cuenta no sirve en el nuestro**.
 
-Lo bueno: lo que se cree en `masiapp.netlify.app` **sí vale para siempre**, aunque lo cree una versión provisional de la app. La passkey se ata al dominio, no a la pantalla. Las wallets que saques hoy siguen sirviendo cuando la app esté terminada.
+Lo bueno: lo que se cree en `masiapp.vercel.app` **sí vale para siempre**, aunque lo cree una versión provisional de la app. La passkey se ata al dominio, no a la pantalla. Las wallets que saques hoy siguen sirviendo cuando la app esté terminada.
 
 ---
 
@@ -40,11 +40,11 @@ networkPassphrase: 'Test SDF Network ; September 2015'
 walletWasmHash: '97ce047884106b1c6c3bb40b8973cc48db1c4dad95c9e20462bf2c701daa764e'
 ```
 
-### 2. El relayer, en una Netlify Function
+### 2. El relayer, en una Vercel Function
 
 La clave del relayer **no puede ir en el navegador**. Nada que empiece por `VITE_` sirve: se empaqueta en el bundle y queda público.
 
-Como ya estamos en Netlify, lo natural es una **Netlify Function** que reciba la transacción firmada y la reenvíe. La clave se configura como variable de entorno en el panel de Netlify, no en el repo.
+Como ya estamos en Vercel, lo natural es una **Vercel Function** que reciba la transacción firmada y la reenvíe. La clave se configura como variable de entorno en el panel de Vercel, no en el repo.
 
 Conseguir la clave:
 
@@ -68,12 +68,12 @@ await kit.confirmWalletCreation(created, result.hash);     // NO pide huella
 
 ### 4. Crear las dos cuentas
 
-Desde un celular real, en `https://masiapp.netlify.app`:
+Desde un celular real, en `https://masiapp.vercel.app`:
 
 - [ ] Registrar **María** → apuntar su dirección `C…` y el hash del despliegue.
 - [ ] Registrar **Juan** → apuntar su dirección `C…` y el hash del despliegue.
 
-Usa la URL principal. **Nunca** un deploy preview (`deploy-preview-N--…`): es otro origen y la cuenta no valdría.
+Usa la URL principal. **Nunca** una URL de preview de Vercel (`masiapp-git-…vercel.app`): es otro origen y la cuenta no valdría.
 
 ---
 
