@@ -123,6 +123,7 @@ vencimiento: el contrato no ejecuta tareas programadas.
 - Las calificaciones se pueden falsear, pero cada reseña falsa cuesta la comisión de un trabajo real.
 - El árbitro de las disputas es Masi. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales.
 - Recuperación de cuenta: depende de la sincronización de passkeys con Google o iCloud.
+- La API compartida de la demo no tiene autenticación. El dinero y el estado de los trabajos siguen protegidos por el contrato; solicitudes, postulaciones, cotizaciones y texto de reseñas viven temporalmente en Upstash Redis.
 
 ## Documentación
 
