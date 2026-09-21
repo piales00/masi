@@ -1,5 +1,5 @@
-import { handleApi } from '../server/api';
-import { redisStore } from '../server/redisStore';
+import { handleApi } from '../server/api.js';
+import { redisStore } from '../server/redisStore.js';
 
 export function GET(req: Request): Promise<Response> {
   return handleApi(req, redisStore);

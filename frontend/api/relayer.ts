@@ -1,4 +1,4 @@
-import { handleRelayer, type RelayerEnv } from '../server/relayer';
+import { handleRelayer, type RelayerEnv } from '../server/relayer.js';
 
 function env(): RelayerEnv {
   return {

@@ -1,6 +1,6 @@
 import { Address, TransactionBuilder } from '@stellar/stellar-sdk';
 import { PasskeyServer } from 'passkey-kit/server';
-import type { ApiError } from '../../shared/api';
+import type { ApiError } from '../../shared/api.js';
 
 const networkPassphrase = 'Test SDF Network ; September 2015';
 

@@ -2,8 +2,8 @@ import type { RatingSource, RatingSummary } from '../../shared/escrow';
 import profileData from './data/providers.json';
 import ratingData from './data/ratings.mock.json';
 
-export const TRADES = ['Electricidad', 'Gasfitería', 'Cerrajería', 'Carpintería', 'Pintura', 'Instalaciones', 'Reparaciones', 'Limpieza', 'Aire Acondicionado', 'Más servicios'] as const;
-export type Trade = typeof TRADES[number];
+import { TRADES, type Trade } from '../../shared/trades.js';
+export { TRADES, type Trade } from '../../shared/trades.js';
 export interface Provider {
   id: string;
   address: string;

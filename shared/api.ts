@@ -1,4 +1,4 @@
-import type { Trade } from '../frontend/src/marketplace';
+import type { Trade } from './trades.js';
 
 /** Comisión de Masi: 5 %. La paga el cliente encima del total. */
 export const FEE_BPS = 500;
