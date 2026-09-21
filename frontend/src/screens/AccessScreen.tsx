@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowRight, Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { MasiLogo } from '../components/MasiLogo';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { RETURNING_PROFILE, useDemo } from '../demo/DemoContext';
+import { RETURNING_PROFILE, RETURNING_PROVIDER_PROFILE, useDemo } from '../demo/DemoContext';
 import { cn } from '../cn';
 
 type Mode = 'entrar' | 'crear';
@@ -23,22 +23,36 @@ function GoogleMark() {
 
 export function AccessScreen() {
   const navigate = useNavigate();
-  const { saveProfile } = useDemo();
+  const [params] = useSearchParams();
+  const { signInClient, signInProvider } = useDemo();
   const [mode, setMode] = useState<Mode>('entrar');
+
+  const isProvider = params.get('rol') === 'profesional';
 
   /** Entrar salta la configuración: ese perfil ya existe. Crear cuenta pasa por ella. */
   const advance = () => {
+    if (isProvider) {
+      if (mode === 'crear') return navigate('/profesional/configuracion');
+      signInProvider(RETURNING_PROVIDER_PROFILE);
+      return navigate('/profesional', { replace: true });
+    }
     if (mode === 'crear') return navigate('/configuracion');
-    saveProfile(RETURNING_PROFILE);
+    signInClient(RETURNING_PROFILE);
     navigate('/home', { replace: true });
   };
+
+  /** Un profesional que entra con Google es cuenta nueva: siempre pasa por el setup. */
+  const withGoogle = () => (isProvider ? navigate('/profesional/configuracion') : advance());
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     advance();
   };
 
-  return <Screen header={<ScreenHeader title="Bienvenido a Masi" subtitle="Entra o crea tu cuenta" />}>
+  return <Screen header={<ScreenHeader
+    title="Bienvenido a Masi"
+    subtitle={isProvider ? 'Entra o crea tu cuenta de profesional' : 'Entra o crea tu cuenta'}
+  />}>
     <form onSubmit={submit} className="px-4 py-6">
       <MasiLogo variant="app" className="mx-auto w-24" />
 
@@ -80,7 +94,7 @@ export function AccessScreen() {
         <span className="h-px flex-1 bg-masi-gray" />
       </div>
 
-      <Button variant="secondary" onClick={advance}>
+      <Button variant="secondary" onClick={withGoogle}>
         <GoogleMark />Continuar con Google
       </Button>
 

@@ -7,12 +7,12 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { useDemo } from '../demo/DemoContext';
 
 export function ProfileScreen() {
-  const { profile, reset } = useDemo();
+  const { profile, signOut } = useDemo();
   const navigate = useNavigate();
 
-  /** Sin perfil, RequireProfile ya manda a /bienvenida, así que basta con limpiar e ir allí. */
+  /** Cierra solo la sesión de cliente: la cuenta y sus solicitudes siguen guardadas. */
   const restart = () => {
-    reset();
+    signOut('client');
     navigate('/bienvenida', { replace: true });
   };
 

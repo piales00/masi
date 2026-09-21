@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { ArrowRight, Camera, LocateFixed, MapPin, Search, Sparkles, X } from 'lucide-react';
+import { ArrowRight, Camera, LocateFixed, MapPin, Search, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { fieldBox } from '../components/Field';
@@ -75,7 +75,7 @@ function Options({ legend, options, value, onChange }: {
 
 export function NewRequestScreen() {
   const navigate = useNavigate();
-  const { profile } = useDemo();
+  const { profile, publishRequest } = useDemo();
   const incoming = useLocation().state as { description?: string; trade?: Trade } | null;
 
   const [trade, setTrade] = useState<Trade | ''>(incoming?.trade && TRADES.includes(incoming.trade) ? incoming.trade : '');
@@ -88,14 +88,17 @@ export function NewRequestScreen() {
   const [reference, setReference] = useState('');
   const [timing, setTiming] = useState<string>(TIMINGS[0]);
   const [date, setDate] = useState('');
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  /** Solo se abre la grilla completa cuando el usuario pide cambiar de servicio. */
+  const [picking, setPicking] = useState(false);
 
   // Las vistas previas son URLs de objeto: hay que liberarlas al salir de la pantalla.
   const photosRef = useRef(photos);
   photosRef.current = photos;
   useEffect(() => () => { photosRef.current.forEach(photo => URL.revokeObjectURL(photo.url)); }, []);
 
-  const suggestion = trade || suggestionDismissed ? null : suggestService(description);
+  const suggestion = !trade && !picking ? suggestService(description) : null;
+  const showPicker = picking || (!trade && !suggestion);
+  const chosen = trade ? serviceOf(trade) : null;
   const today = new Date().toLocaleDateString('en-CA');
 
   const addPhotos = (event: ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +120,15 @@ export function NewRequestScreen() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!ready) return;
+    if (!trade || !description.trim()) return;
+    publishRequest({
+      servicio: trade,
+      descripcion: description.trim(),
+      fotos: photos.length,
+      ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
+      distrito: district.trim(),
+      cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
+    });
     navigate(`/profesionales?servicio=${encodeURIComponent(trade)}`);
   };
 
@@ -127,26 +138,44 @@ export function NewRequestScreen() {
       <Button type="submit" form="solicitud" disabled={!ready}>
         Publicar solicitud<ArrowRight size={18} aria-hidden="true" />
       </Button>
+      <p className="mt-2 flex items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-masi-muted">
+        <ShieldCheck size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+        <span>Los acuerdos realizados fuera de la app no están cubiertos por la garantía de Masi.</span>
+      </p>
     </ScreenFooter>}
   >
     <form id="solicitud" onSubmit={submit} className="space-y-8 px-4 py-6">
       <section>
         <h2 className="text-sm font-semibold text-masi-navy">¿Qué servicio necesitas?</h2>
 
-        {suggestion
-          ? <div className="mt-3 rounded-masi-card border border-masi-blue bg-masi-blue-50 p-4">
-            <p className="flex items-start gap-2 text-sm text-masi-navy">
-              <Sparkles size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-masi-blue" />
-              <span>Parece que necesitas <strong className="font-bold">{suggestion.name}</strong>. Confírmalo o elige otro servicio.</span>
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button className="!w-auto" onClick={() => setTrade(suggestion.id)}>Confirmar</Button>
-              <Button variant="secondary" className="!w-auto" onClick={() => setSuggestionDismissed(true)}>Cambiar servicio</Button>
-            </div>
+        {showPicker && <div className="mt-3">
+          <TradeChips selected={trade} onSelect={next => { setTrade(next); setPicking(false); }} label="Elegir servicio" />
+        </div>}
+
+        {!showPicker && chosen && <div className="mt-3 flex flex-wrap items-center gap-3">
+          <span className="flex min-h-10 items-center gap-2 rounded-full border border-masi-blue bg-masi-blue px-4 text-sm font-semibold text-white">
+            <span className="grid size-6 place-items-center rounded-full bg-white/20">
+              <chosen.icon size={14} aria-hidden="true" />
+            </span>
+            {chosen.name}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="text-sm font-semibold text-masi-blue underline-offset-4 hover:underline"
+          >Cambiar servicio</button>
+        </div>}
+
+        {!showPicker && !chosen && suggestion && <div className="mt-3 rounded-masi-card border border-masi-blue bg-masi-blue-50 p-4">
+          <p className="flex items-start gap-2 text-sm text-masi-navy">
+            <Sparkles size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-masi-blue" />
+            <span>Parece que necesitas <strong className="font-bold">{suggestion.name}</strong>. Confírmalo o elige otro servicio.</span>
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="!w-auto" onClick={() => setTrade(suggestion.id)}>Confirmar</Button>
+            <Button variant="secondary" className="!w-auto" onClick={() => setPicking(true)}>Cambiar servicio</Button>
           </div>
-          : <div className="mt-3">
-            <TradeChips selected={trade} onSelect={next => setTrade(next === trade ? '' : next)} label="Elegir servicio" />
-          </div>}
+        </div>}
       </section>
 
       <section>

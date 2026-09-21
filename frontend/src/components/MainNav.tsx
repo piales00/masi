@@ -3,18 +3,32 @@ import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../cn';
 
-export const NAV_ITEMS: readonly { to: string; label: string; icon: LucideIcon }[] = [
+export interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  /** Marca activo solo con coincidencia exacta, para rutas que son prefijo de otras. */
+  end?: boolean;
+}
+
+export const CLIENT_NAV: readonly NavItem[] = [
   { to: '/home', label: 'Inicio', icon: House },
   { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { to: '/actividad', label: 'Actividad', icon: Activity },
   { to: '/perfil', label: 'Perfil', icon: CircleUser },
 ];
 
+export const PROVIDER_NAV: readonly NavItem[] = [
+  { to: '/profesional', label: 'Inicio', icon: House, end: true },
+  { to: '/profesional/actividad', label: 'Actividad', icon: Activity },
+  { to: '/profesional/perfil', label: 'Perfil', icon: CircleUser },
+];
+
 /**
  * Una sola navegación con dos presentaciones: barra inferior en móvil y barra lateral
  * desde 768px. AppShell la coloca con flex-direction; aquí solo cambia la forma.
  */
-export function MainNav() {
+export function MainNav({ items }: { items: readonly NavItem[] }) {
   return <nav
     aria-label="Secciones de Masi"
     className={cn(
@@ -22,9 +36,10 @@ export function MainNav() {
       'md:order-first md:w-56 md:flex-col md:gap-1 md:border-t-0 md:border-r md:px-3 md:py-4',
     )}
   >
-    {NAV_ITEMS.map(({ to, label, icon: Icon }) => <NavLink
+    {items.map(({ to, label, icon: Icon, end }) => <NavLink
       key={to}
       to={to}
+      end={end}
       className={({ isActive }) => cn(
         'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] leading-tight font-semibold',
         'transition-colors duration-200 ease-out md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:py-2.5 md:text-sm',
