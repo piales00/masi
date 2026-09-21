@@ -1,47 +1,45 @@
 # Tareas del 21 de septiembre — Backend
 
-**Resumen.** Hoy te toca todo lo que no se ve: `dispute` y `resolve` en el contrato con su redespliegue, la API del almacén compartido (solicitudes, postulaciones, cotizaciones y reseñas) y la Function del relayer. Tu primera entrega es **la definición de la API de la [sección 2](#2-la-api-del-almacén--el-punto-de-integración)**, versionada en `shared/api.ts`, porque el frontend trabaja contra ella en paralelo. Tres decisiones abiertas condicionan parte del trabajo, y están marcadas con 🔒 en cada tarea. Checkpoint el 23 y entrega el 25.
+**Resumen.** Hoy te toca todo lo que no se ve: `dispute` y `resolve` en el contrato con su redespliegue, la API del almacén compartido (solicitudes, postulaciones, cotizaciones y reseñas) y la Function del relayer. Tu primera entrega es **la definición de la API de la [sección 2](#2-la-api-del-almacén--el-punto-de-integración)**, versionada en `shared/api.ts`, porque el frontend trabaja contra ella en paralelo. **Todas las decisiones que te afectaban ya están tomadas** (sección 0), y la disputa con su redespliegue ya está hecha. Checkpoint el 23 y entrega el 25.
 
 Documento hermano: [`TAREAS_21SEP_FRONTEND.md`](./TAREAS_21SEP_FRONTEND.md).
 
-
-> **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. B7 está hecha: el proyecto ya existe en Vercel. **B4b, B5b y B6 quedan desbloqueadas** y se implementan sobre Vercel Functions + Vercel Blob. B6: las wallets de María y Juan se crean en `https://masiapp.vercel.app/passkey-test/`, nunca en una URL de preview (`masiapp-git-…`).
-
-> **✅ Decisiones del PO cerradas (21/09, tarde):** (b) se construye la disputa — **B2 y B3 ya están hechas y desplegadas** (PR #6), no las repitas; el contract ID definitivo es **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**. `resolve` **cuenta como trabajo completado** y como disputa. (c) plazo de revisión por defecto **24 h** (`review_secs = 86400`). Datos **compartidos** con la API. Siguen abiertas, y mientras tanto se usa la recomendación: tras publicar se va al detalle de la solicitud, botón "Tengo un problema" en la pantalla de trabajo, comentario de reseña opcional, y API sin autenticación declarada en el README.
 
 ---
 
 ## 0. Antes de empezar
 
-### Decisiones abiertas que bloquean tareas
+### Decisiones del PO — todas cerradas
 
-| # | Decisión | Recomendación | Bloquea |
-|---|---|---|---|
-| **(a)** | **Hosting**: pagar Netlify Personal (9 USD, se queda `masiapp.netlify.app`) o mudarse hoy a Vercel Hobby (gratis, cambia el dominio) | La tiene que tomar el PO **antes de crear las wallets de María y Juan** | B4b, B5b, B6, B7 |
-| **(b)** | **¿Se construye `dispute`/`resolve`?** | Sí, hoy (~3 h con tests) | B2, B3 |
-| **(c)** | **Plazo de revisión por defecto** | ✅ Decidido: **24 h** (`86400` s) | Solo el valor de `reviewSecs` en la API |
+| Tema | Decisión |
+|---|---|
+| Hosting | **Vercel Hobby**. Dominio congelado: **`https://masiapp.vercel.app`**. Netlify ya no se usa para nada |
+| Disputa | **Se construye.** `dispute` y `resolve` ya están hechos y desplegados (PR #6) |
+| `resolve` | **Cuenta como trabajo completado** y también como disputa en el perfil |
+| Contract ID | **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**, definitivo |
+| Plazo de revisión por defecto | **24 h** (`86400` s) |
+| Datos antes del contrato | **Compartidos**, con la API de este documento |
+| Almacén de la API | **Upstash Redis** (Vercel Marketplace, plan gratuito). Ver B4b |
 
-Por qué (a) es urgente: Netlify está sin créditos. El plan gratuito da 300 al mes, cada despliegue de producción cuesta 15 y quedan 30, o sea **dos despliegues**, sin renovación hasta el 19 de octubre. El tráfico y las invocaciones de Functions también gastan créditos, así que el sitio se puede pausar solo en pleno vídeo. **Cambiar de dominio solo es barato hoy**: las passkeys se atan al dominio y las wallets definitivas todavía no existen. Si se mudan, la mudanza va **antes** de B6.
+Pendientes que no te bloquean, con la recomendación como valor por defecto: tras publicar, el cliente va al detalle de su solicitud; botón "Tengo un problema" en la pantalla de trabajo; comentario de reseña opcional; y la API sin autenticación, declarado en el README.
 
-### Git: cómo trabajar sin quemar despliegues
+### Git
 
-- `main` está protegido por un ruleset: no se empuja directo, todo entra por PR (no exige aprobaciones).
-- **Cada merge a `main` es un despliegue de producción.** En Netlify quedan dos.
-- Trabaja en ramas cortas (`feat/dispute`, `feat/api-almacen`, `feat/relayer`) y ábrelas como PR contra **`develop`**. `develop` → `main` se mergea **agrupado**, una vez al día como mucho, cuando algo tenga que verse en el dominio.
-- Comprueba en el panel de Netlify que `develop` no tenga *branch deploys* activos. Si los tiene, también gastan créditos.
+- `main` está protegido por un ruleset: no se empuja directo, todo entra por PR.
+- Trabaja en ramas cortas (`feat/api-almacen`, `feat/relayer`) y ábrelas como PR contra **`develop`**. `develop` → `main` se mergea cuando algo tenga que verse en el dominio.
+- Vercel Hobby permite 100 despliegues al día, así que ya no hay que racionarlos. Pero **las URLs de preview (`masiapp-git-…vercel.app`) son otro origen**: ahí no se crean passkeys que tengan que durar.
 - Los commits y los PR no llevan `Co-Authored-By` ni líneas de atribución (regla de `CLAUDE.md`).
 
 ### Orden del día
 
 ```
-B1 shared/api.ts ──► (frontend arranca contra los tipos)
-B2 dispute/resolve 🔒b ──► B3 redespliegue 🔒b
-B4a núcleo de la API ──► B4b adaptador + despliegue 🔒a
-B5a relayer (núcleo) ──► B5b relayer desplegado 🔒a ──► B6 wallets de María y Juan 🔒a
-B7 mudanza a Vercel 🔒a (solo si se decide)
+B1 shared/api.ts ──► (el frontend arranca contra los tipos)
+B4a núcleo de la API ──► B4b Upstash Redis + Vercel Function
+B5a relayer (núcleo) ──► B5b relayer desplegado ──► B6 wallets de María y Juan
+B2, B3, B7: ✅ hechas
 ```
 
-Si hay que recortar, en este orden: B7 se hace solo si se decide; B2 y B3 si el PO dice que no; B5 y B6 pasan al fallback de passkeys (el 22 por la noche). **B1 y B4 no se recortan**: sin almacén compartido, el vídeo sale con los dos roles en un mismo teléfono.
+**B1 y B4 no se recortan**: sin almacén compartido, el vídeo sale con los dos roles en un mismo teléfono. Si las passkeys no llegan el 22 por la noche, B5 y B6 pasan al fallback definido en el scope.
 
 ---
 
@@ -60,78 +58,28 @@ Si hay que recortar, en este orden: B7 se hace solo si se decide; B2 y B3 si el 
 **Criterios de aceptación.**
 - [ ] `shared/api.ts` exporta `Solicitud`, `SolicitudInput`, `Postulacion`, `PostulacionInput`, `Cotizacion`, `CotizacionInput`, `Resena`, `ResenaInput`, `ApiError` y las constantes `FEE_BPS`, `MAX_MATERIALS_BPS` y `DEFAULT_REVIEW_SECS`.
 - [ ] `cd frontend && npm run build` pasa.
-- [ ] PR a `develop` mergeado **antes de las 11:00**, y aviso al frontend.
+- [ ] PR a `develop` mergeado **lo primero del día**, y aviso al frontend: es lo único que lo bloquea.
 - [ ] Cualquier cambio posterior a la forma del JSON se hace en `shared/api.ts` **y** en la sección 2 de este documento en el mismo PR, avisando al frontend.
 
 **Depende de.** Nada. **Estimación:** 0,5 h.
 
 ---
 
-### B2 · `dispute` y `resolve` en el contrato 🔒 decisión (b)
+### B2 y B3 · Disputa y redespliegue — ✅ hechas
 
-> **Pendiente de confirmar por el PO.** Si dice que no, salta a B4. **Redesplegar cambia el contract ID** (el contrato no tiene función de actualización), así que B2 y B3 tienen que estar hechas **antes de que el frontend se conecte al contrato y antes de sembrar el historial el 24**. Si se hace después, ese trabajo se pierde.
+`dispute` y `resolve` están implementados, con 22 tests, y desplegados en testnet (PR #6). **No las repitas.**
 
-**Objetivo.** Que el cliente pueda congelar el saldo de un trabajo iniciado o terminado, y que el árbitro lo reparta.
+- Contract ID definitivo: **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**, ya actualizado en `CLAUDE.md`, `INTEGRACION.md`, `DESPLIEGUE.md`, el README y `AVANCE.md`.
+- `resolve` suma a la vez un trabajo completado y una disputa, así que calificar después mantiene `rating_count <= completed_jobs`.
+- El caso de disputa con reparto 70/30 está verificado en red; los hashes están en [`DESPLIEGUE.md`](./DESPLIEGUE.md).
 
-**Por qué importa.** Sin `dispute`, `auto_release` le paga al técnico aunque el cliente no apruebe, y el cliente no tiene cómo frenarlo (M12 del flujo del PO). Es lo primero que preguntaría un jurado.
-
-**Archivos.**
-- `contracts/escrow/src/lib.rs`: reemplazar los stubs de `dispute` (línea 281) y `resolve` (línea 288).
-- `contracts/escrow/src/events.rs`: nuevos eventos `Disputed` y `Resolved`.
-- `contracts/escrow/src/test.rs`: reemplazar `stubs_are_in_abi_and_never_report_success_or_move_funds` (línea 354) y ampliar `all_seven_events_have_stable_topics_and_payloads` (línea 318) con los dos eventos nuevos.
-- `contracts/escrow/test_snapshots/`: regenerar y commitear.
-
-**Qué tiene que hacer** (ABI sin cambios: los nombres y argumentos ya están en `shared/escrow.ts`):
-
-- `dispute(job_id, caller)`: `require_party` (ya exige la firma de `caller` y que sea cliente o proveedor). Estado `Started` o `Submitted`; cualquier otro → `InvalidState` (#4). Pasa a `Disputed` y emite `Disputed { job_id, caller }`. **No mueve dinero.** Como `approve` y `auto_release` exigen `Submitted`, quedan bloqueadas sin tocar nada más.
-- `resolve(job_id, provider_bps)`: firma del árbitro (`config.arbiter.require_auth()`, ya está). `provider_bps > 10_000` → `InvalidBps` (#7). Estado `Disputed`, si no `InvalidState`. Reparte **solo `remaining_amount`**: al proveedor `portion(remaining, provider_bps)`, y al cliente el resto (así el redondeo no pierde dinero). `fee_amount` va a `config.platform`. El adelanto de materiales ya entregado **nunca** entra en el reparto. Pasa a `Resolved`, fija `released_at` y `remaining_amount = 0`, guarda **antes** de transferir (igual que `release`) y emite `Resolved { job_id, provider_bps, provider_amount, client_amount, fee_amount }`.
-- Perfil: `resolve` suma 1 a `disputes` **y también 1 a `completed_jobs`**. Motivo: `rate` se permite desde `Resolved`, y `parseRatingSummary` de `frontend/src/marketplace.ts` (línea 38) rechaza cualquier resumen con `rating_count > completed_jobs`. Si `resolve` no sumara a `completed_jobs`, calificar un trabajo resuelto rompería el perfil del técnico en la pantalla.
-- No hacen falta errores nuevos. Si añades alguno, va al final (#17 en adelante): los códigos no se renumeran.
-
-**Criterios de aceptación.**
-- [ ] `dispute` funciona desde `Started` y desde `Submitted`, lo pueden llamar tanto el cliente como el proveedor, y un tercero recibe `Unauthorized`.
-- [ ] `dispute` desde `Requested`, `Accepted`, `Funded`, `Released`, `Resolved`, `Cancelled` y `Disputed` da `InvalidState`.
-- [ ] Tras `dispute`, `approve` y `auto_release` (aunque el plazo haya vencido) dan `InvalidState`.
-- [ ] `resolve` sin la firma del árbitro falla; con `provider_bps = 10_001` da `InvalidBps`.
-- [ ] Con `provider_bps` de 0, 5.000 y 10.000 los saldos finales cuadran al stroop: proveedor = materiales + su parte, cliente = el resto, plataforma = comisión, **contrato = 0**.
-- [ ] Un segundo `resolve` da `InvalidState`.
-- [ ] `rate` funciona después de `resolve`, y `rating_of` cumple `rating_count <= completed_jobs` y `disputes == 1`.
-- [ ] Test de eventos con `Disputed` y `Resolved` y payload exacto.
-- [ ] `cargo fmt --all -- --check`, `cargo test --workspace --locked` y `stellar contract build --locked` pasan. Anota el número nuevo de tests (hoy son 17).
-
-**Depende de.** Decisión (b). **Estimación:** 3 h.
-
----
-
-### B3 · Redesplegar el contrato y propagar el ID nuevo 🔒 decisión (b)
-
-**Objetivo.** Tener el `escrow` con disputa vivo en testnet y un solo contract ID correcto en todo el repo.
-
-**Por qué importa.** Es el ID que se entrega en el checkpoint del 23 y al que se conecta el frontend el 22.
-
-**Pasos** (reproducción completa en [`DESPLIEGUE.md`](./DESPLIEGUE.md)):
-1. Construir, subir el WASM y desplegar con `--admin` de la cuenta `masi`.
-2. `init(arbiter = masi, platform = masi-platform, token = CBRGYUR2…ISPSCC)`. **El SAC de PEN-test no cambia.**
-3. Ejecutar por CLI un flujo corto: `create_job` → `accept` → `fund` → `start` → `dispute` → `resolve(5000)`, y verificar los saldos del SAC.
-
-**Archivos que cambian.** `CLAUDE.md` (tabla "Contrato desplegado"), `INTEGRACION.md` (tabla inicial y la constante `CONTRACT_ID` del ejemplo), `DESPLIEGUE.md` (identificadores, hash del WASM y hashes de transacción; mover el ID actual `CDBZRR356…3XV` a "despliegues superados", junto a `CAV3YGS5…`), `README.MD`, `AVANCE.md` y la constante `CONTRACT_ID` de `frontend/src/config.ts` (la crea el frontend en su tarea F1).
-
-Aprovecha para corregir `P2_PRUEBA_PASSKEYS.md`, línea 238: todavía apunta al despliegue viejo `CAV3YGS5…`.
-
-**Criterios de aceptación.**
-- [ ] `grep -rn "CDBZRR356\|CAV3YGS5"` fuera de `DESPLIEGUE.md` no devuelve nada, salvo menciones explícitas de "superado".
-- [ ] `DESPLIEGUE.md` tiene el ID nuevo, el hash del WASM y los hashes de `dispute` y `resolve` verificables en stellar.expert.
-- [ ] En `INTEGRACION.md`, las líneas de ejemplo de `rating_of(juan)` y `jobs_of(juan)` se actualizan o se marcan como del contrato anterior: el nuevo empieza vacío.
-- [ ] En la tabla de errores de `INTEGRACION.md`, `NotImplemented` ya no se describe como "función aún no construida".
-- [ ] Aviso al frontend con el ID nuevo.
-
-**Depende de.** B2. **Tiene que ir antes de** F8 (conectar el frontend) y de la siembra del 24. **Estimación:** 1 h.
+Lo único que te queda de esto: en B5a, `ESCROW_CONTRACT_ID` vale `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`.
 
 ---
 
 ### B4a · Núcleo de la API del almacén, independiente del proveedor
 
-**Objetivo.** Implementar los endpoints de la [sección 2](#2-la-api-del-almacén--el-punto-de-integración) sobre una interfaz de almacenamiento propia, sin depender todavía de Netlify ni de Vercel.
+**Objetivo.** Implementar los endpoints de la [sección 2](#2-la-api-del-almacén--el-punto-de-integración) sobre una interfaz de almacenamiento propia, sin depender todavía de Upstash. Así los tests corren en memoria.
 
 **Por qué importa.** Hoy las solicitudes y postulaciones viven en el `localStorage` (`frontend/src/demo/DemoContext.tsx`, claves `masi.demo.solicitudes.v1` y `masi.demo.postulaciones.v1`), así que lo que publica María en su teléfono nunca le llega a Juan. Sin esto, el vídeo se graba con los dos roles en el mismo navegador.
 
@@ -139,7 +87,7 @@ Aprovecha para corregir `P2_PRUEBA_PASSKEYS.md`, línea 238: todavía apunta al 
 - Nuevo: `frontend/server/store.ts`, con la interfaz `KeyValueStore { get(key): Promise<unknown | null>; set(key, value): Promise<void>; list(prefix): Promise<string[]> }` y una implementación en memoria para los tests.
 - Nuevo: `frontend/server/api.ts`, con `handleApi(req: Request, store: KeyValueStore): Promise<Response>`: enrutado, validación, transiciones de estado y errores.
 - Nuevo: `frontend/server/api.test.ts` (Vitest, ya instalado).
-- Va dentro de `frontend/` porque ahí está el `package.json` que usan tanto el build de Netlify (`base = "frontend"`) como el de Vercel.
+- Va dentro de `frontend/` porque el Root Directory del proyecto en Vercel es `frontend`: ahí está el `package.json` que usa el build.
 
 **Criterios de aceptación.**
 - [ ] Todos los endpoints de la sección 2.3 responden con los códigos y las formas exactas de la sección 2.
@@ -154,21 +102,27 @@ Aprovecha para corregir `P2_PRUEBA_PASSKEYS.md`, línea 238: todavía apunta al 
 
 ---
 
-### B4b · Adaptador de almacenamiento y despliegue de la API 🔒 decisión (a)
+### B4b · Upstash Redis y la API desplegada en Vercel
 
-**Objetivo.** Conectar `handleApi` al Blob storage del proveedor elegido y dejarlo respondiendo en el dominio.
+**Objetivo.** Conectar `handleApi` a Upstash Redis y dejarlo respondiendo en `https://masiapp.vercel.app/api/…`.
 
-**Archivos, según el proveedor** (detalle en la [sección 2.6](#26-implementación-por-proveedor)):
-- Netlify: `frontend/netlify/functions/api.mts` con `config = { path: "/api/*" }`, más `@netlify/blobs`. Declara `[functions] directory = "netlify/functions"` en `netlify.toml`: es relativo a `base = "frontend"`.
-- Vercel: `frontend/api/[...ruta].ts`, más `@vercel/blob` con un store **privado** conectado al proyecto.
+**Por qué Redis y no Vercel Blob.** Blob es almacenamiento de archivos: sus lecturas pasan por caché, y el plan Hobby solo incluye 2.000 operaciones "avanzadas" al mes, que es lo que cuestan escribir y listar. Con dos teléfonos consultando cada 10 s se agotan en horas. Upstash Redis es la opción de Vercel para datos que se leen y escriben constantemente, y su plan gratuito da 500.000 comandos, 256 MB y 10 GB de tráfico al mes (comprobado el 21/09). Blob queda para las fotos de las solicitudes, si algún día se guardan de verdad.
+
+**Pasos.**
+1. En el panel de Vercel del proyecto: *Storage → Marketplace → Upstash (Redis)*, plan gratuito, y conectarlo al proyecto. La integración añade sola las variables de entorno.
+2. `npm install @upstash/redis` dentro de `frontend/`.
+3. `frontend/server/redisStore.ts`: implementa `KeyValueStore` con `Redis.fromEnv()`. `get` → `redis.get(key)`; `set` → `redis.set(key, value)`; `list(prefix)` → `redis.scan` con `match: `${prefix}*``, repitiendo hasta que el cursor vuelva a `0`. Con decenas de registros sobra.
+4. `frontend/api/[...ruta].ts`: `export function GET/POST/PATCH/PUT(req: Request) { return handleApi(req, redisStore) }`. Si el catch-all no enruta, un rewrite `/api/:ruta*` en `vercel.json`.
+5. Comprueba en *Settings → Environment Variables* qué nombres inyectó la integración (`UPSTASH_REDIS_REST_*` o `KV_REST_API_*`). Si `Redis.fromEnv()` no los encuentra, pásalos a mano con `new Redis({ url, token })`.
+6. En local: `vercel link` y `vercel env pull .env.local`, y después `vercel dev`.
 
 **Criterios de aceptación.**
-- [ ] `GET /api/salud` responde `{"ok":true}` en el dominio y **no** devuelve el `index.html` de la regla SPA (`frontend/public/_redirects` en Netlify, `vercel.json` en Vercel).
-- [ ] Publicar una solicitud desde un teléfono y leerla desde otro dispositivo en menos de 5 s. Esto exige lectura consistente: `consistency: "strong"` en Netlify o `useCache: false` en Vercel.
+- [ ] `GET /api/salud` responde `{"ok":true}` en `masiapp.vercel.app` y **no** devuelve el `index.html` de la regla SPA (`frontend/vercel.json` ya excluye `/api/`).
+- [ ] Publicar una solicitud desde un teléfono y leerla desde otro dispositivo en menos de 5 s. Upstash es de lectura consistente por defecto, así que no hace falta nada especial.
 - [ ] Ningún secreto en el repo ni en variables `VITE_`.
-- [ ] Documentado en `DESPLIEGUE.md`: dónde vive el store, cómo se vacía antes de grabar el vídeo y qué variables de entorno hay.
+- [ ] Documentado en `DESPLIEGUE.md`: qué base de Upstash es, cómo se vacía antes de grabar el vídeo (`FLUSHDB` desde la consola de Upstash) y qué variables hay.
 
-**Depende de.** B4a y la decisión (a). **Estimación:** 1 h.
+**Depende de.** B4a. **Estimación:** 1 h.
 
 ---
 
@@ -209,57 +163,42 @@ Content-Type: application/json
 
 **Depende de.** Nada para el núcleo. **Estimación:** 1,5 h.
 
-### B5b · Relayer desplegado 🔒 decisión (a)
+### B5b · Relayer desplegado
 
 **Objetivo.** `handleRelayer` publicado como Function en el dominio definitivo.
 
-**Archivos.** Netlify: `frontend/netlify/functions/relayer.mts` con `config = { path: "/api/relayer" }`. Vercel: `frontend/api/relayer.ts`. Variables de entorno en el panel del proveedor.
+**Archivos.** `frontend/api/relayer.ts`. Variables en *Vercel → Settings → Environment Variables*: `RELAYER_API_KEY`, `RELAYER_BASE_URL=https://channels.openzeppelin.com/testnet`, `ESCROW_CONTRACT_ID=CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`, `PEN_SAC_ID=CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` y `WALLET_WASM_HASH`.
 
 **Criterios de aceptación.**
 - [ ] Una transacción firmada con el autenticador virtual de Chrome DevTools en el dominio se envía y aparece en stellar.expert, **sin XLM en la cuenta del usuario**. Cómo activar el autenticador virtual: [`P2_PRUEBA_PASSKEYS.md`](./P2_PRUEBA_PASSKEYS.md), sección de escritorio. En Linux no hay autenticador de plataforma.
-- [ ] `POST /api/relayer` no queda tapado por la regla SPA.
+- [ ] `POST /api/relayer` no queda tapado por la regla SPA (`vercel.json` ya excluye `/api/`).
 
-**Depende de.** B5a y la decisión (a). **Estimación:** 0,5 h.
+**Depende de.** B5a. **Estimación:** 0,5 h.
 
 ---
 
-### B6 · Wallets definitivas de María y Juan 🔒 decisión (a)
+### B6 · Wallets definitivas de María y Juan
 
-**Objetivo y pasos:** están completos en [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md). No se repiten aquí.
+**Objetivo y pasos:** están completos en [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md), ya actualizado a Vercel. No se repiten aquí.
 
-**Lo que cambia respecto a ese documento.**
-- **No empieces hasta que se cierre la decisión (a).** Las passkeys quedan atadas al dominio exacto. Si se crean en `masiapp.netlify.app` y luego el equipo se muda a Vercel, las dos cuentas se pierden y el historial del 24 no tiene a qué colgarse.
-- Si se mudan, sustituye `masiapp.netlify.app` por el dominio nuevo en todo el documento, y el PO actualiza la regla del dominio en `CLAUDE.md` y en `masi-scope.md`.
-- Con huella **real**, en el teléfono, en la URL principal. El autenticador virtual de DevTools no vale para estas dos cuentas.
-- La Function del relayer es B5b.
+**Lo que conviene recordar.**
+- **Solo en `https://masiapp.vercel.app`.** Las passkeys quedan atadas al dominio exacto: nada creado en `masiapp.netlify.app`, en `localhost` ni en una URL de preview `masiapp-git-…` sirve después.
+- Con huella **real**, en el teléfono. El autenticador virtual de DevTools no vale para estas dos cuentas.
+- El relayer es B5b: sin él, no llegan a la red.
 
 **Entrega.** Las dos direcciones `C…`, pasadas al frontend (van en `frontend/src/data/providers.json` para Juan y en `frontend/src/config.ts` para María), y los dos hashes de despliegue en el README.
 
 **Ojo con el frente del otro.** El paso 1 de ese documento (meter `passkey-kit` en Acceso y Configuración) toca `frontend/src/screens/AccessScreen.tsx` y `SetupScreen.tsx`. Avisa al frontend antes de tocarlos y haz el cambio en una rama propia (`feat/passkey-acceso`), lo más pequeño posible: crear la cuenta y guardar la dirección `C…`. Nada de rediseño.
 
-**Depende de.** Decisión (a) y B5b. **Estimación:** 2 h (1 h de integración en Acceso y 1 h para crear las dos cuentas).
+**Depende de.** B5b. **Estimación:** 2 h (1 h de integración en Acceso y 1 h para crear las dos cuentas).
 
 ---
 
-### B7 · Mudanza a Vercel 🔒 decisión (a), solo si se decide
+### B7 · Mudanza a Vercel — ✅ hecha
 
-**Objetivo.** El mismo sitio, con Functions y Blob, en Vercel Hobby.
+El proyecto ya está en Vercel con Root Directory `frontend` y responde en **`https://masiapp.vercel.app`**. `frontend/vercel.json` tiene la regla SPA, excluyendo `/api/` y `/passkey-test/`, y los refrescos en rutas internas ya no dan 404 (comprobado). El dominio está actualizado en `CLAUDE.md` y en los documentos.
 
-**Pasos.**
-1. Importar el repo en Vercel con **Root Directory = `frontend`**, framework Vite, build `npm run build`, output `dist` y Node 24 (el `package.json` exige `>=24.15.0`).
-2. Elegir el subdominio `*.vercel.app` **una sola vez** y congelarlo. Es el nuevo dominio de las passkeys.
-3. Crear un Blob store **privado** y conectarlo al proyecto (añade `BLOB_STORE_ID` y OIDC; no hace falta token manual).
-4. Variables: `RELAYER_API_KEY`, `RELAYER_BASE_URL`, `ESCROW_CONTRACT_ID`, `PEN_SAC_ID`, `WALLET_WASM_HASH`.
-5. `frontend/vercel.json` con la regla SPA: es la tarea F7 del frontend.
-6. Comprobar que `/passkey-test/` sigue sirviéndose (es estático en `frontend/public/passkey-test/`).
-
-**Criterios de aceptación.**
-- [ ] La app carga en el dominio nuevo y un refresco en `/solicitudes/abc` no da 404.
-- [ ] `/api/salud` responde JSON.
-- [ ] Dominio nuevo anotado en `CLAUDE.md`, `README.MD`, `AVANCE.md` y `TAREA_PASSKEYS_DOMINIO.md` (con el visto bueno del PO, porque `CLAUDE.md` hoy dice que el dominio no se cambia).
-- [ ] Netlify queda sin desplegar más y sin tráfico que consuma créditos.
-
-**Depende de.** Decisión (a). Va **antes** de B6. **Estimación:** 1 h.
+Lo único que queda son las variables de entorno de B4b y B5b.
 
 ---
 
@@ -447,23 +386,19 @@ resenas/{jobId}
 
 Un registro por clave. Las listas se arman con `list(prefix)` y una lectura por clave. Con decenas de registros sobra. Sin autenticación: es una demo, y el dinero no pasa por aquí. Va como limitación en el README.
 
-### 2.6 Implementación por proveedor
+### 2.6 Implementación en Vercel
 
-| | Netlify | Vercel |
-|---|---|---|
-| Function | `frontend/netlify/functions/api.mts`, `export default (req) => handleApi(req, netlifyStore)`, `export const config = { path: "/api/*" }` | `frontend/api/[...ruta].ts`, `export function GET/POST/PATCH/PUT(req) { return handleApi(req, vercelStore) }`. Si el catch-all no enruta, un rewrite `/api/:ruta*` en `vercel.json` |
-| Almacén | `@netlify/blobs`: `getStore({ name: "masi", consistency: "strong" })`, `setJSON`, `get(key, { type: "json" })`, `list({ prefix })` | `@vercel/blob` con store **privado**: `put(key, json, { access: "private", allowOverwrite: true, contentType: "application/json" })`, `get(key, { useCache: false })`, `list({ prefix })` |
-| Consistencia | La lectura por defecto es *eventual*: sin `"strong"`, Juan puede no ver la solicitud de María durante un rato | Una sobrescritura tarda hasta 60 s en propagarse por la CDN. `useCache: false` se la salta |
-| Local | `netlify dev` (store local aislado) | `vercel dev` tras `vercel env pull` |
-| Coste | Cada invocación gasta créditos, y quedan pocos. El frontend consulta cada 10 s y solo con la pestaña visible | Incluido en Hobby |
-| SPA | Las Functions con `config.path` deben ganar a `/* /index.html 200` de `_redirects`. **Verifícalo** con `/api/salud` | El rewrite SPA de `vercel.json` debe excluir `/api/` (F7) |
+| | |
+|---|---|
+| Function | `frontend/api/[...ruta].ts`, `export function GET/POST/PATCH/PUT(req) { return handleApi(req, redisStore) }`. Si el catch-all no enruta, un rewrite `/api/:ruta*` en `vercel.json` |
+| Almacén | Upstash Redis con `@upstash/redis`: `Redis.fromEnv()`, `get`, `set` y `scan` con `match: "prefijo*"` |
+| Consistencia | Una escritura se lee de inmediato desde otro dispositivo |
+| Local | `vercel dev`, después de `vercel link` y `vercel env pull .env.local` |
+| Coste | Plan gratuito de Upstash: 500.000 comandos al mes. El frontend consulta cada 10 s, y solo con la pestaña visible |
+| SPA | `frontend/vercel.json` ya excluye `/api/` de la regla SPA |
 
 ---
 
-## 3. Decisiones que necesito del PO
+## 3. Decisiones del PO
 
-1. **(a) Hosting: Netlify Personal (9 USD) o Vercel Hobby.** Hoy y antes de B6. Si es Vercel, confirmar el subdominio nuevo y autorizar el cambio de la regla del dominio en `CLAUDE.md`.
-2. **(b) ¿Se construye `dispute`/`resolve` hoy?** Si sí, asumir el cambio de contract ID antes del checkpoint del 23.
-3. **(c) Plazo de revisión por defecto.** ✅ **24 h**, decidido. Para el vídeo, el `auto_release` se muestra con un trabajo sembrado por CLI con un plazo corto: confirmar que se acepta así.
-4. **Que `resolve` sume a `completed_jobs`** además de a `disputes` (motivo en B2). Si el PO prefiere que no, el frontend tiene que relajar la validación de `parseRatingSummary`.
-5. **Aceptar que la API no tiene autenticación** y declararlo en el README como limitación de la demo.
+Todas las que te bloqueaban están cerradas; ver la tabla de la sección 0. Si durante el día aparece una nueva, se la llevas al PO en vez de suponerla.

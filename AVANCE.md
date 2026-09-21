@@ -76,7 +76,7 @@ Dos problemas:
 
 **4. La cuenta de comisiones sigue siendo una dirección G** hasta que `passkey-kit` permita convertirla en smart wallet sin bloquear los fondos.
 
-**5. Hosting en Vercel y un backend mínimo.** El 21 Netlify se quedó en 30 de 300 créditos (cada despliegue a producción cuesta 15) y el período no se renueva hasta el 19 de octubre. Se migró a Vercel Hobby **antes de crear ninguna wallet definitiva**, así que el cambio de dominio no rompió nada. El dominio congelado es ahora `https://masiapp.vercel.app`. `main` está protegido por un ruleset: todo entra por PR. El modelo de ofertas necesita datos compartidos antes del contrato, así que se añade un backend mínimo (Vercel Functions + Vercel Blob), aunque el scope original decía "sin backend propio".
+**5. Hosting en Vercel y un backend mínimo.** El 21 Netlify se quedó en 30 de 300 créditos (cada despliegue a producción cuesta 15) y el período no se renueva hasta el 19 de octubre. Se migró a Vercel Hobby **antes de crear ninguna wallet definitiva**, así que el cambio de dominio no rompió nada. El dominio congelado es ahora `https://masiapp.vercel.app`. `main` está protegido por un ruleset: todo entra por PR. El modelo de ofertas necesita datos compartidos antes del contrato, así que se añade un backend mínimo (Vercel Functions + Upstash Redis del Marketplace. Se descartó Vercel Blob, que es para archivos y con el plan Hobby se quedaría corto de operaciones), aunque el scope original decía "sin backend propio".
 
 ---
 
@@ -88,7 +88,7 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 
 - [x] **`dispute` y `resolve`:** se construyen, y `resolve` cuenta como trabajo completado. **Hechos y desplegados**; nuevo contract ID.
 - [x] **Hosting:** Vercel, `https://masiapp.vercel.app`.
-- [x] **Datos compartidos** con la API del backend (Vercel Functions + Vercel Blob).
+- [x] **Datos compartidos** con la API del backend (Vercel Functions + Upstash Redis del Marketplace. Se descartó Vercel Blob, que es para archivos y con el plan Hobby se quedaría corto de operaciones).
 - [x] **Plazo de revisión por defecto: 24 h** (`review_secs = 86400`). Decisión del PO: a la gente no le gusta esperar. Con la disputa disponible, el cliente puede frenar el pago dentro de ese plazo.
 - [ ] Pendientes, con la recomendación como valor por defecto mientras no se decidan: tras publicar, el cliente va al **detalle de su solicitud**; botón **"Tengo un problema"** en la pantalla de trabajo; comentario de reseña **opcional**; la API **sin autenticación**, declarado en el README.
 
