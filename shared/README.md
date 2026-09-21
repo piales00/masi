@@ -35,8 +35,10 @@ reemplazar sus direcciones de prueba por las cuentas reales de los proveedores.
 - `JobState` usa `{ tag: 'Requested', values: undefined }` y las otras ocho variantes.
 - `comment_hash` representa exactamente 32 bytes, `stars` está entre 1 y 5.
 - Los tipos de retorno describen el valor exitoso una vez tratados los errores.
-- `dispute`, `resolve` y `rate` tienen firmas públicas pero por ahora devuelven
-  `NotImplemented`; la interfaz de trabajo debe mantener esas acciones deshabilitadas.
+- `dispute`, `resolve` y `rate` están implementadas. `dispute` pasa el trabajo a
+  `Disputed` desde `Started` o `Submitted`; `resolve` lo lleva a `Resolved` y cuenta
+  como trabajo completado, así que calificarlo después mantiene
+  `rating_count <= completed_jobs`.
 
 `auto_release`, `cancel` y `dispute` incluyen `caller` para autenticar a quien
 actúa. `cancel` y `dispute` comprueban además que sea cliente o proveedor.

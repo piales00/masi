@@ -1,8 +1,8 @@
 # Estado del proyecto
 
-**Actualizado: 21 de septiembre de 2026, mediodía.** Entrega el 25. Checkpoint el 23.
+**Actualizado: 21 de septiembre de 2026, tarde.** Entrega el 25. Checkpoint el 23.
 
-En una línea: **el contrato está terminado en testnet y el frontend ya cubre la mitad del flujo, pero la parte que usa Stellar —pagar, iniciar, terminar, aprobar, calificar— todavía no tiene ninguna pantalla.**
+En una línea: **el contrato está completo en testnet, disputa incluida, y el frontend ya cubre la mitad del flujo, pero la parte que usa Stellar —pagar, iniciar, terminar, aprobar, calificar— todavía no tiene ninguna pantalla.**
 
 La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md), del PO, con sus preguntas respondidas en [`RESPUESTAS_TPO.md`](./RESPUESTAS_TPO.md).
 
@@ -14,7 +14,7 @@ La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md
 |---|---|
 | App | https://masiapp.vercel.app |
 | Demo de passkeys | https://masiapp.vercel.app/passkey-test/ |
-| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| Contrato `escrow` | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
 Hashes y reproducción: [`DESPLIEGUE.md`](./DESPLIEGUE.md).
@@ -37,7 +37,7 @@ Medido contra el diagrama del PO. **En negrita, el tramo que se propone mostrar 
 | **M10 · Terminar** | ✅ `submit` | ❌ |
 | **M11 · Aprobar, o vence el plazo** | ✅ `approve`, `auto_release` | ❌ |
 | **M14 · Calificar** | ✅ `rate` | ❌ |
-| M12 · Disputa | ❌ `NotImplemented` | ❌ |
+| M12 · Disputa | ✅ `dispute`, `resolve` | ❌ |
 
 **El frontend no tiene ninguna conexión con la cadena:** no instala `@stellar/stellar-sdk` ni `passkey-kit`, y `dataSource.ts` sigue apuntando a datos de prueba.
 
@@ -45,11 +45,11 @@ Medido contra el diagrama del PO. **En negrita, el tramo que se propone mostrar 
 
 ## Por frente
 
-### P1 — Contrato ✅ salvo la disputa
+### P1 — Contrato ✅ completo
 
-17/17 tests. Flujo completo, `rate` y `auto_release` verificados en testnet.
+22/22 tests. Flujo completo, `rate`, `auto_release` y **la disputa** verificados en testnet. `dispute` congela el saldo y bloquea `approve` y `auto_release`; `resolve` reparte solo el saldo (el adelanto de materiales nunca entra), la comisión va a Masi, y cuenta como trabajo completado y como disputa en el perfil. Hashes en [`DESPLIEGUE.md`](./DESPLIEGUE.md).
 
-`dispute` y `resolve` siguen en `NotImplemented`. El PO pide no recortarlos, y tiene razón: sin `dispute`, `auto_release` le paga al técnico aunque el cliente no apruebe, y el cliente no tiene cómo frenarlo.
+**El contract ID cambió** a `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` al añadir la disputa. Es el definitivo salvo que haga falta otra función: el frontend ya puede conectar contra él.
 
 ### P2 — Cuentas 🔶
 
@@ -86,15 +86,16 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 
 ### 0. Decidir, antes de repartir nada
 
-- [ ] **¿Se construye `dispute`?** Recomendación: sí. **Añadirlo cambia el contract ID**, porque el contrato no tiene función de actualización. Si se hace después de conectar el frontend o de sembrar el día 24, se pierde ese trabajo.
+- [x] **`dispute` y `resolve`:** se construyen, y `resolve` cuenta como trabajo completado. **Hechos y desplegados**; nuevo contract ID.
 - [x] **Hosting:** Vercel, `https://masiapp.vercel.app`.
-- [ ] **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Vercel Blob detrás de una Vercel Function.
-- [ ] **Plazo de revisión por defecto.** Recomendación: 72 h.
+- [x] **Datos compartidos** con la API del backend (Vercel Functions + Vercel Blob).
+- [x] **Plazo de revisión por defecto: 24 h** (`review_secs = 86400`). Decisión del PO: a la gente no le gusta esperar. Con la disputa disponible, el cliente puede frenar el pago dentro de ese plazo.
+- [ ] Pendientes, con la recomendación como valor por defecto mientras no se decidan: tras publicar, el cliente va al **detalle de su solicitud**; botón **"Tengo un problema"** en la pantalla de trabajo; comentario de reseña **opcional**; la API **sin autenticación**, declarado en el README.
 
 ### P1 — Contrato
 
-- [ ] **`dispute` y `resolve`**, con tests (~3 h). `dispute` pasa a `Disputed`, que ya bloquea `approve` y `auto_release` por sí solo. `resolve` reparte solo el saldo según `provider_bps`, la comisión va a Masi y suma una disputa al perfil.
-- [ ] Redesplegar y actualizar el ID en `CLAUDE.md`, `INTEGRACION.md`, `DESPLIEGUE.md` y el README. **Antes** de que el frontend se conecte.
+- [x] **`dispute` y `resolve`**, con tests. Hecho.
+- [x] Redesplegado y ID actualizado en `CLAUDE.md`, `INTEGRACION.md`, `DESPLIEGUE.md` y el README.
 
 ### P2 — Cuentas
 
@@ -111,7 +112,7 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 
 ### Después de lo anterior
 
-- [ ] Conectar `dataSource.ts` y la pantalla de trabajo al contrato → [`INTEGRACION.md`](./INTEGRACION.md). Espera al redespliegue de P1.
+- [ ] Conectar `dataSource.ts` y la pantalla de trabajo al contrato → [`INTEGRACION.md`](./INTEGRACION.md). Ya no espera a nada: el contrato es el definitivo.
 - [ ] Reescribir el guion del vídeo con el flujo del PO.
 - [ ] 24: sembrar el historial de Juan **contra su wallet definitiva**.
 
@@ -122,7 +123,7 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 | Riesgo | Por qué importa |
 |---|---|
 | **El tramo con Stellar no tiene pantallas** | Es lo único que se muestra en vivo y lo que evalúa el track. A 4 días de la entrega, es el riesgo mayor |
-| Redesplegar después de conectar | Cambia el contract ID y rompe todo lo conectado. Hay que decidir `dispute` hoy |
+| ~~Redesplegar después de conectar~~ | Resuelto: la disputa se añadió antes de conectar |
 | Datos solo en el navegador | Con dos teléfonos, el técnico no ve lo que publica el cliente |
 | Perfiles vacíos en el vídeo | El historial de Juan depende de que su wallet exista antes del 24 |
 | Passkeys | Decisión el 22 por la noche; fallback a Blux definido |
@@ -137,7 +138,7 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 - [x] Diagrama de arquitectura → [`ARQUITECTURA.md`](./ARQUITECTURA.md)
 - [ ] Decisión sobre passkeys o fallback — el 22 por la noche
 
-Si se redespliega por `dispute`, el ID del checkpoint cambia; hay que entregar el nuevo.
+El ID que se entrega es el nuevo, con la disputa: `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`.
 
 ---
 

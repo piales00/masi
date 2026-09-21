@@ -10,15 +10,15 @@ Contrato desplegado, inicializado y con el flujo principal ejecutado de punta a 
 
 | Qué | ID |
 |---|---|
-| **Contrato `escrow`** | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| **Contrato `escrow`** | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | **SAC de PEN-test** | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
-| Hash del WASM | `d37dfd73161cd59a244687c612d78974a66c916a019bc5440b8a766b69038bb7` |
+| Hash del WASM | `786f21b988ce6c15e1ab7b0c5edbc3c5ee6e110ba301539a3fa275fe0318d73d` |
 | Activo | `PENT:GBEL5YQVA7322R26DWRQTJSZPZ7ODD5NSCQZ6TDPD5MP4FAUDXNITYAE` |
 
-- Explorador: [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV)
-- Tamaño del WASM: 17 KB, muy por debajo del límite de 128 KB de la red.
+- Explorador: [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL)
+- Tamaño del WASM: 19 KB, muy por debajo del límite de 128 KB de la red.
 
-> **Despliegue anterior, ya superado:** `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO`, sin `rate`. El contrato no tiene función de actualización, así que añadir `rate` obligó a desplegar de nuevo. **Usa siempre el ID de arriba.**
+> **Despliegues anteriores, ya superados:** `CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` (sin `rate`) y `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` (sin `dispute`). El contrato no tiene función de actualización, así que cada función nueva obligó a desplegar de nuevo. **Usa siempre el ID de arriba.** Las secciones "El caso del demo", "Calificación" y "Segundo caso" de más abajo se ejecutaron sobre esos despliegues anteriores; el código de esas funciones no cambió.
 
 ## Cuentas
 
@@ -169,7 +169,38 @@ Saldos acumulados tras los dos trabajos de este contrato, más el del despliegue
 
 Y `rating_of(juan)` devuelve `completed_jobs: 2, rating_count: 1, stars_sum: 5`: los dos trabajos de este contrato cuentan como completados, pero solo el primero está calificado. **Cobrar y calificar son cosas distintas**, que es justo lo que hace que las estrellas signifiquen algo.
 
+## Tercer caso: el cliente no está conforme — disputa
+
+Desplegado el 21/09 sobre `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`, tras decidir el PO construir la disputa y que `resolve` cuente como trabajo completado.
+
+Trabajo 1: mismo trato de S/1.200, con 30 % de materiales y 5 % de comisión. `create_job` → `accept` → `fund` → `start` → `submit`, y en vez de aprobar, **María abre una disputa**.
+
+| Paso | Hash |
+|---|---|
+| `init` | `b6c682fa49a2c62566178b9c8424678d2351062bcf65ba8e354fddf2d9603554` |
+| `fund` | `d34f21efb7e188452b95689d9ae3fe1f1f4c947506c8b86dd0c39b3ba6ebacb3` |
+| `start` | `af4bb849867861fb2aba3dd4dc7a2cb4be4707f02bf9932667115154ea7b9fa5` |
+| `dispute` (María) | `f4c6a820c77d153dd1bd73d0d1b02edafa6be964f584f69aa8ea33721611ac11` |
+| `resolve` 70 % al técnico (árbitro) | `c78da7c2043bb15ba7581a47fccf7ceaf7b4342116cea68b712ee4a85e08523e` |
+| `rate` 3 estrellas | `156df083ae2ded484617b7928448f842aa2c751639a2d66369b90229f3501941` |
+
+Durante la disputa, `approve` se rechaza con `Error(Contract, #4)` (`InvalidState`): el saldo queda congelado hasta que decide el árbitro.
+
+El árbitro reparte **solo el saldo** de S/840. El adelanto de S/360 ya era de Juan y no entra:
+
+| Cuenta | Movimiento |
+|---|---|
+| Juan | **+S/948**: S/360 de materiales al iniciar + S/588 (70 % del saldo) |
+| María | recupera **S/252** (30 % del saldo) |
+| Masi | **+S/60** de comisión, igual que en cualquier trabajo |
+| Contrato | S/0 |
+
+```
+rating_of(juan) → {"completed_jobs":1,"disputes":1,"rating_count":1,"stars_sum":3}
+```
+
+`resolve` suma a la vez un trabajo completado y una disputa. Por eso calificar un trabajo resuelto deja el perfil coherente: nunca hay más reseñas que trabajos. Y la disputa queda registrada en el perfil, a la vista de cualquier cliente.
+
 ## Lo que este despliegue todavía no prueba
 
-- `dispute` y `resolve` siguen siendo stubs: devuelven `NotImplemented` y no mueven fondos. Son los primeros de la lista de recortes.
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
