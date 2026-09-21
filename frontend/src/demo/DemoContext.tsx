@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { Cotizacion, CotizacionInput, SolicitudEstado } from '../../../shared/api';
+import { providers } from '../marketplace';
 import type { Trade } from '../marketplace';
+
+export type { Cotizacion } from '../../../shared/api';
 
 export interface Profile {
   firstName: string;
@@ -25,14 +29,15 @@ export interface ProviderProfile {
   photoUrl?: string;
 }
 
-export type EstadoSolicitud = 'buscando_profesionales' | 'profesional_elegido';
+/** Los estados los define shared/api.ts; aquí no se inventan strings. */
+export type EstadoSolicitud = SolicitudEstado;
 
 export interface Solicitud {
   id: string;
   servicio: Trade;
   descripcion: string;
-  /** Cuántas fotos adjuntó el cliente. Se dibujan como marcadores: no guardamos los archivos. */
-  fotos: number;
+  /** Fotos del cliente como data URL, para que sobrevivan a la recarga. Ver images.ts. */
+  fotos: string[];
   ubicacion: string;
   distrito: string;
   /** Urgencia elegida en el formulario; vacío en registros anteriores a este campo. */
@@ -63,6 +68,8 @@ export interface Postulacion {
   providerId: string;
   /** El oficio no se repite aquí: lo aporta la solicitud a la que pertenece. */
   providerNombre: string;
+  /** Dirección del catálogo cuando el id coincide; null mientras no tenga cuenta. */
+  providerAddress: string | null;
   providerPerfil?: ProviderSnapshot;
   precio: number;
   minutos: number;
@@ -84,6 +91,8 @@ const PROVIDER_KEY = 'masi.demo.profesional.v2';
 const SESSION_KEY = 'masi.demo.sesion.v2';
 const REQUESTS_KEY = 'masi.demo.solicitudes.v1';
 const PROPOSALS_KEY = 'masi.demo.postulaciones.v1';
+const QUOTES_KEY = 'masi.demo.cotizaciones.v1';
+const PENDING_ACCEPT_KEY = 'masi.demo.aceptacionPendiente.v1';
 const AVAILABLE_KEY = 'masi.demo.disponible.v1';
 
 export const RETURNING_PROFILE: Profile = {
@@ -168,7 +177,37 @@ const parseSession = (value: unknown): Session | null => {
 
 const parseList = <T,>(value: unknown): T[] | null => (Array.isArray(value) ? value as T[] : null);
 
-const ESTADOS: readonly EstadoSolicitud[] = ['buscando_profesionales', 'profesional_elegido'];
+const ESTADOS: readonly EstadoSolicitud[] = ['buscando_profesionales', 'profesional_elegido', 'cotizada', 'contratada'];
+
+/** Dirección del profesional cuando su id corresponde a una ficha del catálogo. */
+export const addressOfProvider = (providerId: string): string | null =>
+  providers.find(item => item.id === providerId)?.address ?? null;
+
+/** Ídem con el nombre: el catálogo es una fuente real, no un invento del fallback. */
+export const nameOfProvider = (providerId: string): string | null =>
+  providers.find(item => item.id === providerId)?.name ?? null;
+
+/**
+ * createJob no se puede repetir: crearía un segundo trabajo. Si la aceptación se
+ * interrumpe después de la firma, el recibo queda aquí y solo se reintenta el guardado.
+ */
+export interface AceptacionPendiente {
+  cotizacionId: string;
+  jobId: string;
+  txHash: string;
+}
+
+export function writePendingAcceptance(value: AceptacionPendiente): void {
+  write(PENDING_ACCEPT_KEY, value);
+}
+
+export function readPendingAcceptance(): AceptacionPendiente | null {
+  return read<AceptacionPendiente>(PENDING_ACCEPT_KEY, value => {
+    const row = value as Partial<AceptacionPendiente> | null;
+    if (!row?.cotizacionId || !row.jobId || !row.txHash) return null;
+    return { cotizacionId: row.cotizacionId, jobId: row.jobId, txHash: row.txHash };
+  });
+}
 
 /**
  * Identidad local del cliente. Sustituye al nombre como clave de pertenencia; el día que
@@ -188,6 +227,8 @@ function migrateSolicitudes(rows: Solicitud[], clienteId: string): Solicitud[] {
     ...row,
     clienteId: typeof row.clienteId === 'string' && row.clienteId ? row.clienteId : clienteId,
     cuando: typeof row.cuando === 'string' ? row.cuando : '',
+    // Antes solo se guardaba el conteo, así que de esas solicitudes no hay imagen que recuperar.
+    fotos: Array.isArray(row.fotos) ? row.fotos.filter(foto => typeof foto === 'string') : [],
     estado: ESTADOS.includes(row.estado) ? row.estado : 'buscando_profesionales',
   }));
 }
@@ -195,7 +236,10 @@ function migrateSolicitudes(rows: Solicitud[], clienteId: string): Solicitud[] {
 function migratePostulaciones(rows: Postulacion[]): Postulacion[] {
   return rows.map(row => ({
     ...row,
-    providerNombre: typeof row.providerNombre === 'string' && row.providerNombre ? row.providerNombre : PROVIDER_FALLBACK_NAME,
+    providerNombre: (typeof row.providerNombre === 'string' && row.providerNombre.trim())
+      || nameOfProvider(row.providerId)
+      || PROVIDER_FALLBACK_NAME,
+    providerAddress: typeof row.providerAddress === 'string' ? row.providerAddress : addressOfProvider(row.providerId),
   }));
 }
 
@@ -205,6 +249,7 @@ interface DemoValue {
   providerProfile: ProviderProfile | null;
   solicitudes: Solicitud[];
   postulaciones: Postulacion[];
+  cotizaciones: Cotizacion[];
   available: boolean;
   saveProfile: (profile: Profile) => void;
   saveProviderProfile: (profile: ProviderProfile) => void;
@@ -214,8 +259,11 @@ interface DemoValue {
   signOut: (role: Role) => void;
   /** Async desde ya: en F5 solo cambia la implementación, no las pantallas. */
   publishRequest: (input: Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId'>) => Promise<Solicitud>;
-  sendProposal: (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre'>) => Promise<Postulacion>;
+  sendProposal: (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre' | 'providerAddress' | 'providerPerfil'>) => Promise<Postulacion>;
   chooseProposal: (solicitudId: string, postulacionId: string) => Promise<Solicitud>;
+  sendQuote: (input: CotizacionInput) => Promise<Cotizacion>;
+  acceptQuote: (id: string, jobId: string, txHash: string) => Promise<Cotizacion>;
+  rejectQuote: (id: string) => Promise<Cotizacion>;
   setAvailable: (next: boolean) => void;
 }
 
@@ -229,6 +277,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const clienteId = clientAccount?.contractId ?? legacyClientId;
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], legacyClientId));
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? []));
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => read(QUOTES_KEY, parseList<Cotizacion>) ?? []);
   const [available, setAvailableState] = useState<boolean>(() => read<boolean>(AVAILABLE_KEY, v => (typeof v === 'boolean' ? v : null)) ?? true);
 
   const openSession = useCallback((role: Role) => {
@@ -296,11 +345,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return solicitud;
   }, [clienteId]);
 
-  const sendProposal = useCallback(async (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre'>) => {
+  const sendProposal = useCallback(async (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre' | 'providerAddress' | 'providerPerfil'>) => {
     const postulacion: Postulacion = {
       ...input,
       id: crypto.randomUUID(),
-      providerNombre: providerAccount?.fullName?.trim() || PROVIDER_FALLBACK_NAME,
+      // El nombre de la cuenta manda; el catálogo lo respalda. El genérico es el último recurso.
+      providerNombre: providerAccount?.fullName?.trim() || nameOfProvider(input.providerId) || PROVIDER_FALLBACK_NAME,
+      providerAddress: addressOfProvider(input.providerId),
       providerPerfil: providerAccount
         ? {
           servicios: providerAccount.services,
@@ -331,6 +382,60 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return updated;
   }, [solicitudes]);
 
+  /** Cambia el estado de una solicitud y lo persiste, devolviendo la lista nueva. */
+  const patchSolicitud = useCallback((solicitudId: string, estado: EstadoSolicitud) => {
+    setSolicitudes(list => {
+      const next = list.map(item => (item.id === solicitudId ? { ...item, estado } : item));
+      write(REQUESTS_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const guardarCotizaciones = useCallback((next: Cotizacion[]) => {
+    write(QUOTES_KEY, next);
+    setCotizaciones(next);
+  }, []);
+
+  const sendQuote = useCallback(async (input: CotizacionInput) => {
+    const ahora = new Date().toISOString();
+    const cotizacion: Cotizacion = {
+      ...input,
+      id: crypto.randomUUID(),
+      estado: 'enviada',
+      jobId: null,
+      txHash: null,
+      creadaEn: ahora,
+      actualizadaEn: ahora,
+    };
+    guardarCotizaciones([cotizacion, ...cotizaciones]);
+    patchSolicitud(input.solicitudId, 'cotizada');
+    return cotizacion;
+  }, [cotizaciones, guardarCotizaciones, patchSolicitud]);
+
+  const acceptQuote = useCallback(async (id: string, jobId: string, txHash: string) => {
+    const actual = cotizaciones.find(item => item.id === id);
+    if (!actual) throw new Error(`No existe la cotización ${id}`);
+    const actualizada: Cotizacion = { ...actual, estado: 'aceptada', jobId, txHash, actualizadaEn: new Date().toISOString() };
+    guardarCotizaciones(cotizaciones.map(item => (item.id === id ? actualizada : item)));
+    patchSolicitud(actual.solicitudId, 'contratada');
+    try {
+      localStorage.removeItem(PENDING_ACCEPT_KEY);
+    } catch {
+      // Ídem.
+    }
+    return actualizada;
+  }, [cotizaciones, guardarCotizaciones, patchSolicitud]);
+
+  /** Rechazar devuelve la solicitud al profesional elegido para que vuelva a cotizar. */
+  const rejectQuote = useCallback(async (id: string) => {
+    const actual = cotizaciones.find(item => item.id === id);
+    if (!actual) throw new Error(`No existe la cotización ${id}`);
+    const actualizada: Cotizacion = { ...actual, estado: 'rechazada', actualizadaEn: new Date().toISOString() };
+    guardarCotizaciones(cotizaciones.map(item => (item.id === id ? actualizada : item)));
+    patchSolicitud(actual.solicitudId, 'profesional_elegido');
+    return actualizada;
+  }, [cotizaciones, guardarCotizaciones, patchSolicitud]);
+
   const setAvailable = useCallback((next: boolean) => {
     setAvailableState(next);
     write(AVAILABLE_KEY, next);
@@ -340,8 +445,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const providerProfile = session.provider ? providerAccount : null;
 
   const value = useMemo(
-    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, setAvailable }),
-    [profile, clienteId, providerProfile, solicitudes, postulaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, setAvailable],
+    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, setAvailable }),
+    [profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, setAvailable],
   );
   return <DemoContext value={value}>{children}</DemoContext>;
 }
