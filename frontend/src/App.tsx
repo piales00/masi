@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Activity, ClipboardList } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AuthLayout } from './components/AuthLayout';
@@ -14,7 +14,10 @@ import { ProviderAlertScreen } from './screens/ProviderAlertScreen';
 import { ProviderHomeScreen } from './screens/ProviderHomeScreen';
 import { ProviderProfileScreen } from './screens/ProviderProfileScreen';
 import { ProviderSetupScreen } from './screens/ProviderSetupScreen';
+import { ProposalDetailScreen } from './screens/ProposalDetailScreen';
 import { ProvidersScreen } from './screens/ProvidersScreen';
+import { RequestDetailScreen } from './screens/RequestDetailScreen';
+import { RequestsScreen } from './screens/RequestsScreen';
 import { RoleScreen } from './screens/RoleScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { SoonScreen } from './screens/SoonScreen';
@@ -65,8 +68,10 @@ export function App() {
 
     <Route element={<RequireProfile><AppShell /></RequireProfile>}>
       <Route path="home" element={<HomeScreen />} />
-      <Route path="solicitudes" element={<SoonScreen title="Solicitudes" icon={ClipboardList} text="Aquí seguirás cada trabajo que solicites, desde que lo pides hasta que lo apruebas." />} />
+      <Route path="solicitudes" element={<RequestsScreen />} />
       <Route path="solicitudes/nueva" element={<NewRequestScreen />} />
+      <Route path="solicitudes/:id" element={<RequestDetailScreen />} />
+      <Route path="solicitudes/:id/propuesta/:postulacionId" element={<ProposalDetailScreen />} />
       <Route path="profesionales" element={<ProvidersScreen />} />
       <Route path="actividad" element={<SoonScreen title="Actividad" icon={Activity} text="Aquí verás el detalle de cada pago y cada paso de tus trabajos." />} />
       <Route path="perfil" element={<ProfileScreen />} />

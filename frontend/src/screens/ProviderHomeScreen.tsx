@@ -5,6 +5,7 @@ import { Screen } from '../components/Screen';
 import { cn } from '../cn';
 import { mockDistanceKm } from '../demo/distance';
 import { useDemo } from '../demo/DemoContext';
+import { alertasPara } from '../demo/selectors';
 import { formatPrice } from '../marketplace';
 import { serviceOf } from '../trades';
 
@@ -17,8 +18,7 @@ export function ProviderHomeScreen() {
   const sent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
 
   const services = providerProfile?.services ?? [];
-  const applied = new Set(postulaciones.filter(item => item.providerId === providerProfile?.id).map(item => item.solicitudId));
-  const alerts = solicitudes.filter(item => item.estado === 'buscando_profesionales' && services.includes(item.servicio) && !applied.has(item.id));
+  const alerts = alertasPara(providerProfile, solicitudes, postulaciones);
 
   return <Screen header={
     <header className="shrink-0 border-b border-masi-gray bg-white px-4 pt-[calc(0.75rem+var(--masi-safe-top))] pb-3">

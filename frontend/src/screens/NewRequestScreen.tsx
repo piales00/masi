@@ -118,18 +118,19 @@ export function NewRequestScreen() {
 
   const ready = Boolean(trade && description.trim());
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!trade || !description.trim()) return;
-    publishRequest({
+    const solicitud = await publishRequest({
       servicio: trade,
       descripcion: description.trim(),
       fotos: photos.length,
       ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
       distrito: district.trim(),
+      cuando: timing === 'Elegir fecha' && date ? `El ${date}` : timing,
       cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
     });
-    navigate(`/profesionales?servicio=${encodeURIComponent(trade)}`);
+    navigate(`/solicitudes/${solicitud.id}`, { replace: true });
   };
 
   return <Screen
