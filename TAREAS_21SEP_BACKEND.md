@@ -4,6 +4,9 @@
 
 Documento hermano: [`TAREAS_21SEP_FRONTEND.md`](./TAREAS_21SEP_FRONTEND.md).
 
+
+> **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. B7 está hecha: el proyecto ya existe en Vercel. **B4b, B5b y B6 quedan desbloqueadas** y se implementan sobre Vercel Functions + Vercel Blob. B6: las wallets de María y Juan se crean en `https://masiapp.vercel.app/passkey-test/`, nunca en una URL de preview (`masiapp-git-…`).
+
 ---
 
 ## 0. Antes de empezar

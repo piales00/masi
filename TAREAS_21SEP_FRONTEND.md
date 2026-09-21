@@ -2,6 +2,9 @@
 
 **Resumen.** Hoy cierras el recorrido que falta entre "el técnico se postula" y "el cliente califica": el cliente ve las postulaciones y elige (M3), el técnico envía la cotización final y el cliente la acepta, lo que dispara `create_job` (M4–M5), y la **pantalla de trabajo**, una por rol, con las firmas del tramo que se muestra en vivo. Todo se construye hoy contra datos de prueba, con la misma forma que el contrato y que la API, y se conecta después. La API del almacén la define el backend en un solo sitio: [la sección 2 de `TAREAS_21SEP_BACKEND.md`](./TAREAS_21SEP_BACKEND.md#2-la-api-del-almacén--el-punto-de-integración). Aquí se enlaza, no se repite.
 
+
+> **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. F7 ya está hecha en el PR #5 (`frontend/vercel.json`). F5 se prueba contra la API desplegada en Vercel.
+
 ---
 
 ## 0. Antes de empezar
