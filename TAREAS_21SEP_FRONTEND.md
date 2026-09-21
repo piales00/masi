@@ -38,7 +38,7 @@
 |---|---|---|
 | **(a)** | Hosting: Netlify Personal o Vercel Hobby | F5 (probar contra la API desplegada) y F7 |
 | **(b)** | ¿Se construye `dispute`? Cambia el contract ID | F8 (conectar al contrato), que no es de hoy |
-| **(c)** | Plazo de revisión por defecto (recomendado 72 h) | Solo el valor de `DEFAULT_REVIEW_SECS` |
+| **(c)** | Plazo de revisión por defecto: ✅ **24 h** | Solo el valor de `DEFAULT_REVIEW_SECS` |
 
 ### Orden y línea de corte
 
@@ -61,7 +61,7 @@ F6 tests (a lo largo del día)     F7 vercel.json 🔒a     F8 conectar al contr
 **Por qué importa.** Las tres pantallas siguientes muestran dinero y errores. Un redondeo distinto entre la pantalla y el contrato hace que el cliente vea S/360 de adelanto y el contrato entregue otra cifra.
 
 **Archivos.**
-- Nuevo: `frontend/src/config.ts`: `CONTRACT_ID` (hoy `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`; cambia si se hace B3), `PEN_SAC_ID`, `RPC_URL`, `NETWORK_PASSPHRASE` y `EXPLORER_TX = 'https://stellar.expert/explorer/testnet/tx/'`. `FEE_BPS`, `MAX_MATERIALS_BPS` y `DEFAULT_REVIEW_SECS` se reexportan de `shared/api.ts`, no se duplican. **Es el único archivo que toca el backend cuando cambie el ID.**
+- Nuevo: `frontend/src/config.ts`: `CONTRACT_ID` (`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`, definitivo tras B3), `PEN_SAC_ID`, `RPC_URL`, `NETWORK_PASSPHRASE` y `EXPLORER_TX = 'https://stellar.expert/explorer/testnet/tx/'`. `FEE_BPS`, `MAX_MATERIALS_BPS` y `DEFAULT_REVIEW_SECS` se reexportan de `shared/api.ts`, no se duplican. **Es el único archivo que toca el backend cuando cambie el ID.**
 - Nuevo: `frontend/src/money.ts`:
   - `solesToStroops(input: string): bigint`: acepta `"1200"` o `"1200.5"` (máximo 2 decimales) y lanza error si no. **Sin pasar por `number`.**
   - `formatSoles(stroops: bigint): string`, con el mismo formato que `formatPrice` de `frontend/src/marketplace.ts` (`S/ 1,200`).
@@ -141,7 +141,7 @@ F6 tests (a lo largo del día)     F7 vercel.json 🔒a     F8 conectar al contr
 
 **Tarjeta del cliente.**
 - Total S/1.200 · "Materiales, se entregan al iniciar: S/360" · "Comisión Masi (5 %): S/60" · **"Pagarás S/1.260"**.
-- Una línea sobre la protección: "Tu dinero queda protegido. Juan recibe el resto cuando apruebes el trabajo, o 72 horas después de que lo marque como terminado si no respondes." Las horas salen de `reviewSecs`.
+- Una línea sobre la protección: "Tu dinero queda protegido. Juan recibe el resto cuando apruebes el trabajo, o 24 horas después de que lo marque como terminado si no respondes." Las horas salen de `reviewSecs`.
 - Botón primario "Aceptar cotización" → "Confirma con tu huella" → `escrow.createJob({ client, provider: providerAddress, amount: BigInt(totalStroops), materials_bps, fee_bps, review_secs: BigInt(reviewSecs), description })` → `acceptQuote(id, String(jobId), hash)` → navegar a `/trabajos/:jobId`.
 - Antes de firmar, avisa de lo que viene: "Juan confirmará y luego pagas." El cliente firma dos veces con el técnico en medio (`create_job`, `accept` del técnico, `fund`), porque el contrato no deja pagar un trabajo que el técnico no confirmó.
 - Botón secundario "Rechazar" → `rejectQuote`; el técnico puede volver a cotizar.

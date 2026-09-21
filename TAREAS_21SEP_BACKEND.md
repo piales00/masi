@@ -19,7 +19,7 @@ Documento hermano: [`TAREAS_21SEP_FRONTEND.md`](./TAREAS_21SEP_FRONTEND.md).
 |---|---|---|---|
 | **(a)** | **Hosting**: pagar Netlify Personal (9 USD, se queda `masiapp.netlify.app`) o mudarse hoy a Vercel Hobby (gratis, cambia el dominio) | La tiene que tomar el PO **antes de crear las wallets de María y Juan** | B4b, B5b, B6, B7 |
 | **(b)** | **¿Se construye `dispute`/`resolve`?** | Sí, hoy (~3 h con tests) | B2, B3 |
-| **(c)** | **Plazo de revisión por defecto** | 72 h (`259200` s) mientras no exista `dispute` | Solo el valor de `reviewSecs` en la API |
+| **(c)** | **Plazo de revisión por defecto** | ✅ Decidido: **24 h** (`86400` s) | Solo el valor de `reviewSecs` en la API |
 
 Por qué (a) es urgente: Netlify está sin créditos. El plan gratuito da 300 al mes, cada despliegue de producción cuesta 15 y quedan 30, o sea **dos despliegues**, sin renovación hasta el 19 de octubre. El tráfico y las invocaciones de Functions también gastan créditos, así que el sitio se puede pausar solo en pleno vídeo. **Cambiar de dominio solo es barato hoy**: las passkeys se atan al dominio y las wallets definitivas todavía no existen. Si se mudan, la mudanza va **antes** de B6.
 
@@ -284,8 +284,8 @@ import type { Trade } from '../frontend/src/marketplace';
 export const FEE_BPS = 500;
 /** Tope del contrato para el adelanto (50 %). Por encima, create_job da InvalidBps. */
 export const MAX_MATERIALS_BPS = 5000;
-/** Plazo de revisión por defecto: 72 h. Pendiente de la decisión (c). */
-export const DEFAULT_REVIEW_SECS = 259200;
+/** Plazo de revisión por defecto: 24 h. Decisión del PO del 21/09. */
+export const DEFAULT_REVIEW_SECS = 86400;
 
 export type SolicitudEstado =
   | 'buscando_profesionales' // recién publicada; los técnicos pueden postularse
@@ -409,7 +409,7 @@ POST /api/cotizaciones
   "materialesStroops": "3600000000",
   "materialsBps": 3000,
   "feeBps": 500,
-  "reviewSecs": 259200,
+  "reviewSecs": 86400,
   "descripcion": "Pintar departamento en Surco"
 }
 ```
@@ -464,6 +464,6 @@ Un registro por clave. Las listas se arman con `list(prefix)` y una lectura por 
 
 1. **(a) Hosting: Netlify Personal (9 USD) o Vercel Hobby.** Hoy y antes de B6. Si es Vercel, confirmar el subdominio nuevo y autorizar el cambio de la regla del dominio en `CLAUDE.md`.
 2. **(b) ¿Se construye `dispute`/`resolve` hoy?** Si sí, asumir el cambio de contract ID antes del checkpoint del 23.
-3. **(c) Plazo de revisión por defecto.** 72 h mientras no haya `dispute`. Para el vídeo, el `auto_release` se muestra con un trabajo sembrado por CLI con un plazo corto: confirmar que se acepta así.
+3. **(c) Plazo de revisión por defecto.** ✅ **24 h**, decidido. Para el vídeo, el `auto_release` se muestra con un trabajo sembrado por CLI con un plazo corto: confirmar que se acepta así.
 4. **Que `resolve` sume a `completed_jobs`** además de a `disputes` (motivo en B2). Si el PO prefiere que no, el frontend tiene que relajar la validación de `parseRatingSummary`.
 5. **Aceptar que la API no tiene autenticación** y declararlo en el README como limitación de la demo.
