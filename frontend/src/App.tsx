@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, Briefcase } from 'lucide-react';
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AuthLayout } from './components/AuthLayout';
@@ -13,6 +13,7 @@ import { ProviderActivityScreen } from './screens/ProviderActivityScreen';
 import { ProviderAlertScreen } from './screens/ProviderAlertScreen';
 import { ProviderHomeScreen } from './screens/ProviderHomeScreen';
 import { ProviderProfileScreen } from './screens/ProviderProfileScreen';
+import { ProviderQuoteScreen } from './screens/ProviderQuoteScreen';
 import { ProviderSetupScreen } from './screens/ProviderSetupScreen';
 import { ProposalDetailScreen } from './screens/ProposalDetailScreen';
 import { ProvidersScreen } from './screens/ProvidersScreen';
@@ -62,7 +63,10 @@ export function App() {
     <Route element={<RequireProviderProfile><AppShell items={PROVIDER_NAV} /></RequireProviderProfile>}>
       <Route path="profesional" element={<ProviderHomeScreen />} />
       <Route path="profesional/alertas/:id" element={<ProviderAlertScreen />} />
-      <Route path="profesional/actividad" element={<ProviderActivityScreen />} />
+      <Route path="profesional/cotizacion/:solicitudId" element={<ProviderQuoteScreen />} />
+      {/* Solicitudes es la bandeja operativa; Actividad queda para el historial de F4. */}
+      <Route path="profesional/solicitudes" element={<ProviderActivityScreen />} />
+      <Route path="profesional/actividad" element={<SoonScreen title="Tu actividad" icon={Activity} text="Aquí aparecerá el historial de tus servicios terminados." />} />
       <Route path="profesional/perfil" element={<ProviderProfileScreen />} />
     </Route>
 
@@ -73,8 +77,11 @@ export function App() {
       <Route path="solicitudes/:id" element={<RequestDetailScreen />} />
       <Route path="solicitudes/:id/propuesta/:postulacionId" element={<ProposalDetailScreen />} />
       <Route path="profesionales" element={<ProvidersScreen />} />
-      <Route path="actividad" element={<SoonScreen title="Actividad" icon={Activity} text="Aquí verás el detalle de cada pago y cada paso de tus trabajos." />} />
+      {/* Actividad es el historial; lo que sigue en curso vive en Solicitudes hasta F4. */}
+      <Route path="actividad" element={<SoonScreen title="Actividad" icon={Activity} text="Aquí quedará el historial de tus trabajos terminados. Los que están en curso siguen en Solicitudes." />} />
       <Route path="perfil" element={<ProfileScreen />} />
+      {/* Marcador de posición: la pantalla de trabajo es F4. */}
+      <Route path="trabajos/:jobId" element={<SoonScreen title="Tu trabajo" icon={Briefcase} text="Tu pago está protegido. Aquí seguirás cada paso del trabajo." />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/splash" replace />} />

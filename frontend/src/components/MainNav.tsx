@@ -3,9 +3,9 @@ import type { LucideIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
-import { alertasPara, solicitudesPorAtender } from '../demo/selectors';
+import { alertasPara, cotizacionesPorEnviar, solicitudesPorAtender } from '../demo/selectors';
 
-type BadgeKey = 'clientRequests' | 'providerAlerts';
+type BadgeKey = 'clientRequests' | 'providerAlerts' | 'providerQuotes';
 
 export interface NavItem {
   to: string;
@@ -19,8 +19,9 @@ export interface NavItem {
 
 /** Texto para lectores de pantalla: el número solo no dice de qué. */
 const BADGE_LABEL: Record<BadgeKey, (count: number) => string> = {
-  clientRequests: count => (count === 1 ? '1 solicitud con propuestas' : `${count} solicitudes con propuestas`),
+  clientRequests: count => (count === 1 ? '1 solicitud necesita tu respuesta' : `${count} solicitudes necesitan tu respuesta`),
   providerAlerts: count => (count === 1 ? '1 solicitud disponible' : `${count} solicitudes disponibles`),
+  providerQuotes: count => (count === 1 ? '1 cotización por enviar' : `${count} cotizaciones por enviar`),
 };
 
 export const CLIENT_NAV: readonly NavItem[] = [
@@ -32,6 +33,7 @@ export const CLIENT_NAV: readonly NavItem[] = [
 
 export const PROVIDER_NAV: readonly NavItem[] = [
   { to: '/profesional', label: 'Inicio', icon: House, end: true, badge: 'providerAlerts' },
+  { to: '/profesional/solicitudes', label: 'Solicitudes', icon: ClipboardList, badge: 'providerQuotes' },
   { to: '/profesional/actividad', label: 'Actividad', icon: Activity },
   { to: '/profesional/perfil', label: 'Perfil', icon: CircleUser },
 ];
@@ -41,11 +43,12 @@ export const PROVIDER_NAV: readonly NavItem[] = [
  * desde 768px. AppShell la coloca con flex-direction; aquí solo cambia la forma.
  */
 export function MainNav({ items }: { items: readonly NavItem[] }) {
-  const { clienteId, providerProfile, solicitudes, postulaciones } = useDemo();
+  const { clienteId, providerProfile, solicitudes, postulaciones, cotizaciones } = useDemo();
 
   const counts: Record<BadgeKey, number> = {
     clientRequests: solicitudesPorAtender(clienteId, solicitudes, postulaciones).length,
     providerAlerts: alertasPara(providerProfile, solicitudes, postulaciones).length,
+    providerQuotes: cotizacionesPorEnviar(providerProfile, solicitudes, postulaciones, cotizaciones).length,
   };
 
   return <nav

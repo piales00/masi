@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ImageIcon, Info, MapPin, Send } from 'lucide-react';
+import { Info, MapPin, Send } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -66,12 +66,15 @@ export function ProviderAlertScreen() {
 
       <section className="mt-6">
         <h2 className="text-sm font-semibold text-masi-navy">Fotos del cliente</h2>
-        {solicitud.fotos > 0
+        {solicitud.fotos.length > 0
           ? <ul className="mt-3 grid grid-cols-3 gap-2">
-            {Array.from({ length: solicitud.fotos }, (_, index) => <li
-              key={index}
-              className="grid aspect-square place-items-center rounded-masi-input border border-masi-gray bg-masi-blue-50 text-masi-blue"
-            ><ImageIcon size={22} aria-hidden="true" /><span className="sr-only">Foto {index + 1}</span></li>)}
+            {solicitud.fotos.map((foto, index) => <li key={index}>
+              <img
+                src={foto}
+                alt={`Foto ${index + 1} del cliente`}
+                className="aspect-square w-full rounded-masi-input border border-masi-gray object-cover"
+              />
+            </li>)}
           </ul>
           : <p className="mt-2 text-sm text-masi-muted">El cliente no adjuntó fotos.</p>}
       </section>
