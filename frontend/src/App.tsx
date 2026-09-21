@@ -1,13 +1,26 @@
 import type { ReactElement } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Activity } from 'lucide-react';
+import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AuthLayout } from './components/AuthLayout';
+import { PROVIDER_NAV } from './components/MainNav';
 import { useDemo } from './demo/DemoContext';
 import { AccessScreen } from './screens/AccessScreen';
 import { HomeScreen } from './screens/HomeScreen';
-import { ProviderSoonScreen } from './screens/ProviderSoonScreen';
+import { NewRequestScreen } from './screens/NewRequestScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { ProviderActivityScreen } from './screens/ProviderActivityScreen';
+import { ProviderAlertScreen } from './screens/ProviderAlertScreen';
+import { ProviderHomeScreen } from './screens/ProviderHomeScreen';
+import { ProviderProfileScreen } from './screens/ProviderProfileScreen';
+import { ProviderSetupScreen } from './screens/ProviderSetupScreen';
+import { ProposalDetailScreen } from './screens/ProposalDetailScreen';
+import { ProvidersScreen } from './screens/ProvidersScreen';
+import { RequestDetailScreen } from './screens/RequestDetailScreen';
+import { RequestsScreen } from './screens/RequestsScreen';
 import { RoleScreen } from './screens/RoleScreen';
 import { SetupScreen } from './screens/SetupScreen';
+import { SoonScreen } from './screens/SoonScreen';
 import { SplashScreen } from './screens/SplashScreen';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 
@@ -16,9 +29,21 @@ function RequireProfile({ children }: { children: ReactElement }) {
   return profile ? children : <Navigate to="/bienvenida" replace />;
 }
 
-/** Con perfil ya creado, volver atrás hasta un formulario de acceso devuelve a /home. */
-function SkipIfProfile({ children }: { children: ReactElement }) {
-  const { profile } = useDemo();
+function RequireProviderProfile({ children }: { children: ReactElement }) {
+  const { providerProfile } = useDemo();
+  return providerProfile ? children : <Navigate to="/bienvenida" replace />;
+}
+
+/**
+ * Con la cuenta ya creada, volver atrás hasta un formulario de acceso devuelve al
+ * destino del rol. En /acceso el rol llega por query param; en los setup es fijo.
+ */
+function SkipIfSignedIn({ role, children }: { role?: 'client' | 'provider'; children: ReactElement }) {
+  const { profile, providerProfile } = useDemo();
+  const [params] = useSearchParams();
+  const resolved = role ?? (params.get('rol') === 'profesional' ? 'provider' : 'client');
+
+  if (resolved === 'provider') return providerProfile ? <Navigate to="/profesional" replace /> : children;
   return profile ? <Navigate to="/home" replace /> : children;
 }
 
@@ -29,13 +54,27 @@ export function App() {
       <Route path="splash" element={<SplashScreen />} />
       <Route path="bienvenida" element={<WelcomeScreen />} />
       <Route path="rol" element={<RoleScreen />} />
-      <Route path="rol/profesional" element={<ProviderSoonScreen />} />
-      <Route path="acceso" element={<SkipIfProfile><AccessScreen /></SkipIfProfile>} />
-      <Route path="configuracion" element={<SkipIfProfile><SetupScreen /></SkipIfProfile>} />
+      <Route path="acceso" element={<SkipIfSignedIn><AccessScreen /></SkipIfSignedIn>} />
+      <Route path="configuracion" element={<SkipIfSignedIn role="client"><SetupScreen /></SkipIfSignedIn>} />
+      <Route path="profesional/configuracion" element={<SkipIfSignedIn role="provider"><ProviderSetupScreen /></SkipIfSignedIn>} />
     </Route>
 
-    <Route element={<AppShell />}>
-      <Route path="home" element={<RequireProfile><HomeScreen /></RequireProfile>} />
+    <Route element={<RequireProviderProfile><AppShell items={PROVIDER_NAV} /></RequireProviderProfile>}>
+      <Route path="profesional" element={<ProviderHomeScreen />} />
+      <Route path="profesional/alertas/:id" element={<ProviderAlertScreen />} />
+      <Route path="profesional/actividad" element={<ProviderActivityScreen />} />
+      <Route path="profesional/perfil" element={<ProviderProfileScreen />} />
+    </Route>
+
+    <Route element={<RequireProfile><AppShell /></RequireProfile>}>
+      <Route path="home" element={<HomeScreen />} />
+      <Route path="solicitudes" element={<RequestsScreen />} />
+      <Route path="solicitudes/nueva" element={<NewRequestScreen />} />
+      <Route path="solicitudes/:id" element={<RequestDetailScreen />} />
+      <Route path="solicitudes/:id/propuesta/:postulacionId" element={<ProposalDetailScreen />} />
+      <Route path="profesionales" element={<ProvidersScreen />} />
+      <Route path="actividad" element={<SoonScreen title="Actividad" icon={Activity} text="Aquí verás el detalle de cada pago y cada paso de tus trabajos." />} />
+      <Route path="perfil" element={<ProfileScreen />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/splash" replace />} />

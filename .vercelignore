@@ -1,0 +1,10 @@
+# Deploy only application sources, never unrelated desktop documents or secrets.
+/*
+!/frontend
+!/shared
+/frontend/node_modules
+/frontend/dist
+/frontend/.vercel
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example

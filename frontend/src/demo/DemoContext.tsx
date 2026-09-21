@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { Trade } from '../marketplace';
 
 export interface Profile {
   firstName: string;
@@ -11,72 +12,337 @@ export interface Profile {
   deploymentHash?: string;
 }
 
-const STORAGE_KEY = 'masi.demo.v1';
+export interface ProviderProfile {
+  contractId?: string;
+  deploymentHash?: string;
+  id: string;
+  fullName: string;
+  services: Trade[];
+  district: string;
+  yearsExperience: number;
+  bio: string;
+  /** Vista previa local: no se guarda, así que tras recargar el avatar vuelve a las iniciales. */
+  photoUrl?: string;
+}
 
-/** Survives a reload so deep links like /solicitud/:id keep working. */
-function readProfile(): Profile | null {
+export type EstadoSolicitud = 'buscando_profesionales' | 'profesional_elegido';
+
+export interface Solicitud {
+  id: string;
+  servicio: Trade;
+  descripcion: string;
+  /** Cuántas fotos adjuntó el cliente. Se dibujan como marcadores: no guardamos los archivos. */
+  fotos: number;
+  ubicacion: string;
+  distrito: string;
+  /** Urgencia elegida en el formulario; vacío en registros anteriores a este campo. */
+  cuando: string;
+  /** Nombre para mostrar. La identidad estable es clienteId. */
+  cliente: string;
+  clienteId: string;
+  estado: EstadoSolicitud;
+  postulacionElegidaId?: string;
+  creadaEn: string;
+}
+
+/**
+ * Copia de lo público del profesional al momento de postular. El cliente no puede leer
+ * la cuenta del profesional, así que la propuesta se lleva consigo lo que debe mostrar.
+ * Ausente en propuestas anteriores a este campo y en las del catálogo, que ya tienen ficha.
+ */
+export interface ProviderSnapshot {
+  servicios: Trade[];
+  distrito: string;
+  aniosExperiencia: number;
+  bio: string;
+}
+
+export interface Postulacion {
+  id: string;
+  solicitudId: string;
+  providerId: string;
+  /** El oficio no se repite aquí: lo aporta la solicitud a la que pertenece. */
+  providerNombre: string;
+  providerPerfil?: ProviderSnapshot;
+  precio: number;
+  minutos: number;
+  fecha: string;
+}
+
+export const PROVIDER_FALLBACK_NAME = 'Profesional de Masi';
+
+export type Role = 'client' | 'provider';
+
+/**
+ * Cuatro cajones separados. Las cuentas quedan guardadas aunque se cierre sesión, y
+ * las solicitudes y postulaciones son datos compartidos entre los dos roles: nunca se
+ * borran al salir, o el cliente publicaría algo que el profesional jamás vería.
+ */
+const CLIENT_KEY = 'masi.demo.cliente.v2';
+const CLIENT_ID_KEY = 'masi.demo.clienteId.v1';
+const PROVIDER_KEY = 'masi.demo.profesional.v2';
+const SESSION_KEY = 'masi.demo.sesion.v2';
+const REQUESTS_KEY = 'masi.demo.solicitudes.v1';
+const PROPOSALS_KEY = 'masi.demo.postulaciones.v1';
+const AVAILABLE_KEY = 'masi.demo.disponible.v1';
+
+export const RETURNING_PROFILE: Profile = {
+  firstName: 'María',
+  lastName: 'Torres',
+  phone: '999 888 777',
+  district: 'Chorrillos, Lima',
+};
+
+export const RETURNING_PROVIDER_PROFILE: ProviderProfile = {
+  id: 'juan',
+  fullName: 'Juan Ramírez',
+  services: ['Pintura'],
+  district: 'Surco',
+  yearsExperience: 8,
+  bio: 'Dale una nueva vida a tus paredes, con atención a cada detalle.',
+};
+
+interface Session { client: boolean; provider: boolean }
+
+function read<T>(key: string, parse: (value: unknown) => T | null): T | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<Profile> | null;
-    if (!value || typeof value.firstName !== 'string' || !value.firstName.trim() ||
-        typeof value.contractId !== 'string' || !value.contractId.startsWith('C')) return null;
-    return {
-      firstName: value.firstName,
-      lastName: typeof value.lastName === 'string' ? value.lastName : '',
-      phone: typeof value.phone === 'string' ? value.phone : '',
-      district: typeof value.district === 'string' ? value.district : '',
-      role: value.role === 'profesional' ? 'profesional' : 'cliente',
-      contractId: typeof value.contractId === 'string' ? value.contractId : undefined,
-      deploymentHash: typeof value.deploymentHash === 'string' ? value.deploymentHash : undefined,
-    };
+    const raw = localStorage.getItem(key);
+    return raw ? parse(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-export function readProfileForAddress(contractId: string): Profile | null {
+function write(key: string, value: unknown): void {
   try {
-    const raw = localStorage.getItem(`masi.profile.${contractId}`);
-    if (!raw) return null;
-    const value = JSON.parse(raw) as Profile;
-    return value.contractId === contractId && typeof value.firstName === 'string' ? value : null;
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    return null;
+    // Sin almacenamiento la demo sigue funcionando; solo no sobrevive a una recarga.
   }
+}
+
+const parseProfile = (value: unknown): Profile | null => {
+  const row = value as Partial<Profile> | null;
+  if (!row || typeof row.firstName !== 'string' || !row.firstName.trim()) return null;
+  return {
+    firstName: row.firstName,
+    role: row.role === 'profesional' ? 'profesional' : 'cliente',
+    lastName: typeof row.lastName === 'string' ? row.lastName : '',
+    phone: typeof row.phone === 'string' ? row.phone : '',
+    district: typeof row.district === 'string' ? row.district : '',
+    contractId: typeof row.contractId === 'string' ? row.contractId : undefined,
+    deploymentHash: typeof row.deploymentHash === 'string' ? row.deploymentHash : undefined,
+  };
+};
+
+const parseProviderProfile = (value: unknown): ProviderProfile | null => {
+  const row = value as Partial<ProviderProfile> | null;
+  if (!row || typeof row.fullName !== 'string' || !row.fullName.trim()) return null;
+  return {
+    id: typeof row.id === 'string' && row.id ? row.id : 'provider',
+    fullName: row.fullName,
+    services: Array.isArray(row.services) ? row.services as Trade[] : [],
+    district: typeof row.district === 'string' ? row.district : '',
+    yearsExperience: typeof row.yearsExperience === 'number' ? row.yearsExperience : 0,
+    bio: typeof row.bio === 'string' ? row.bio : '',
+    contractId: typeof row.contractId === 'string' ? row.contractId : undefined,
+    deploymentHash: typeof row.deploymentHash === 'string' ? row.deploymentHash : undefined,
+  };
+};
+
+export function readProfileForAddress(contractId: string): Profile | null {
+  const profile = read(`masi.profile.${contractId}`, parseProfile);
+  return profile?.contractId === contractId ? profile : null;
+}
+
+export function readProviderForAddress(contractId: string): ProviderProfile | null {
+  const profile = read(`masi.provider.${contractId}`, parseProviderProfile);
+  return profile?.contractId === contractId ? profile : null;
+}
+
+const parseSession = (value: unknown): Session | null => {
+  const row = value as Partial<Session> | null;
+  if (!row) return null;
+  return { client: row.client === true, provider: row.provider === true };
+};
+
+const parseList = <T,>(value: unknown): T[] | null => (Array.isArray(value) ? value as T[] : null);
+
+const ESTADOS: readonly EstadoSolicitud[] = ['buscando_profesionales', 'profesional_elegido'];
+
+/**
+ * Identidad local del cliente. Sustituye al nombre como clave de pertenencia; el día que
+ * exista la dirección de la cuenta, se reemplaza este UUID por ella.
+ */
+function readOrCreateClientId(): string {
+  const stored = read<string>(CLIENT_ID_KEY, value => (typeof value === 'string' && value ? value : null));
+  if (stored) return stored;
+  const created = crypto.randomUUID();
+  write(CLIENT_ID_KEY, created);
+  return created;
+}
+
+/** Los registros guardados antes de esta versión no traen clienteId ni providerNombre. */
+function migrateSolicitudes(rows: Solicitud[], clienteId: string): Solicitud[] {
+  return rows.map(row => ({
+    ...row,
+    clienteId: typeof row.clienteId === 'string' && row.clienteId ? row.clienteId : clienteId,
+    cuando: typeof row.cuando === 'string' ? row.cuando : '',
+    estado: ESTADOS.includes(row.estado) ? row.estado : 'buscando_profesionales',
+  }));
+}
+
+function migratePostulaciones(rows: Postulacion[]): Postulacion[] {
+  return rows.map(row => ({
+    ...row,
+    providerNombre: typeof row.providerNombre === 'string' && row.providerNombre ? row.providerNombre : PROVIDER_FALLBACK_NAME,
+  }));
 }
 
 interface DemoValue {
   profile: Profile | null;
+  clienteId: string;
+  providerProfile: ProviderProfile | null;
+  solicitudes: Solicitud[];
+  postulaciones: Postulacion[];
+  available: boolean;
   saveProfile: (profile: Profile) => void;
-  reset: () => void;
+  saveProviderProfile: (profile: ProviderProfile) => void;
+  /** Reabre la cuenta guardada de ese rol; si no hay ninguna, usa la de ejemplo. */
+  signInClient: (fallback: Profile) => void;
+  signInProvider: (fallback: ProviderProfile) => void;
+  signOut: (role: Role) => void;
+  /** Async desde ya: en F5 solo cambia la implementación, no las pantallas. */
+  publishRequest: (input: Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId'>) => Promise<Solicitud>;
+  sendProposal: (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre'>) => Promise<Postulacion>;
+  chooseProposal: (solicitudId: string, postulacionId: string) => Promise<Solicitud>;
+  setAvailable: (next: boolean) => void;
 }
 
 const DemoContext = createContext<DemoValue | null>(null);
 
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<Profile | null>(readProfile);
+  const [clientAccount, setClientAccount] = useState<Profile | null>(() => read(CLIENT_KEY, parseProfile));
+  const [providerAccount, setProviderAccount] = useState<ProviderProfile | null>(() => read(PROVIDER_KEY, parseProviderProfile));
+  const [session, setSession] = useState<Session>(() => read(SESSION_KEY, parseSession) ?? { client: false, provider: false });
+  const [legacyClientId] = useState(readOrCreateClientId);
+  const clienteId = clientAccount?.contractId ?? legacyClientId;
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], legacyClientId));
+  const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? []));
+  const [available, setAvailableState] = useState<boolean>(() => read<boolean>(AVAILABLE_KEY, v => (typeof v === 'boolean' ? v : null)) ?? true);
+
+  const openSession = useCallback((role: Role) => {
+    setSession(current => {
+      const next = { ...current, [role]: true };
+      write(SESSION_KEY, next);
+      return next;
+    });
+  }, []);
 
   const saveProfile = useCallback((next: Profile) => {
-    setProfile(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      if (next.contractId) localStorage.setItem(`masi.profile.${next.contractId}`, JSON.stringify(next));
-    } catch {
-      // Sin almacenamiento la demo sigue funcionando; solo no sobrevive a una recarga.
+    setClientAccount(next);
+    write(CLIENT_KEY, next);
+    if (next.contractId) write(`masi.profile.${next.contractId}`, next);
+    openSession('client');
+  }, [openSession]);
+
+  const saveProviderProfile = useCallback((next: ProviderProfile) => {
+    setProviderAccount(next);
+    // photoUrl queda fuera: es una URL de objeto que no sobrevive a la recarga.
+    const { photoUrl: _photoUrl, ...persisted } = next;
+    write(PROVIDER_KEY, persisted);
+    if (next.contractId) write(`masi.provider.${next.contractId}`, persisted);
+    openSession('provider');
+  }, [openSession]);
+
+  const signInClient = useCallback((fallback: Profile) => {
+    if (!clientAccount) {
+      setClientAccount(fallback);
+      write(CLIENT_KEY, fallback);
     }
+    openSession('client');
+  }, [clientAccount, openSession]);
+
+  const signInProvider = useCallback((fallback: ProviderProfile) => {
+    if (!providerAccount) {
+      setProviderAccount(fallback);
+      write(PROVIDER_KEY, fallback);
+    }
+    openSession('provider');
+  }, [providerAccount, openSession]);
+
+  /** Cierra solo ese rol. La cuenta queda guardada para volver a entrar con ella. */
+  const signOut = useCallback((role: Role) => {
+    setSession(current => {
+      const next = { ...current, [role]: false };
+      write(SESSION_KEY, next);
+      return next;
+    });
   }, []);
 
-  const reset = useCallback(() => {
-    setProfile(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ídem.
-    }
+  const publishRequest = useCallback(async (input: Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId'>) => {
+    const solicitud: Solicitud = {
+      ...input,
+      id: crypto.randomUUID(),
+      clienteId,
+      estado: 'buscando_profesionales',
+      creadaEn: new Date().toISOString(),
+    };
+    setSolicitudes(current => {
+      const next = [solicitud, ...current];
+      write(REQUESTS_KEY, next);
+      return next;
+    });
+    return solicitud;
+  }, [clienteId]);
+
+  const sendProposal = useCallback(async (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre'>) => {
+    const postulacion: Postulacion = {
+      ...input,
+      id: crypto.randomUUID(),
+      providerNombre: providerAccount?.fullName?.trim() || PROVIDER_FALLBACK_NAME,
+      providerPerfil: providerAccount
+        ? {
+          servicios: providerAccount.services,
+          distrito: providerAccount.district,
+          aniosExperiencia: providerAccount.yearsExperience,
+          bio: providerAccount.bio,
+        }
+        : undefined,
+      fecha: new Date().toISOString(),
+    };
+    setPostulaciones(current => {
+      const next = [postulacion, ...current];
+      write(PROPOSALS_KEY, next);
+      return next;
+    });
+    return postulacion;
+  }, [providerAccount]);
+
+  const chooseProposal = useCallback(async (solicitudId: string, postulacionId: string) => {
+    const current = solicitudes.find(item => item.id === solicitudId);
+    if (!current) throw new Error(`No existe la solicitud ${solicitudId}`);
+    const updated: Solicitud = { ...current, estado: 'profesional_elegido', postulacionElegidaId: postulacionId };
+    setSolicitudes(list => {
+      const next = list.map(item => (item.id === solicitudId ? updated : item));
+      write(REQUESTS_KEY, next);
+      return next;
+    });
+    return updated;
+  }, [solicitudes]);
+
+  const setAvailable = useCallback((next: boolean) => {
+    setAvailableState(next);
+    write(AVAILABLE_KEY, next);
   }, []);
 
-  const value = useMemo(() => ({ profile, saveProfile, reset }), [profile, saveProfile, reset]);
+  const profile = session.client ? clientAccount : null;
+  const providerProfile = session.provider ? providerAccount : null;
+
+  const value = useMemo(
+    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, setAvailable }),
+    [profile, clienteId, providerProfile, solicitudes, postulaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, setAvailable],
+  );
   return <DemoContext value={value}>{children}</DemoContext>;
 }
 

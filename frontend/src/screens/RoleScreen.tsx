@@ -21,7 +21,7 @@ export function RoleScreen() {
   return <Screen
     header={<ScreenHeader title="¿Cómo quieres usar Masi?" subtitle="Puedes cambiarlo después" />}
     footer={<ScreenFooter className="bg-white">
-      <Button disabled={!role} onClick={() => navigate(`/acceso?rol=${role}`)}>
+      <Button disabled={!role} onClick={() => navigate(role === 'cliente' ? '/acceso' : '/acceso?rol=profesional')}>
         Continuar<ArrowRight size={18} aria-hidden="true" />
       </Button>
     </ScreenFooter>}

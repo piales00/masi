@@ -190,6 +190,26 @@ Para probar está bien y no hay que rehacer nada. Pero:
 - [ ] Todo lo creado en ese sitio es **desechable**; no lo uses como referencia de "ya tengo cuenta".
 - [ ] **Repetir la prueba en `masiapp.vercel.app` antes de sembrar los trabajos del 24.** Si se siembran perfiles con cuentas de otro dominio, el día de grabar no entra nadie.
 
+### Hallazgo 4 — funciona en el celular pero no en la laptop
+
+Es normal y no es un fallo del código. **La laptop necesita un autenticador de plataforma**, y muchas no lo tienen utilizable:
+
+- **Linux:** Chrome y Firefox no traen autenticador de plataforma. Solo ofrecen "usar un teléfono" por QR o una llave física. No hay nada que arreglar.
+- **Windows:** hace falta Windows Hello **configurado con PIN**. Tener lector de huella no basta si nunca se activó.
+- **Mac:** Touch ID.
+
+No bloquea nada: Masi es una app móvil, el vídeo se graba en un teléfono y el criterio de la decisión del 22 es "¿firma en un celular real?". Ya sabemos que sí.
+
+**Para desarrollar sin depender del teléfono**, Chrome trae un autenticador virtual:
+
+1. DevTools (F12) → tres puntos → **More tools** → **WebAuthn**.
+2. Marca **Enable virtual authenticator environment**.
+3. **Add** con protocolo `ctap2`, transporte `internal`, y *resident keys* y *user verification* activadas.
+
+El navegador simula la huella y el flujo entero funciona sin hardware. Dos avisos: las credenciales virtuales **se borran al cerrar DevTools**, y **las wallets de María y Juan tienen que crearse con huella real en el teléfono**, no con el autenticador virtual.
+
+Para diagnosticar, mira el error en consola: `NotSupportedError` o que no salga diálogo significa que no hay autenticador; `NotAllowedError` significa que sí lo hay pero se canceló.
+
 ### Lo que sigue pendiente
 
 - [ ] Firmar una transacción con el relayer pagando las comisiones (fase 2).

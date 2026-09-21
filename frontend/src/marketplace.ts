@@ -11,6 +11,9 @@ export interface Provider {
   trade: Trade;
   profession: string;
   district: string;
+  /** Distancia al distrito del usuario, en kilómetros. Dato fuera de la cadena. */
+  distance_km: number;
+  availability: string;
   reference_price_pen: number;
   photo: string;
   specialty: string;
@@ -43,11 +46,12 @@ export function parseProviders(value: unknown): Provider[] {
   return value.map((raw: unknown) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid provider');
     const row = raw as Record<string, unknown>;
-    for (const key of ['id', 'address', 'name', 'trade', 'profession', 'district', 'photo', 'specialty', 'description']) {
+    for (const key of ['id', 'address', 'name', 'trade', 'profession', 'district', 'availability', 'photo', 'specialty', 'description']) {
       if (typeof row[key] !== 'string' || !row[key].trim()) throw new Error(`Missing provider field: ${key}`);
     }
     if (!TRADES.includes(row.trade as Trade)) throw new Error('Unknown trade');
     if (typeof row.reference_price_pen !== 'number' || !Number.isFinite(row.reference_price_pen) || row.reference_price_pen <= 0) throw new Error('Invalid reference price');
+    if (typeof row.distance_km !== 'number' || !Number.isFinite(row.distance_km) || row.distance_km <= 0) throw new Error('Invalid distance');
     if (!/^C[A-Z2-7]{55}$/.test(row.address as string)) throw new Error('Invalid contract address');
     if (ids.has(row.id as string) || addresses.has(row.address as string)) throw new Error('Duplicate provider');
     ids.add(row.id as string); addresses.add(row.address as string);

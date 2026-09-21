@@ -30,22 +30,43 @@ El usuario nunca ve una wallet, nunca escribe una frase semilla y nunca necesita
 | Passkeys + contrato de cuenta | Pagar y aprobar con huella, sin wallet |
 | Relayer | El usuario nunca necesita XLM |
 
+Solo dos cosas viven en la cadena —retener el dinero y guardar quién calificó qué—
+y son exactamente las dos donde "confía en nosotros" es una respuesta débil. Todo
+lo demás está fuera, porque una base de datos lo hace mejor. Los diagramas y el
+razonamiento completo: [`ARQUITECTURA.md`](./ARQUITECTURA.md).
+
 ## Estado
 
 En construcción. Entrega el 25 de septiembre de 2026.
 
-Implementación del 20 de septiembre:
+**Desplegado y funcionando en testnet:**
 
-- **P1:** contrato en `contracts/escrow`, flujo principal de pagos, autorización,
-  eventos y almacenamiento persistente. Las firmas de `dispute`, `resolve` y
-  `rate` están disponibles y devuelven `NotImplemented` hasta el siguiente frente.
-- **P3:** búsqueda React + Vite en `frontend`, ocho perfiles de prueba, filtros por
-  oficio y distrito y calificaciones con la misma forma de `rating_of`.
-- **Interfaz compartida:** [`shared/escrow.ts`](./shared/escrow.ts) contiene los
-  nueve estados, `Job`, los argumentos públicos y el resumen de calificaciones.
+| | |
+|---|---|
+| App | https://masiapp.netlify.app |
+| Contrato `escrow` | [`CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV`](https://stellar.expert/explorer/testnet/contract/CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV) |
+| SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
-La búsqueda muestra datos ficticios. Aún no está conectada a un contrato desplegado.
-Passkeys, relayer y pantallas del flujo de trabajo corresponden a P2/P4.
+El caso del demo está ejecutado de punta a punta en la red, no solo en tests: María
+paga S/1.260, Juan cobra S/1.200 (S/360 de materiales al iniciar y S/840 al
+aprobar), Masi cobra S/60 de comisión y el contrato queda en cero. Los hashes de
+cada transacción están en [`DESPLIEGUE.md`](./DESPLIEGUE.md), verificables por
+cualquiera en el explorador.
+
+**Contrato** — 17/17 tests. `create_job`, `accept`, `fund`, `start`, `submit`,
+`approve`, `cancel`, `rate` y `auto_release` funcionan y están probados en red.
+`dispute` y `resolve` devuelven `NotImplemented`; son los primeros de la lista de
+recortes.
+
+**Cuentas** — passkeys verificadas en un Android real: se desplegó una smart wallet
+con huella. Falta repetirlo en el dominio definitivo e integrar el relayer.
+
+**Frontend** — PWA móvil con el onboarding completo, publicación de solicitudes y
+listado de profesionales. Las calificaciones usan datos de prueba con la misma
+forma que devuelve el contrato; `frontend/src/dataSource.ts` es el único punto a
+cambiar para conectarlo.
+
+Estado detallado por frente: [`AVANCE.md`](./AVANCE.md).
 
 ## Ejecutar en local
 
@@ -57,10 +78,8 @@ npm ci
 npm run dev
 ```
 
-El servidor muestra la dirección local al arrancar. Para encontrar el caso del
-video, elige **Pintura** y **Surco**: aparece **Juan**, con precio referencial
-**S/1,200**. La ficha breve describe el servicio; contratar y pagar pertenecen al
-flujo de P4.
+El servidor muestra la dirección local al arrancar. El caso del vídeo es **Juan**,
+pintor en **Surco**, con precio referencial **S/1.200**.
 
 Verificar frontend:
 
@@ -87,14 +106,16 @@ la configuración requerida por el runtime ([documentación del SDK](https://doc
 
 ## Conectar los frentes
 
-P3 consume `RatingSource.rating_of(provider)`. Para conectar la cadena, sustituir
-la fuente mock por un adaptador que devuelva el resultado decodificado y asociar
-los perfiles con direcciones reales. No cambian las tarjetas ni el formato del
-resumen. Ver [`shared/README.md`](./shared/README.md).
+`frontend/src/dataSource.ts` es el único punto a cambiar: exporta un `RatingSource`
+que hoy devuelve datos de prueba y mañana leerá del contrato. La forma ya es la
+misma, así que es una línea. La guía completa, con las reglas que evitan los
+errores típicos —stroops, `bigint`, direcciones C, errores traducidos— está en
+[`INTEGRACION.md`](./INTEGRACION.md).
 
-`auto_release`, `cancel` y `dispute` reciben `caller` además de `job_id`, para
-autenticar a quien actúa. `auto_release` cuenta el plazo desde `submit` y necesita
-una invocación después del vencimiento; el contrato no ejecuta tareas programadas.
+`auto_release`, `cancel` y `dispute` reciben `caller` además de `job_id`, porque
+admiten más de un rol y `require_auth` no puede adivinar a quién exigirle la firma.
+`auto_release` cuenta el plazo desde `submit` y necesita una invocación después del
+vencimiento: el contrato no ejecuta tareas programadas.
 
 ## Limitaciones
 
@@ -108,6 +129,10 @@ una invocación después del vencimiento; el contrato no ejecuta tareas programa
 
 | Archivo | Qué tiene |
 |---|---|
+| [`ARQUITECTURA.md`](./ARQUITECTURA.md) | Diagramas: qué vive en la cadena y qué no, y por qué |
+| [`AVANCE.md`](./AVANCE.md) | Estado del proyecto por frente |
+| [`DESPLIEGUE.md`](./DESPLIEGUE.md) | Contract ID, hashes y cómo reproducir el despliegue |
+| [`INTEGRACION.md`](./INTEGRACION.md) | Cómo conectar el frontend al contrato |
 | [`masi-scope.md`](./masi-scope.md) | Alcance completo: estados, funciones del contrato, cronograma, riesgos |
 | [`SETUP_AGENTES.md`](./SETUP_AGENTES.md) | Instalación del entorno y de los agentes de AI |
 | [`CLAUDE.md`](./CLAUDE.md) | Reglas que los agentes deben respetar |

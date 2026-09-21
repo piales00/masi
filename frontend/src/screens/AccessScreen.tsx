@@ -5,22 +5,33 @@ import { Button } from '../components/Button';
 import { MasiLogo } from '../components/MasiLogo';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { readProfileForAddress, useDemo } from '../demo/DemoContext';
+import { readProfileForAddress, readProviderForAddress, useDemo } from '../demo/DemoContext';
 import { signIn } from '../passkeys';
 
 export function AccessScreen() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const role = params.get('rol') === 'profesional' ? 'profesional' : 'cliente';
-  const { saveProfile } = useDemo();
+  const { saveProfile, saveProviderProfile } = useDemo();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const enter = async () => {
+    if (busy) return;
     setBusy(true);
     setError('');
     try {
       const contractId = await signIn();
+      if (role === 'profesional') {
+        const profile = readProviderForAddress(contractId);
+        if (!profile) {
+          navigate('/profesional/configuracion', { replace: true, state: { contractId } });
+          return;
+        }
+        saveProviderProfile(profile);
+        navigate('/profesional', { replace: true });
+        return;
+      }
       saveProfile(readProfileForAddress(contractId) ?? {
         firstName: 'Cuenta', lastName: '', phone: '', district: 'Lima', role, contractId,
       });
@@ -50,7 +61,7 @@ export function AccessScreen() {
 
       <div className="mt-8 text-center">
         <p className="text-sm text-masi-muted">¿Primera vez en Masi?</p>
-        <Button variant="secondary" className="mt-3" onClick={() => navigate(`/configuracion?rol=${role}`)}>
+        <Button variant="secondary" className="mt-3" onClick={() => navigate(role === 'profesional' ? '/profesional/configuracion' : '/configuracion')}>
           Crear cuenta<ArrowRight size={18} aria-hidden="true" />
         </Button>
       </div>
