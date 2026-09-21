@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { fieldBox } from '../components/Field';
 import { Screen } from '../components/Screen';
+import { AccountDetails } from '../components/AccountDetails';
 import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
 import type { Trade } from '../marketplace';
@@ -93,6 +94,7 @@ export function HomeScreen() {
           </li>)}
         </ol>
       </section>
+      <AccountDetails contractId={profile?.contractId} deploymentHash={profile?.deploymentHash} />
     </div>
   </Screen>;
 }

@@ -1,6 +1,7 @@
 import { Briefcase, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
+import { AccountDetails } from '../components/AccountDetails';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -49,6 +50,7 @@ export function ProviderProfileScreen() {
         </div> : null}
       </div>
 
+      <AccountDetails contractId={providerProfile?.contractId} deploymentHash={providerProfile?.deploymentHash} />
       <Button variant="secondary" onClick={leave} className="mt-6">
         <LogOut size={18} aria-hidden="true" />Cerrar sesión
       </Button>

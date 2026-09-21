@@ -14,9 +14,9 @@ import {
   type Solicitud,
   type SolicitudEstado,
   type SolicitudInput,
-} from '../../shared/api';
-import { TRADES, type Trade } from '../src/marketplace';
-import type { KeyValueStore } from './store';
+} from '../../shared/api.js';
+import { TRADES, type Trade } from '../../shared/trades.js';
+import type { KeyValueStore } from './store.js';
 
 const ADDRESS_RE = /^C[A-Z2-7]{55}$/;
 const HEX_64_RE = /^[0-9a-f]{64}$/;

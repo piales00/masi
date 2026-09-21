@@ -11,9 +11,14 @@ export interface Profile {
   lastName: string;
   phone: string;
   district: string;
+  role?: 'cliente' | 'profesional';
+  contractId?: string;
+  deploymentHash?: string;
 }
 
 export interface ProviderProfile {
+  contractId?: string;
+  deploymentHash?: string;
   id: string;
   fullName: string;
   services: Trade[];
@@ -130,9 +135,12 @@ const parseProfile = (value: unknown): Profile | null => {
   if (!row || typeof row.firstName !== 'string' || !row.firstName.trim()) return null;
   return {
     firstName: row.firstName,
+    role: row.role === 'profesional' ? 'profesional' : 'cliente',
     lastName: typeof row.lastName === 'string' ? row.lastName : '',
     phone: typeof row.phone === 'string' ? row.phone : '',
     district: typeof row.district === 'string' ? row.district : '',
+    contractId: typeof row.contractId === 'string' ? row.contractId : undefined,
+    deploymentHash: typeof row.deploymentHash === 'string' ? row.deploymentHash : undefined,
   };
 };
 
@@ -146,8 +154,20 @@ const parseProviderProfile = (value: unknown): ProviderProfile | null => {
     district: typeof row.district === 'string' ? row.district : '',
     yearsExperience: typeof row.yearsExperience === 'number' ? row.yearsExperience : 0,
     bio: typeof row.bio === 'string' ? row.bio : '',
+    contractId: typeof row.contractId === 'string' ? row.contractId : undefined,
+    deploymentHash: typeof row.deploymentHash === 'string' ? row.deploymentHash : undefined,
   };
 };
+
+export function readProfileForAddress(contractId: string): Profile | null {
+  const profile = read(`masi.profile.${contractId}`, parseProfile);
+  return profile?.contractId === contractId ? profile : null;
+}
+
+export function readProviderForAddress(contractId: string): ProviderProfile | null {
+  const profile = read(`masi.provider.${contractId}`, parseProviderProfile);
+  return profile?.contractId === contractId ? profile : null;
+}
 
 const parseSession = (value: unknown): Session | null => {
   const row = value as Partial<Session> | null;
@@ -253,8 +273,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [clientAccount, setClientAccount] = useState<Profile | null>(() => read(CLIENT_KEY, parseProfile));
   const [providerAccount, setProviderAccount] = useState<ProviderProfile | null>(() => read(PROVIDER_KEY, parseProviderProfile));
   const [session, setSession] = useState<Session>(() => read(SESSION_KEY, parseSession) ?? { client: false, provider: false });
-  const [clienteId] = useState(readOrCreateClientId);
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], clienteId));
+  const [legacyClientId] = useState(readOrCreateClientId);
+  const clienteId = clientAccount?.contractId ?? legacyClientId;
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], legacyClientId));
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? []));
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => read(QUOTES_KEY, parseList<Cotizacion>) ?? []);
   const [available, setAvailableState] = useState<boolean>(() => read<boolean>(AVAILABLE_KEY, v => (typeof v === 'boolean' ? v : null)) ?? true);
@@ -270,6 +291,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const saveProfile = useCallback((next: Profile) => {
     setClientAccount(next);
     write(CLIENT_KEY, next);
+    if (next.contractId) write(`masi.profile.${next.contractId}`, next);
     openSession('client');
   }, [openSession]);
 
@@ -278,6 +300,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     // photoUrl queda fuera: es una URL de objeto que no sobrevive a la recarga.
     const { photoUrl: _photoUrl, ...persisted } = next;
     write(PROVIDER_KEY, persisted);
+    if (next.contractId) write(`masi.provider.${next.contractId}`, persisted);
     openSession('provider');
   }, [openSession]);
 

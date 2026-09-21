@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { ArrowRight, Camera } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { Button } from '../components/Button';
 import { Field, fieldBox } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
+import { createAccount, hasPendingAccount } from '../passkeys';
 import { useDemo } from '../demo/DemoContext';
 import type { Trade } from '../marketplace';
 import { SERVICES, TINT_CLASSES } from '../trades';
@@ -19,6 +20,11 @@ const DISTRICTS = ['Surco', 'Chorrillos', 'Barranco', 'Surquillo', 'Miraflores',
 
 export function ProviderSetupScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const existingContract = (location.state as { contractId?: string } | null)?.contractId;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(hasPendingAccount);
   const { saveProviderProfile } = useDemo();
   const [fullName, setFullName] = useState('');
   const [services, setServices] = useState<Trade[]>([]);
@@ -48,19 +54,33 @@ export function ProviderSetupScreen() {
 
   const ready = Boolean(fullName.trim() && services.length > 0 && district && years !== '');
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!ready) return;
-    saveProviderProfile({
-      id: crypto.randomUUID(),
-      fullName: fullName.trim(),
-      services,
-      district,
-      yearsExperience: Number(years),
-      bio: bio.trim(),
-      photoUrl: photoUrl || undefined,
-    });
-    navigate('/profesional', { replace: true });
+    if (!ready || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const receipt = existingContract
+        ? { contractId: existingContract, hash: undefined }
+        : await createAccount(fullName.trim());
+      saveProviderProfile({
+        id: receipt.contractId,
+        contractId: receipt.contractId,
+        deploymentHash: receipt.hash,
+        fullName: fullName.trim(),
+        services,
+        district,
+        yearsExperience: Number(years),
+        bio: bio.trim(),
+        photoUrl: photoUrl || undefined,
+      });
+      navigate('/profesional', { replace: true });
+    } catch (cause) {
+      setPending(hasPendingAccount());
+      setError(cause instanceof Error ? cause.message : 'No se pudo registrar tu cuenta. Inténtalo de nuevo.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return <Screen header={<ScreenHeader title="Completa tu perfil" subtitle="Así te conocen los clientes de tu zona" />}>
@@ -138,7 +158,12 @@ export function ProviderSetupScreen() {
         <p className="mt-1.5 text-right text-xs text-masi-muted">{bio.length}/{MAX_BIO}</p>
       </div>
 
-      <Button type="submit" disabled={!ready}>Continuar<ArrowRight size={18} aria-hidden="true" /></Button>
+      {pending && !existingContract && <p className="rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Hay un registro pendiente. Reintenta con el mismo nombre.</p>}
+      {error && <p role="alert" className="text-sm text-masi-error">{error}</p>}
+      <Button type="submit" disabled={!ready || busy}>
+        {busy ? 'Guardando…' : existingContract ? 'Guardar perfil' : pending ? 'Reintentar registro' : 'Crear cuenta con huella'}
+        <ArrowRight size={18} aria-hidden="true" />
+      </Button>
     </form>
   </Screen>;
 }

@@ -1,8 +1,18 @@
 import { Redis } from '@upstash/redis';
-import type { KeyValueStore } from './store';
+import type { KeyValueStore } from './store.js';
 
 export class RedisStore implements KeyValueStore {
-  constructor(private readonly redis: Redis) {}
+  constructor(private client?: Redis) {}
+
+  private get redis(): Redis {
+    if (!this.client) {
+      if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+        throw new Error('Falta configurar Upstash Redis en el servidor.');
+      }
+      this.client = Redis.fromEnv();
+    }
+    return this.client;
+  }
 
   async get(key: string): Promise<unknown | null> {
     return this.redis.get(key);
@@ -24,4 +34,5 @@ export class RedisStore implements KeyValueStore {
   }
 }
 
-export const redisStore = new RedisStore(Redis.fromEnv());
+// La ruta de salud no requiere una conexión a la base de datos.
+export const redisStore = new RedisStore();

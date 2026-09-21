@@ -11,4 +11,5 @@ test_snapshots/
 .env.*
 !.env.example
 *.log
+**/.vercel/
 
