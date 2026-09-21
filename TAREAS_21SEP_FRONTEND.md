@@ -3,9 +3,7 @@
 **Resumen.** Hoy cierras el recorrido que falta entre "el técnico se postula" y "el cliente califica": el cliente ve las postulaciones y elige (M3), el técnico envía la cotización final y el cliente la acepta, lo que dispara `create_job` (M4–M5), y la **pantalla de trabajo**, una por rol, con las firmas del tramo que se muestra en vivo. Todo se construye hoy contra datos de prueba, con la misma forma que el contrato y que la API, y se conecta después. La API del almacén la define el backend en un solo sitio: [la sección 2 de `TAREAS_21SEP_BACKEND.md`](./TAREAS_21SEP_BACKEND.md#2-la-api-del-almacén--el-punto-de-integración). Aquí se enlaza, no se repite.
 
 
-> **✅ Decisión (a) cerrada el 21 al mediodía: Vercel.** El dominio congelado es **`https://masiapp.vercel.app`**; ya no se usa `masiapp.netlify.app` para nada. F7 ya está hecha en el PR #5 (`frontend/vercel.json`). F5 se prueba contra la API desplegada en Vercel.
-
-> **✅ Decisiones del PO cerradas (21/09, tarde):** (b) se construye la disputa — **B2 y B3 ya están hechas y desplegadas** (PR #6), no las repitas; el contract ID definitivo es **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**. `resolve` **cuenta como trabajo completado** y como disputa. (c) plazo de revisión por defecto **24 h** (`review_secs = 86400`). Datos **compartidos** con la API. Siguen abiertas, y mientras tanto se usa la recomendación: tras publicar se va al detalle de la solicitud, botón "Tengo un problema" en la pantalla de trabajo, comentario de reseña opcional, y API sin autenticación declarada en el README.
+**Todas las decisiones que te afectaban ya están tomadas** (sección 0).
 
 ---
 
@@ -28,24 +26,29 @@
 
 ### Git
 
-- `main` está protegido: todo entra por PR, y **cada merge a `main` es un despliegue de producción**. En Netlify quedan dos, sin renovación hasta el 19 de octubre.
-- Trabaja en ramas cortas (`feat/pantalla-trabajo`, `feat/m3-elegir`, `feat/cotizacion`) con PR contra **`develop`**. `develop` → `main` se mergea agrupado, como mucho una vez al día.
+- `main` está protegido: todo entra por PR.
+- Trabaja en ramas cortas (`feat/pantalla-trabajo`, `feat/m3-elegir`, `feat/cotizacion`) con PR contra **`develop`**. `develop` → `main` se mergea cuando algo tenga que verse en el dominio.
+- Vercel Hobby permite 100 despliegues al día, así que no hay que racionarlos. Cada PR genera una URL de preview (`masiapp-git-…vercel.app`) que sirve para revisar pantallas, pero **las passkeys solo valen en `https://masiapp.vercel.app`**.
 - Los commits y los PR no llevan `Co-Authored-By` ni líneas de atribución.
 
-### Decisiones abiertas que te afectan
+### Decisiones del PO — todas cerradas
 
-| # | Decisión | Te bloquea |
+| Tema | Decisión | Qué implica para ti |
 |---|---|---|
-| **(a)** | Hosting: Netlify Personal o Vercel Hobby | F5 (probar contra la API desplegada) y F7 |
-| **(b)** | ¿Se construye `dispute`? Cambia el contract ID | F8 (conectar al contrato), que no es de hoy |
-| **(c)** | Plazo de revisión por defecto: ✅ **24 h** | Solo el valor de `DEFAULT_REVIEW_SECS` |
+| Hosting | **Vercel**, `https://masiapp.vercel.app` | F7 ya está hecha. F5 se prueba contra la API desplegada ahí |
+| Disputa | **Se construye**, ya desplegada | Botón **"Tengo un problema"** en F4, en los estados iniciado y terminado. Suma ~1 h a F4 |
+| Contract ID | **`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`**, definitivo | Va en `CONTRACT_ID` de `config.ts` (F1). F8 ya no espera ningún redespliegue |
+| Plazo de revisión | **24 h** | `DEFAULT_REVIEW_SECS = 86400`, y el texto "se libera el {fecha}" se calcula con eso |
+| Datos antes del contrato | **Compartidos**, con la API del backend | F5 |
+
+Pendientes, con la recomendación como valor por defecto hasta que el PO diga otra cosa: **tras publicar, el cliente va al detalle de su solicitud**, no al listado de profesionales (F2); y **el comentario de la reseña es opcional** (F4).
 
 ### Orden y línea de corte
 
 ```
 F1 base ──► F2 M3 ──► F3 cotización ──► F4 pantalla de trabajo
-                         └──────────────► F5 persistencia en la API 🔒a
-F6 tests (a lo largo del día)     F7 vercel.json 🔒a     F8 conectar al contrato (22) 🔒b
+                         └──────────────► F5 persistencia en la API
+F6 tests (a lo largo del día)     F7 ✅ hecha     F8 conectar al contrato (22)
 ```
 
 **F4 es la prioridad del día**: es el tramo que se muestra en vivo y hoy no tiene ninguna pantalla. No depende de F2 ni de F3, así que, si a mediodía vas atrasado, haz F4 antes que F2 y F3. Si a las 18:00 no llegaste a F5, pasa al 22 a primera hora. Suma estimada de hoy: unas 14 h. No cabe entera, y está ordenada para que lo que quede fuera sea lo último.
@@ -207,6 +210,8 @@ Montos siempre desde el `Job` (`amount`, `fee_amount`, `materials_amount` y `rem
 
 Se guarda el texto **antes** de firmar: si falla la firma, queda un texto huérfano sin efecto; al revés, quedaría un hash en la cadena sin texto que lo respalde. Con el comentario vacío se firma el hash de `""` y no se guarda nada.
 
+**"Tengo un problema" (decisión del PO).** En `Started` y `Submitted`, cliente y técnico ven un enlace secundario "Tengo un problema", que llama a `dispute(job_id, caller)` tras confirmar con la huella. Nunca la palabra "disputa" en primer plano. El mock reproduce las dos funciones: `dispute` pasa a `Disputed` desde esos dos estados, y `resolve(job_id, provider_bps)` pasa a `Resolved`, repartiendo solo `remaining_amount`. `resolve` no es una acción de ningún usuario de la app, porque la firma el árbitro: en el mock se dispara con un control solo de desarrollo, y en red, por CLI.
+
 **Siempre.**
 - Botón en estado "Confirmando…" y deshabilitado mientras se firma y envía. Nada de doble envío.
 - Tras cada acción, relee con `getJob` y además refresca cada 5 s con la pestaña visible, para ver lo que firma la otra persona.
@@ -221,13 +226,14 @@ Se guarda el texto **antes** de firmar: si falla la firma, queda un texto huérf
 - [ ] Forzar `Error(Contract, #15)` muestra "Ya calificaste este trabajo."
 - [ ] `auto_release` solo se ofrece con el plazo vencido. Si el mock responde #12, "Todavía estás a tiempo de revisar el trabajo."
 - [ ] `grep -rniE "wallet|xlm|\bgas\b|seed phrase|stroop" frontend/src/screens` no devuelve nada visible para el usuario.
+- [ ] "Tengo un problema" solo aparece en `Started` y `Submitted`; tras usarlo, el trabajo muestra "Estamos revisando este trabajo" y ya no ofrece aprobar.
 - [ ] Móvil a 360 px; checklist de la sección 13 de `STYLE_GUIDE.md`.
 
-**Depende de.** F1. **No** depende de F2 ni de F3. **Estimación:** 4 h.
+**Depende de.** F1. **No** depende de F2 ni de F3. **Estimación:** 5 h (4 h + 1 h del botón de disputa).
 
 ---
 
-### F5 · Persistencia de `DemoContext` en la API compartida 🔒 decisión (a) para probar desplegado
+### F5 · Persistencia de `DemoContext` en la API compartida
 
 **Objetivo.** Que solicitudes, postulaciones, cotizaciones y reseñas se lean y escriban en la API del almacén, para que lo que publica María en su teléfono le llegue a Juan en el suyo.
 
@@ -237,7 +243,7 @@ Se guarda el texto **antes** de firmar: si falla la firma, queda un texto huérf
 
 **Archivos.**
 - Nuevo: `frontend/src/api/client.ts`: un `fetch` tipado por endpoint (`listSolicitudes`, `createSolicitud`, `elegir`, `listPostulaciones`, `createPostulacion`, `listCotizaciones`, `createCotizacion`, `patchCotizacion`, `getResena`, `putResena`), que lanza con el `ApiError` recibido.
-- Nuevo: `frontend/src/usePolling.ts`: repite una carga cada 10 s y se detiene con `document.hidden`. En Netlify cada invocación gasta créditos.
+- Nuevo: `frontend/src/usePolling.ts`: repite una carga cada 10 s y se detiene con `document.hidden`, para no gastar comandos de Upstash con la pestaña oculta.
 - `frontend/src/demo/DemoContext.tsx`: `publishRequest`, `sendProposal`, `chooseProposal`, `sendQuote`, `acceptQuote`, `rejectQuote` y `saveReview` delegan en `api/client.ts`. `solicitudes`, `postulaciones` y `cotizaciones` se cargan con `usePolling`. **Los perfiles y la sesión siguen en `localStorage`**: no son compartidos.
 - Selector `VITE_STORE=api|local` (no es un secreto, puede ser `VITE_`). `local` conserva el comportamiento actual: es el plan B si la API no llega, con el vídeo en un solo dispositivo.
 - Llamadas que pasan a `await`, con el botón deshabilitado mientras envía y un mensaje de error: `NewRequestScreen.tsx`, línea 124 (`publishRequest`), y `ProviderAlertScreen.tsx`, línea 35 (`sendProposal`), además de las pantallas nuevas de F2 a F4. Lectores que tienen que tolerar el estado de carga: `ProviderHomeScreen.tsx` (líneas 20-21) y `ProviderActivityScreen.tsx` (línea 13).
@@ -248,7 +254,7 @@ Se guarda el texto **antes** de firmar: si falla la firma, queda un texto huérf
 - [ ] Una API caída muestra "Algo salió mal. Inténtalo de nuevo." con botón de reintento, no una pantalla en blanco.
 - [ ] Ningún `bigint` pasa por `JSON.stringify`: el dinero viaja como `string`.
 
-**Depende de.** B1, y B4b desplegado para la prueba entre dispositivos. Antes de B4b se puede probar en local con `netlify dev` o `vercel dev` sobre la rama del backend. **Estimación:** 2,5 h.
+**Depende de.** B1, y B4b desplegado para la prueba entre dispositivos. Antes de B4b se puede probar en local con `vercel dev` sobre la rama del backend, o con `VITE_STORE=local`. **Estimación:** 2,5 h.
 
 ---
 
@@ -271,43 +277,26 @@ Se guarda el texto **antes** de firmar: si falla la firma, queda un texto huérf
 
 ---
 
-### F7 · `vercel.json` con la regla SPA 🔒 decisión (a), solo si se mudan a Vercel
+### F7 · `vercel.json` con la regla SPA — ✅ hecha
 
-**Objetivo.** Que un refresco en una ruta interna (`/solicitudes/abc`) sirva la app en Vercel, como hoy hace `frontend/public/_redirects` en Netlify.
-
-**Archivos.** Nuevo: `frontend/vercel.json` (el Root Directory del proyecto en Vercel es `frontend`, tarea B7 del backend):
+`frontend/vercel.json` ya está en `main` y en producción, con la regla que proponía este documento:
 
 ```json
-{
-  "rewrites": [
-    { "source": "/((?!api/|passkey-test/).*)", "destination": "/index.html" }
-  ]
-}
+{ "source": "/((?!api/|passkey-test).*)", "destination": "/index.html" }
 ```
 
-Deja `_redirects` hasta que Netlify se apague: en Vercel no molesta.
-
-**Criterios de aceptación.**
-- [ ] Refrescar `/solicitudes/abc` y `/profesional/actividad` carga la app.
-- [ ] `/api/salud` devuelve JSON, no `index.html`.
-- [ ] `/passkey-test/` sigue cargando el demo de passkeys.
-
-**Depende de.** Decisión (a) y B7. **Estimación:** 0,25 h.
+Refrescar `/bienvenida`, `/profesional` o `/solicitudes/nueva` ya carga la app (comprobado). `frontend/public/_redirects` es de Netlify y ya no hace nada; se puede borrar.
 
 ---
 
-### F8 · Conectar al contrato — el 22, no hoy 🔒 decisión (b)
+### F8 · Conectar al contrato — el 22
 
 Para que no te pille por sorpresa: el 22 se escribe `frontend/src/escrow/contractEscrow.ts` siguiendo [`INTEGRACION.md`](./INTEGRACION.md) (`contract.Client.from`, firma con `passkey-kit` y envío por `POST /api/relayer`, sección B5a del backend), se cambia la línea de `frontend/src/escrow/index.ts` y la de `frontend/src/dataSource.ts` (`contractRatingSource`), y se pone la dirección real de Juan en `frontend/src/data/providers.json` (hoy es un marcador, `CAAQ…C526`).
 
-**Espera a** que exista el contract ID definitivo (B3, si se hace `dispute`), a que el relayer esté desplegado (B5b) y a que existan las wallets de María y Juan (B6). Conectar antes significa rehacerlo si cambia el ID. **Estimación:** 4 h, el 22.
+El contract ID ya es el definitivo (`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`), así que eso no te bloquea. **Espera** a que el relayer esté desplegado (B5b) y a que existan las wallets de María y Juan (B6). **Estimación:** 4 h, el 22.
 
 ---
 
-## 2. Decisiones que necesito del PO
+## 2. Decisiones del PO
 
-1. **(a) Hosting**, hoy: define si F5 se prueba contra Netlify o Vercel y si hay F7.
-2. **(b) `dispute`**: si se construye, el contract ID cambia y F8 espera al redespliegue. Confirmar además si el cliente debe ver un botón "Tengo un problema" (`dispute`) en la pantalla de trabajo, en `Started` y `Submitted`. Hoy no está en la lista; es 1 h más.
-3. **(c) Plazo de revisión**: el texto "se libera el {fecha}" y la línea de protección de la cotización dependen de ese valor.
-4. **Después de publicar, ¿el cliente va al detalle de su solicitud o al listado de profesionales?** Propuesta: al detalle (F2), que es lo que dice el flujo del PO. Hoy va al listado.
-5. **Comentario de la reseña opcional u obligatorio.** Propuesta: opcional (F4). Es lo tercero en el orden de recorte de `CLAUDE.md`.
+Todas las que te bloqueaban están cerradas; ver la tabla de la sección 0. Si durante el día aparece una nueva, se la llevas al PO en vez de suponerla.
