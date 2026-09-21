@@ -201,6 +201,27 @@ rating_of(juan) → {"completed_jobs":1,"disputes":1,"rating_count":1,"stars_sum
 
 `resolve` suma a la vez un trabajo completado y una disputa. Por eso calificar un trabajo resuelto deja el perfil coherente: nunca hay más reseñas que trabajos. Y la disputa queda registrada en el perfil, a la vista de cualquier cliente.
 
+---
+
+## Relayer del demo de passkeys (Cloudflare Worker)
+
+**Desplegado a mano, fuera de este repo.** Documentado aquí para que no dependa de una sola persona.
+
+| | |
+|---|---|
+| URL | `https://passkey-kit-relayer-proxy.josspe-masi.workers.dev` |
+| Código | `relayer-proxy/` del repo oficial `stellar/passkey-kit`, sin cambios conocidos |
+| Cuenta de Cloudflare | la de Jossep (`josspe-masi`) |
+| Lo usa | el bundle de `frontend/public/passkey-test/`, que tiene esta URL grabada al compilar |
+| Qué patrocina | solo despliegues de wallet y métodos de administración de la wallet (`add_signer`, `add_secp256r1`, `update_signer`, `remove_signer`, `upgrade`). **No relaya llamadas al escrow** |
+| Variable crítica | `ALLOWED_ORIGINS` debe contener exactamente `https://masiapp.vercel.app` |
+
+Para redesplegarlo, desde un clon de `stellar/passkey-kit`: ajustar `relayer-proxy/wrangler.toml` y ejecutar `wrangler deploy` con la cuenta dueña. **Pendiente de su dueño:** confirmar el valor actual de `ALLOWED_ORIGINS` y si el Worker lleva algún cambio respecto al oficial.
+
+El relayer de la app, el que patrocinará `fund`, `start`, `submit`, `approve`, `rate` y `dispute`, es la tarea B5 de `TAREAS_21SEP_BACKEND.md`, en Vercel.
+
+---
+
 ## Lo que este despliegue todavía no prueba
 
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
