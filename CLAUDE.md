@@ -13,7 +13,7 @@ Si algo de esto no funciona, el scope ya tiene el fallback definido. No inventes
 ## Reglas duras
 
 - **En la interfaz nunca aparecen** las palabras *wallet*, *XLM*, *gas* ni *seed phrase*. Los montos siempre en soles.
-- **El dominio de Netlify es `https://masiapp.netlify.app` y no se cambia.** Las passkeys quedan atadas al dominio exacto; si se renombra, las cuentas creadas antes dejan de entrar. Probar siempre en la URL principal, nunca en un deploy preview.
+- **El dominio de Vercel es `https://masiapp.vercel.app` y no se cambia.** Las passkeys quedan atadas al dominio exacto; si se renombra, las cuentas creadas antes dejan de entrar. Probar siempre en la URL principal, nunca en un deploy preview.
 - **No depender de eventos del RPC para el historial.** Solo se guardan un tiempo limitado. El historial va en storage persistente, extendiendo el TTL en cada escritura.
 - **El adelanto de materiales no se puede disputar** una vez entregado.
 - **Cada función de escritura exige `require_auth`** del rol indicado en la tabla.

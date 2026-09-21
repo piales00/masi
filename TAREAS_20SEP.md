@@ -12,7 +12,7 @@ Estas dos van primero porque bloquean al resto de la semana.
 
 | Decisión | Quién | Por qué no tiene vuelta atrás |
 |---|---|---|
-| **Subdominio `*.netlify.app` definitivo** | P2 | La passkey queda atada al dominio exacto. Si se renombra, las cuentas creadas antes dejan de entrar. Tiene que estar fijo **antes** de sembrar los trabajos del 24. |
+| **Dominio `https://masiapp.vercel.app` definitivo** | P2 | La passkey queda atada al dominio exacto. Si se renombra, las cuentas creadas antes dejan de entrar. Tiene que estar fijo **antes** de sembrar los trabajos del 24. |
 | **`passkey-kit` vs. `smart-account-kit`** | P2 | Usan modelos de autorización on-chain distintos. Cambiar después obliga a rehacer el contrato de cuenta. |
 
 Recomendación del scope: `passkey-kit` (modelo de firmantes plano). `smart-account-kit` solo se justifica si hicieran falta límites de gasto o umbrales, y Masi no los necesita.
@@ -45,7 +45,7 @@ Para mañana: disputa, `rate`, tests y despliegue en testnet.
 
 **Prueba de 3 horas + elegir librería.** Es la tarea con caja de tiempo explícita del día.
 
-- [ ] Fijar el subdominio de Netlify y no volver a tocarlo.
+- [ ] Mantener fijo `https://masiapp.vercel.app` y no volver a tocarlo.
 - [ ] Decidir entre `passkey-kit` y `smart-account-kit` (ver tabla de arriba).
 - [ ] Verificar que el ejemplo de la librería elegida corra en **testnet**.
 - [ ] Verificar que el OpenZeppelin Relayer esté operativo: instancia hosteada de testnet en `https://channels.openzeppelin.com/testnet`, API keys en `/gen`. Launchtube está deprecado.
