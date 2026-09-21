@@ -173,3 +173,27 @@ Y `rating_of(juan)` devuelve `completed_jobs: 2, rating_count: 1, stars_sum: 5`:
 
 - `dispute` y `resolve` siguen siendo stubs: devuelven `NotImplemented` y no mueven fondos. Son los primeros de la lista de recortes.
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
+
+## Vercel, Upstash y relayer
+
+El proyecto de Vercel usa `frontend` como **Root Directory** y publica en
+`https://masiapp.vercel.app`. La configuración SPA está en `frontend/vercel.json`;
+las rutas `/api/` y `/passkey-test/` quedan fuera del fallback a `index.html`.
+
+En Vercel se configuran, para producción, las variables listadas en
+`frontend/.env.example`. `RELAYER_API_KEY` y los tokens de Upstash son secretos:
+no se copian al repositorio ni se crean con prefijo `VITE_`.
+
+La base de Upstash se conecta desde **Storage → Marketplace → Upstash Redis**.
+La API utiliza las claves `solicitudes/`, `postulaciones/`, `cotizaciones/` y
+`resenas/`. Antes de grabar el video, se vacía exclusivamente esta base de demo
+con `FLUSHDB` desde la consola de Upstash; esa operación elimina todos sus datos.
+
+Comprobaciones posteriores al despliegue:
+
+```text
+GET  https://masiapp.vercel.app/api/salud
+POST https://masiapp.vercel.app/api/relayer
+```
+
+`/api/salud` debe devolver `{"ok":true}` y nunca el HTML de la aplicación.

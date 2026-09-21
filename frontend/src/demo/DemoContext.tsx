@@ -6,17 +6,12 @@ export interface Profile {
   lastName: string;
   phone: string;
   district: string;
+  role?: 'cliente' | 'profesional';
+  contractId?: string;
+  deploymentHash?: string;
 }
 
 const STORAGE_KEY = 'masi.demo.v1';
-
-/** Quien inicia sesión ya tenía cuenta, así que entra con su perfil listo. */
-export const RETURNING_PROFILE: Profile = {
-  firstName: 'María',
-  lastName: 'Torres',
-  phone: '999 888 777',
-  district: 'Chorrillos, Lima',
-};
 
 /** Survives a reload so deep links like /solicitud/:id keep working. */
 function readProfile(): Profile | null {
@@ -24,13 +19,28 @@ function readProfile(): Profile | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const value = JSON.parse(raw) as Partial<Profile> | null;
-    if (!value || typeof value.firstName !== 'string' || !value.firstName.trim()) return null;
+    if (!value || typeof value.firstName !== 'string' || !value.firstName.trim() ||
+        typeof value.contractId !== 'string' || !value.contractId.startsWith('C')) return null;
     return {
       firstName: value.firstName,
       lastName: typeof value.lastName === 'string' ? value.lastName : '',
       phone: typeof value.phone === 'string' ? value.phone : '',
       district: typeof value.district === 'string' ? value.district : '',
+      role: value.role === 'profesional' ? 'profesional' : 'cliente',
+      contractId: typeof value.contractId === 'string' ? value.contractId : undefined,
+      deploymentHash: typeof value.deploymentHash === 'string' ? value.deploymentHash : undefined,
     };
+  } catch {
+    return null;
+  }
+}
+
+export function readProfileForAddress(contractId: string): Profile | null {
+  try {
+    const raw = localStorage.getItem(`masi.profile.${contractId}`);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Profile;
+    return value.contractId === contractId && typeof value.firstName === 'string' ? value : null;
   } catch {
     return null;
   }
@@ -51,6 +61,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setProfile(next);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      if (next.contractId) localStorage.setItem(`masi.profile.${next.contractId}`, JSON.stringify(next));
     } catch {
       // Sin almacenamiento la demo sigue funcionando; solo no sobrevive a una recarga.
     }
