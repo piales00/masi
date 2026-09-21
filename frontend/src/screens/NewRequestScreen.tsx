@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { ArrowRight, Camera, MapPin, X } from 'lucide-react';
+import { ArrowRight, Camera, LocateFixed, MapPin, Search, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { fieldBox } from '../components/Field';
@@ -12,20 +12,49 @@ import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
 import { TRADES } from '../marketplace';
 import type { Trade } from '../marketplace';
+import { serviceOf } from '../trades';
+import type { Service } from '../trades';
 
 const MAX_CHARS = 300;
 const MAX_PHOTOS = 5;
-const URGENCIES = ['Lo antes posible', 'Hoy', 'Puedo esperar'] as const;
-const BUDGETS = ['Hasta S/ 50', 'S/ 50 a S/ 100', 'S/ 100 a S/ 200', 'Más de S/ 200', 'No estoy seguro'] as const;
+const TIMINGS = ['Lo antes posible', 'Hoy', 'Elegir fecha'] as const;
+
+/**
+ * Simulación local de clasificación: compara palabras clave contra el texto escrito.
+ * No hay IA ni servicio detrás. Cuando exista clasificación real, se reemplaza
+ * únicamente esta tabla y suggestService; la interfaz no cambia.
+ */
+const SERVICE_KEYWORDS: readonly { id: Trade; words: readonly string[] }[] = [
+  { id: 'Cerrajería', words: ['chapa', 'cerradura', 'llave'] },
+  { id: 'Electricidad', words: ['luz', 'electric', 'enchufe'] },
+  { id: 'Gasfitería', words: ['tuberia', 'fuga', 'cano', 'grifo'] },
+  { id: 'Pintura', words: ['pintar', 'pintura', 'pintor'] },
+  { id: 'Carpintería', words: ['mueble', 'madera', 'closet'] },
+  { id: 'Instalaciones', words: ['instalar', 'repisa', 'colgar'] },
+  { id: 'Limpieza', words: ['limpiar', 'limpieza', 'sucio'] },
+  { id: 'Reparaciones', words: ['reparar', 'arreglar', 'roto'] },
+];
+
+const normalize = (text: string): string => text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function suggestService(description: string): Service | null {
+  const text = normalize(description);
+  if (text.trim().length < 3) return null;
+  let best: { id: Trade; hits: number } | null = null;
+  for (const { id, words } of SERVICE_KEYWORDS) {
+    const hits = words.filter(word => text.includes(word)).length;
+    if (hits > 0 && (!best || hits > best.hits)) best = { id, hits };
+  }
+  return best ? serviceOf(best.id) : null;
+}
 
 interface Photo { id: string; url: string; name: string }
 
-function Options({ legend, options, value, onChange, hint }: {
+function Options({ legend, options, value, onChange }: {
   legend: string;
   options: readonly string[];
   value: string;
   onChange: (next: string) => void;
-  hint?: string;
 }) {
   return <fieldset className="border-0 p-0">
     <legend className="text-sm font-semibold text-masi-navy">{legend}</legend>
@@ -33,7 +62,7 @@ function Options({ legend, options, value, onChange, hint }: {
       {options.map(option => <button
         key={option}
         type="button"
-        onClick={() => onChange(value === option ? '' : option)}
+        onClick={() => onChange(option)}
         aria-pressed={value === option}
         className={cn(
           'min-h-10 rounded-full border px-4 text-sm font-semibold transition-colors duration-200 ease-out',
@@ -41,7 +70,6 @@ function Options({ legend, options, value, onChange, hint }: {
         )}
       >{option}</button>)}
     </div>
-    {hint && <p className="mt-2 text-xs leading-relaxed text-masi-muted">{hint}</p>}
   </fieldset>;
 }
 
@@ -55,13 +83,20 @@ export function NewRequestScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [district, setDistrict] = useState(profile?.district ?? '');
   const [editingDistrict, setEditingDistrict] = useState(false);
-  const [urgency, setUrgency] = useState<string>(URGENCIES[0]);
-  const [budget, setBudget] = useState('');
+  const [locationMode, setLocationMode] = useState<'actual' | 'direccion'>('actual');
+  const [address, setAddress] = useState('');
+  const [reference, setReference] = useState('');
+  const [timing, setTiming] = useState<string>(TIMINGS[0]);
+  const [date, setDate] = useState('');
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   // Las vistas previas son URLs de objeto: hay que liberarlas al salir de la pantalla.
   const photosRef = useRef(photos);
   photosRef.current = photos;
   useEffect(() => () => { photosRef.current.forEach(photo => URL.revokeObjectURL(photo.url)); }, []);
+
+  const suggestion = trade || suggestionDismissed ? null : suggestService(description);
+  const today = new Date().toLocaleDateString('en-CA');
 
   const addPhotos = (event: ChangeEvent<HTMLInputElement>) => {
     const chosen = [...(event.target.files ?? [])].filter(file => file.type.startsWith('image/'));
@@ -90,16 +125,28 @@ export function NewRequestScreen() {
     header={<ScreenHeader title="Nueva solicitud" subtitle="Cuéntanos qué está pasando" />}
     footer={<ScreenFooter className="border-t border-masi-gray bg-white">
       <Button type="submit" form="solicitud" disabled={!ready}>
-        Buscar profesionales<ArrowRight size={18} aria-hidden="true" />
+        Publicar solicitud<ArrowRight size={18} aria-hidden="true" />
       </Button>
     </ScreenFooter>}
   >
     <form id="solicitud" onSubmit={submit} className="space-y-8 px-4 py-6">
       <section>
         <h2 className="text-sm font-semibold text-masi-navy">¿Qué servicio necesitas?</h2>
-        <div className="mt-3">
-          <TradeChips selected={trade} onSelect={next => setTrade(next === trade ? '' : next)} label="Elegir servicio" />
-        </div>
+
+        {suggestion
+          ? <div className="mt-3 rounded-masi-card border border-masi-blue bg-masi-blue-50 p-4">
+            <p className="flex items-start gap-2 text-sm text-masi-navy">
+              <Sparkles size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-masi-blue" />
+              <span>Parece que necesitas <strong className="font-bold">{suggestion.name}</strong>. Confírmalo o elige otro servicio.</span>
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button className="!w-auto" onClick={() => setTrade(suggestion.id)}>Confirmar</Button>
+              <Button variant="secondary" className="!w-auto" onClick={() => setSuggestionDismissed(true)}>Cambiar servicio</Button>
+            </div>
+          </div>
+          : <div className="mt-3">
+            <TradeChips selected={trade} onSelect={next => setTrade(next === trade ? '' : next)} label="Elegir servicio" />
+          </div>}
       </section>
 
       <section>
@@ -158,15 +205,59 @@ export function NewRequestScreen() {
           </div>}
       </section>
 
-      <Options legend="¿Qué tan urgente es?" options={URGENCIES} value={urgency} onChange={setUrgency} />
+      {/* Ambas opciones son simuladas: la geolocalización y el mapa reales quedan pendientes. */}
+      <section>
+        <h2 className="text-sm font-semibold text-masi-navy">Ubicación específica</h2>
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Cómo indicar la ubicación">
+          {([['actual', 'Usar mi ubicación actual', LocateFixed], ['direccion', 'Buscar dirección', Search]] as const).map(([id, label, Icon]) => <button
+            key={id}
+            type="button"
+            onClick={() => setLocationMode(id)}
+            aria-pressed={locationMode === id}
+            className={cn(
+              'flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors duration-200 ease-out',
+              locationMode === id ? 'border-masi-blue bg-masi-blue text-white' : 'border-masi-gray bg-white text-masi-navy hover:border-masi-blue',
+            )}
+          ><Icon size={15} aria-hidden="true" />{label}</button>)}
+        </div>
 
-      <Options
-        legend="¿Tienes un presupuesto aproximado? (opcional)"
-        options={BUDGETS}
-        value={budget}
-        onChange={setBudget}
-        hint="Esto es solo una referencia para los profesionales. El precio real se define después de revisar el problema."
-      />
+        {locationMode === 'actual'
+          ? <p className="mt-3 flex items-start gap-2 rounded-masi-input bg-masi-blue-50 p-3 text-xs leading-relaxed text-masi-navy">
+            <LocateFixed size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
+            <span>Compartiremos tu ubicación con el profesional cuando publiques la solicitud.</span>
+          </p>
+          : <input
+            value={address}
+            onChange={event => setAddress(event.target.value)}
+            placeholder="Ej. Av. Defensores del Morro 1234"
+            aria-label="Dirección"
+            className={cn(fieldBox, 'mt-3 h-12')}
+          />}
+
+        <label className="mt-3 block">
+          <span className="text-sm font-semibold text-masi-navy">Referencia <span className="font-normal text-masi-muted">(opcional)</span></span>
+          <input
+            value={reference}
+            onChange={event => setReference(event.target.value)}
+            placeholder="Ej. Portón negro, frente al parque"
+            className={cn(fieldBox, 'mt-2 h-12')}
+          />
+        </label>
+      </section>
+
+      <section>
+        <Options legend="¿Cuándo necesitas el servicio?" options={TIMINGS} value={timing} onChange={setTiming} />
+        {timing === 'Elegir fecha' && <label className="mt-3 block">
+          <span className="sr-only">Fecha del servicio</span>
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={event => setDate(event.target.value)}
+            className={cn(fieldBox, 'h-12')}
+          />
+        </label>}
+      </section>
     </form>
   </Screen>;
 }
