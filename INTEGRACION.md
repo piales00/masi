@@ -4,7 +4,7 @@ Para P3 y P4. El contrato está vivo en testnet y responde; esto es cómo leerlo
 
 | | |
 |---|---|
-| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| Contrato `escrow` | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 | RPC | `https://soroban-testnet.stellar.org` |
 | Frase de red | `Test SDF Network ; September 2015` |
@@ -40,7 +40,7 @@ Hoy le pasa `mockRatingSource`. Conectar es escribir la versión real y pasarla 
 import { contract } from '@stellar/stellar-sdk';
 import type { RatingSource, RatingSummary, Job, JobId } from '../../shared/escrow';
 
-const CONTRACT_ID = 'CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV';
+const CONTRACT_ID = 'CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL';
 const RPC_URL = 'https://soroban-testnet.stellar.org';
 const NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
 
@@ -79,7 +79,7 @@ Y en la pantalla:
 
 ### Lo que devuelve de verdad
 
-Verificado por CLI contra el contrato desplegado:
+Verificado por CLI en el despliegue anterior (`CDBZRR…`), con dos trabajos de Juan: uno aprobado y calificado, y otro liberado por `auto_release`:
 
 ```
 rating_of(juan) → {"completed_jobs":2,"disputes":0,"rating_count":1,"stars_sum":5}
@@ -87,6 +87,14 @@ jobs_of(juan)   → [1, 2]
 ```
 
 Fíjate en que `completed_jobs` (2) y `rating_count` (1) **no coinciden**, y está bien: el segundo trabajo se cobró por `auto_release` porque el cliente no respondió, así que nunca se calificó. La pantalla tiene que soportar un proveedor con trabajos completados y cero reseñas.
+
+En el contrato actual, tras un trabajo resuelto por disputa y calificado con 3 estrellas:
+
+```
+rating_of(juan) → {"completed_jobs":1,"disputes":1,"rating_count":1,"stars_sum":3}
+```
+
+`resolve` suma a la vez un trabajo completado y una disputa, así que nunca hay más reseñas que trabajos.
 
 ---
 
@@ -98,16 +106,18 @@ La tabla completa de funciones está en `masi-scope.md`. Lo que conviene tener p
 
 | Pantalla | Llama a | Quién firma |
 |---|---|---|
-| Solicitar trabajo | `create_job` | cliente |
+| Aceptar la cotización final | `create_job` | cliente |
 | Trabajo (proveedor) | `accept`, `start`, `submit` | proveedor |
 | Pagar protegido | `fund` | cliente |
 | Aprobar | `approve` | cliente |
 | Calificar | `rate` | cliente |
+| "Tengo un problema" | `dispute` | cliente o proveedor |
+| — (panel de Masi) | `resolve` | árbitro |
 | — | `auto_release` | **cualquiera**, pasando su propia dirección |
 
 `cancel`, `dispute` y `auto_release` reciben un parámetro `caller` porque admiten más de un rol y el contrato no puede adivinar a quién exigirle la firma.
 
-`dispute` y `resolve` **todavía devuelven `NotImplemented`**. No construyas la pantalla de disputa contra ellas aún.
+`dispute(job_id, caller)` la puede llamar el cliente o el técnico en `Started` o `Submitted`: congela el saldo y bloquea `approve` y `auto_release`. `resolve(job_id, provider_bps)` solo la firma el árbitro (Masi): reparte el saldo según `provider_bps` (0–10.000), la comisión va a la plataforma, y el adelanto de materiales nunca entra. Tras `resolve` el trabajo queda en `Resolved`, cuenta como completado y se puede calificar. En la pantalla, el botón es "Tengo un problema"; nunca la palabra disputa en primer plano.
 
 ### `rate`, en detalle
 
@@ -134,7 +144,7 @@ Llegan como `Error(Contract, #N)`. Tradúcelos a lenguaje humano — el usuario 
 | 6 | `InvalidAmount` | "El monto no es válido." |
 | 7 | `InvalidBps` | "El adelanto no puede pasar del 50%." |
 | 12 | `ReviewPeriodActive` | "Todavía estás a tiempo de revisar el trabajo." |
-| 13 | `NotImplemented` | Función aún no construida; no debería llegarle al usuario. |
+| 13 | `NotImplemented` | Ya no lo devuelve ninguna función; se conserva el código para no renumerar. |
 | 15 | `AlreadyRated` | "Ya calificaste este trabajo." |
 | 16 | `InvalidStars` | "Elige entre 1 y 5 estrellas." |
 

@@ -235,7 +235,7 @@ Lo que ya está vivo en testnet, por si quieres probar la firma contra nuestro c
 
 | | |
 |---|---|
-| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| Contrato `escrow` | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
 Eso es un extra, no parte de la prueba. La prueba es el demo de `passkey-kit`.

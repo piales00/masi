@@ -162,7 +162,7 @@ Tres reglas que el diagrama no muestra:
 | Contrato `escrow` | Desplegado y verificado en testnet |
 | `rate` e historial on-chain | Funcionando |
 | `auto_release` | Verificado, disparado por un tercero |
-| `dispute` / `resolve` | `NotImplemented` — primeros de la lista de recortes |
+| `dispute` / `resolve` | Verificado en testnet: congela el saldo y el árbitro lo reparte |
 | Passkeys + contrato de cuenta | Funcionan en Android; pendiente el dominio definitivo |
 | Relayer | Servicio verificado; falta integrarlo |
 | Rampa a soles | Simulada, como dice el README |

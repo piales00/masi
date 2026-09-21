@@ -2,7 +2,9 @@
 
 **21 de septiembre de 2026.** Cada respuesta sobre el contrato está comprobada contra el código de `contracts/escrow/` y contra el despliegue en testnet, no de memoria.
 
-Resumen: **la propuesta del PO de separar oferta y cotización final se acepta y no toca el contrato.** Lo que sí hay que decidir hoy es si se construye `dispute`, porque añadirlo cambia el contract ID.
+Resumen: **la propuesta del PO de separar oferta y cotización final se acepta y no toca el contrato.**
+
+> **Decisiones del PO, 21/09 por la tarde:** se construyen `dispute` y `resolve` (**hechos y desplegados**, nuevo contract ID `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`); datos **compartidos** con la API del backend; `resolve` **cuenta como trabajo completado**; plazo de revisión por defecto **24 h**, no 72 h, porque a la gente no le gusta esperar. Con la disputa disponible, un plazo corto ya no deja al cliente desprotegido.
 
 ---
 
@@ -134,4 +136,4 @@ Mi opinión donde afecta a la implementación:
 
 1. **¿Se construye `dispute`?** Recomendación: sí, y antes de conectar el frontend, por el cambio de contract ID.
 2. **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Vercel Blob.
-3. **Plazo de revisión por defecto.** Recomendación: 72 h mientras no exista `dispute`.
+3. ~~Plazo de revisión por defecto~~ → **24 h**, decidido.

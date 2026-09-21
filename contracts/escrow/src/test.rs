@@ -351,17 +351,115 @@ fn all_seven_events_have_stable_topics_and_payloads() {
 }
 
 #[test]
-fn stubs_are_in_abi_and_never_report_success_or_move_funds() {
+fn dispute_freezes_the_balance_and_blocks_both_releases() {
     let f = Fixture::new();
     let id = f.submitted();
-    assert_eq!(f.escrow().try_dispute(&id, &f.client), Err(Ok(ContractError::NotImplemented)));
-    assert_eq!(f.escrow().try_resolve(&id, &5_000), Err(Ok(ContractError::NotImplemented)));
-    // rate ya esta implementado: aqui rechaza por estado, no por stub.
-    assert_eq!(f.escrow().try_rate(&id, &5, &BytesN::from_array(&f.env, &[0; 32])), Err(Ok(ContractError::InvalidState)));
-    assert_eq!(f.escrow().get_job(&id).state, JobState::Submitted);
-    assert_eq!(f.token().balance(&f.provider), MATERIALS);
+    f.escrow().dispute(&id, &f.client);
+    f.assert_auth(&f.client, "dispute", (id, f.client.clone()).into_val(&f.env));
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Disputed {
+        job_id: id, caller: f.client.clone(), remaining_amount: AMOUNT - MATERIALS,
+    }.to_xdr(&f.env, &f.contract)));
+    assert_eq!(f.escrow().get_job(&id).state, JobState::Disputed);
+
+    // Ni el cliente puede aprobar ni nadie puede liberar al vencer el plazo.
+    assert_eq!(f.escrow().try_approve(&id), Err(Ok(ContractError::InvalidState)));
+    f.env.ledger().set_timestamp(1_000 + REVIEW + 1);
+    assert_eq!(f.escrow().try_auto_release(&id, &f.provider), Err(Ok(ContractError::InvalidState)));
+
+    // El saldo sigue congelado; el adelanto ya era del proveedor.
     assert_eq!(f.token().balance(&f.contract), AMOUNT - MATERIALS + FEE);
-    assert_eq!(f.escrow().rating_of(&f.provider), RatingSummary::default());
+    assert_eq!(f.token().balance(&f.provider), MATERIALS);
+}
+
+#[test]
+fn only_parties_can_dispute_and_only_once_the_work_started() {
+    let f = Fixture::new();
+    let stranger = Address::generate(&f.env);
+
+    // Antes de iniciar no hay disputa: para eso esta cancel, con reembolso completo.
+    let funded = f.funded();
+    assert_eq!(f.escrow().try_dispute(&funded, &f.client), Err(Ok(ContractError::InvalidState)));
+
+    // Iniciado: el proveedor tambien puede disputar; un tercero no.
+    f.escrow().start(&funded);
+    assert_eq!(f.escrow().try_dispute(&funded, &stranger), Err(Ok(ContractError::Unauthorized)));
+    f.escrow().dispute(&funded, &f.provider);
+    assert_eq!(f.escrow().get_job(&funded).state, JobState::Disputed);
+    assert_eq!(f.escrow().try_dispute(&funded, &f.client), Err(Ok(ContractError::InvalidState)));
+}
+
+#[test]
+fn resolve_splits_only_the_balance_and_counts_as_a_completed_job() {
+    let f = Fixture::new();
+    let id = f.submitted();
+    f.escrow().dispute(&id, &f.client);
+    f.escrow().resolve(&id, &7_000);
+    f.assert_auth(&f.arbiter, "resolve", (id, 7_000u32).into_val(&f.env));
+
+    // Saldo de S/840: 70 % al proveedor, 30 % de vuelta al cliente. La comision, a Masi.
+    let remaining = AMOUNT - MATERIALS;
+    let to_provider = remaining * 7_000 / 10_000;
+    // events().all() solo guarda la ultima invocacion: se comprueba antes de leer nada.
+    assert!(f.env.events().all().events().iter().any(|e| e == &events::Resolved {
+        job_id: id, provider: f.provider.clone(), provider_amount: to_provider,
+        client_amount: remaining - to_provider, fee_amount: FEE,
+    }.to_xdr(&f.env, &f.contract)));
+    assert_eq!(f.token().balance(&f.provider), MATERIALS + to_provider);
+    assert_eq!(f.token().balance(&f.client), remaining - to_provider);
+    assert_eq!(f.token().balance(&f.platform), FEE);
+    assert_eq!(f.token().balance(&f.contract), 0);
+
+    let job = f.escrow().get_job(&id);
+    assert_eq!(job.state, JobState::Resolved);
+    assert_eq!(job.remaining_amount, 0);
+    assert_eq!(f.escrow().rating_of(&f.provider), RatingSummary {
+        stars_sum: 0, rating_count: 0, completed_jobs: 1, disputes: 1,
+    });
+}
+
+#[test]
+fn resolve_is_arbiter_only_once_and_within_bounds() {
+    let f = Fixture::new();
+    let id = f.submitted();
+
+    // Solo desde Disputed.
+    assert_eq!(f.escrow().try_resolve(&id, &5_000), Err(Ok(ContractError::InvalidState)));
+    f.escrow().dispute(&id, &f.client);
+
+    f.env.mock_auths(&[]);
+    assert!(f.escrow().try_resolve(&id, &5_000).is_err());
+    f.env.mock_all_auths();
+
+    assert_eq!(f.escrow().try_resolve(&id, &10_001), Err(Ok(ContractError::InvalidBps)));
+    f.escrow().resolve(&id, &10_000);
+    assert_eq!(f.token().balance(&f.provider), AMOUNT);
+    assert_eq!(f.escrow().try_resolve(&id, &0), Err(Ok(ContractError::InvalidState)));
+}
+
+#[test]
+fn resolve_can_return_the_whole_balance_to_the_client() {
+    let f = Fixture::new();
+    let id = f.submitted();
+    f.escrow().dispute(&id, &f.provider);
+    f.escrow().resolve(&id, &0);
+    // Aun dandole todo al cliente, el adelanto de materiales no vuelve.
+    assert_eq!(f.token().balance(&f.provider), MATERIALS);
+    assert_eq!(f.token().balance(&f.client), AMOUNT - MATERIALS);
+    assert_eq!(f.token().balance(&f.platform), FEE);
+    assert_eq!(f.token().balance(&f.contract), 0);
+}
+
+#[test]
+fn rating_a_resolved_job_keeps_the_profile_consistent() {
+    let f = Fixture::new();
+    let id = f.submitted();
+    f.escrow().dispute(&id, &f.client);
+    f.escrow().resolve(&id, &5_000);
+    f.escrow().rate(&id, &2, &BytesN::from_array(&f.env, &[3; 32]));
+    let summary = f.escrow().rating_of(&f.provider);
+    // El frontend rechaza perfiles con mas resenas que trabajos completados.
+    assert!(summary.rating_count <= summary.completed_jobs);
+    assert_eq!(summary, RatingSummary { stars_sum: 2, rating_count: 1, completed_jobs: 1, disputes: 1 });
 }
 
 #[test]

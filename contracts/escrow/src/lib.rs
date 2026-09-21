@@ -277,19 +277,70 @@ impl Escrow {
         Ok(())
     }
 
-    /// Reserved ABI for P4. No funds or state change until disputes are implemented.
+    /// Freezes the balance while the arbiter decides. Only the parties, and only
+    /// once the work started: the materials advance is already the provider's.
+    /// `Disputed` blocks `approve` and `auto_release`, which both require `Submitted`.
     pub fn dispute(env: Env, job_id: u64, caller: Address) -> Result<(), ContractError> {
-        let job = storage::job(&env, job_id)?;
+        let mut job = storage::job(&env, job_id)?;
         require_party(&job, &caller)?;
-        Err(ContractError::NotImplemented)
+        if job.state != JobState::Started && job.state != JobState::Submitted {
+            return Err(ContractError::InvalidState);
+        }
+        job.state = JobState::Disputed;
+        storage::save_job(&env, &job);
+        events::Disputed {
+            job_id,
+            caller,
+            remaining_amount: job.remaining_amount,
+        }
+        .publish(&env);
+        Ok(())
     }
 
-    /// Future allocation applies ONLY to Job.remaining_amount, never materials_amount.
+    /// Splits ONLY the frozen balance; the materials advance is never touched and
+    /// the fee still goes to the platform. Rounding dust goes to the client.
+    /// Counts as a completed job, so rating it later keeps rating_count <= completed_jobs.
     pub fn resolve(env: Env, job_id: u64, provider_bps: u32) -> Result<(), ContractError> {
         let config = storage::config(&env)?;
         config.arbiter.require_auth();
-        let _ = (job_id, provider_bps);
-        Err(ContractError::NotImplemented)
+        let mut job = storage::job(&env, job_id)?;
+        require_state(&job, JobState::Disputed)?;
+        if provider_bps > 10_000 {
+            return Err(ContractError::InvalidBps);
+        }
+        let remaining_amount = job.remaining_amount;
+        let provider_amount = portion(remaining_amount, provider_bps)?;
+        let client_amount = remaining_amount
+            .checked_sub(provider_amount)
+            .ok_or(ContractError::ArithmeticOverflow)?;
+
+        job.remaining_amount = 0;
+        job.state = JobState::Resolved;
+        job.released_at = Some(env.ledger().timestamp());
+        let mut rating = storage::rating_of(&env, &job.provider);
+        rating.completed_jobs = rating
+            .completed_jobs
+            .checked_add(1)
+            .ok_or(ContractError::ArithmeticOverflow)?;
+        rating.disputes = rating
+            .disputes
+            .checked_add(1)
+            .ok_or(ContractError::ArithmeticOverflow)?;
+        storage::save_rating(&env, &job.provider, &rating);
+        storage::save_job(&env, &job);
+
+        pay(&env, &job.provider, provider_amount)?;
+        pay(&env, &job.client, client_amount)?;
+        pay(&env, &config.platform, job.fee_amount)?;
+        events::Resolved {
+            job_id,
+            provider: job.provider,
+            provider_amount,
+            client_amount,
+            fee_amount: job.fee_amount,
+        }
+        .publish(&env);
+        Ok(())
     }
 
     /// Only the client who paid for the job, once, and only after the money moved.

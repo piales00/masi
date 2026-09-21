@@ -78,3 +78,21 @@ pub struct Rated {
     pub stars_sum: u32,
     pub rating_count: u32,
 }
+
+#[contractevent]
+pub struct Disputed {
+    #[topic]
+    pub job_id: u64,
+    pub caller: Address,
+    pub remaining_amount: i128,
+}
+
+#[contractevent]
+pub struct Resolved {
+    #[topic]
+    pub job_id: u64,
+    pub provider: Address,
+    pub provider_amount: i128,
+    pub client_amount: i128,
+    pub fee_amount: i128,
+}
