@@ -7,6 +7,9 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-passkey-kit.mjs",
+    "prebuild": "node scripts/patch-passkey-kit.mjs",
+    "pretest": "node scripts/patch-passkey-kit.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",

@@ -2,6 +2,7 @@ import { Buffer } from 'buffer';
 import { MercuryIndexer, PasskeyKit, SignerKey } from 'passkey-kit';
 import type { CreateWalletResult } from 'passkey-kit';
 import { IndexedDBStorage } from 'passkey-kit/storage';
+import { requirePasskeyOrigin } from './passkeyOrigin';
 
 // passkey-kit and stellar-sdk use Buffer while constructing Stellar XDR.
 (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer ??= Buffer;
@@ -41,14 +42,16 @@ export function hasPendingAccount(): boolean {
   return getPending() !== null;
 }
 
+export function pendingAccountName(): string | null {
+  return getPending()?.userName ?? null;
+}
+
 function savePending(value: Pending): void {
   localStorage.setItem(pendingKey, JSON.stringify(value));
 }
 
 export function requireFinalDomain(): void {
-  if (location.origin === 'https://masiapp.vercel.app') return;
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
-  throw new Error('Abre masiapp.vercel.app para crear o ingresar a tu cuenta.');
+  requirePasskeyOrigin(location.origin);
 }
 
 export async function createAccount(userName: string): Promise<AccountReceipt> {
@@ -94,7 +97,9 @@ export async function resumeAccountCreation(): Promise<AccountReceipt> {
 
   const created: CreateWalletResult = {
     rawResponse: pending.rawResponse,
-    keyId: Uint8Array.from(Buffer.from(pending.keyIdBase64, 'base64url')),
+    // Browser Buffer does not support the 'base64url' encoding label.
+    // Normalize the URL-safe alphabet; base64 decoding also accepts omitted padding.
+    keyId: Uint8Array.from(Buffer.from(pending.keyIdBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64')),
     keyIdBase64: pending.keyIdBase64,
     publicKey: Uint8Array.from(Buffer.from(pending.publicKeyBase64, 'base64')),
     contractId: pending.contractId,

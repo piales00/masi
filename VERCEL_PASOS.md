@@ -1,5 +1,20 @@
 # Publicar Masi en Vercel
 
+## Pruebas personales autorizadas
+
+Se habilitó también **https://masiapp-nine.vercel.app** para pruebas desde la
+cuenta personal. El dominio original del equipo sigue permitido; no se migran
+passkeys entre dominios. En el dominio de pruebas hay que registrar cuentas nuevas.
+
+Desde la raíz del repositorio, vincular el proyecto personal existente `masiapp`
+del espacio `jossepv117-5688` y publicar con `npx vercel deploy --prod`.
+No crear otro proyecto. Configurar primero las variables de `frontend/.env.example`
+en Production, incluyendo las credenciales reales del relayer y Upstash.
+La ruta `/api/salud` no confirma que esas credenciales estén listas.
+
+Las instrucciones siguientes sobre el dominio original corresponden al proyecto
+del equipo, no al despliegue personal de pruebas.
+
 El dominio de las passkeys sigue siendo **https://masiapp.vercel.app**. Pertenece
 al equipo: publicar en otro proyecto no concede acceso a ese dominio.
 No registrar cuentas en URLs de preview ni cambiar el dominio para sortear permisos.

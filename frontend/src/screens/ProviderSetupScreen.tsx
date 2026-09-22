@@ -8,12 +8,24 @@ import { Field, fieldBox } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
-import { createAccount, hasPendingAccount } from '../passkeys';
+import { createAccount, hasPendingAccount, pendingAccountName, resumeAccountCreation } from '../passkeys';
 import { useDemo } from '../demo/DemoContext';
 import type { Trade } from '../marketplace';
 import { SERVICES, TINT_CLASSES } from '../trades';
 
 const MAX_BIO = 200;
+const DRAFT_KEY = 'masi.provider.registration.draft.v1';
+
+function readDraft() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+    if (value && typeof value.fullName === 'string' && typeof value.district === 'string'
+      && typeof value.years === 'string' && typeof value.bio === 'string' && Array.isArray(value.services)) {
+      return { ...value, services: value.services.filter((id: unknown) => SERVICES.some(service => service.id === id)) };
+    }
+  } catch { /* Un borrador dañado no bloquea el formulario. */ }
+  return { fullName: '', services: [] as Trade[], district: '', years: '', bio: '' };
+}
 
 /** Zona inicial de MASI: distritos A y B. */
 const DISTRICTS = ['Surco', 'Chorrillos', 'Barranco', 'Surquillo', 'Miraflores', 'San Isidro', 'San Borja'] as const;
@@ -25,12 +37,15 @@ export function ProviderSetupScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(hasPendingAccount);
+  const [pendingName, setPendingName] = useState(pendingAccountName);
+  const [notice, setNotice] = useState('');
+  const [draft] = useState(readDraft);
   const { saveProviderProfile } = useDemo();
-  const [fullName, setFullName] = useState('');
-  const [services, setServices] = useState<Trade[]>([]);
-  const [district, setDistrict] = useState('');
-  const [years, setYears] = useState('');
-  const [bio, setBio] = useState('');
+  const [fullName, setFullName] = useState<string>(draft.fullName);
+  const [services, setServices] = useState<Trade[]>(draft.services);
+  const [district, setDistrict] = useState<string>(draft.district);
+  const [years, setYears] = useState<string>(draft.years);
+  const [bio, setBio] = useState<string>(draft.bio);
   const [photoUrl, setPhotoUrl] = useState('');
 
   // La vista previa es una URL de objeto: hay que liberarla al reemplazarla o al salir.
@@ -52,7 +67,30 @@ export function ProviderSetupScreen() {
     current.includes(id) ? current.filter(service => service !== id) : [...current, id]
   ));
 
-  const ready = Boolean(fullName.trim() && services.length > 0 && district && years !== '');
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ fullName, services, district, years, bio })); }
+    catch { /* El registro sigue disponible sin almacenamiento de borradores. */ }
+  }, [fullName, services, district, years, bio]);
+
+  const missing = [!fullName.trim() && 'nombre completo', !services.length && 'al menos un servicio',
+    !district && 'distrito', (years === '' || !Number.isInteger(Number(years)) || Number(years) < 0 || Number(years) > 60) && 'años de experiencia (0 a 60)'].filter(Boolean);
+  const ready = missing.length === 0;
+
+  const finishPending = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const receipt = await resumeAccountCreation();
+      if (!receipt.confirmed) throw new Error('La confirmación sigue pendiente. Espera un momento y vuelve a intentarlo.');
+      setPending(false);
+      setPendingName(null);
+      setNotice('Registro anterior confirmado. Si era tu cuenta, vuelve a Iniciar sesión y elige su llave para completar el perfil. Para una cuenta distinta, completa este formulario.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo confirmar el registro. Inténtalo de nuevo.');
+    } finally { setBusy(false); }
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -74,9 +112,11 @@ export function ProviderSetupScreen() {
         bio: bio.trim(),
         photoUrl: photoUrl || undefined,
       });
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* Sin almacenamiento. */ }
       navigate('/profesional', { replace: true });
     } catch (cause) {
       setPending(hasPendingAccount());
+      setPendingName(pendingAccountName());
       setError(cause instanceof Error ? cause.message : 'No se pudo registrar tu cuenta. Inténtalo de nuevo.');
     } finally {
       setBusy(false);
@@ -158,7 +198,12 @@ export function ProviderSetupScreen() {
         <p className="mt-1.5 text-right text-xs text-masi-muted">{bio.length}/{MAX_BIO}</p>
       </div>
 
-      {pending && !existingContract && <p className="rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Hay un registro pendiente. Reintenta con el mismo nombre.</p>}
+      {pending && !existingContract && <div className="space-y-3 rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">
+        <p>Hay un registro pendiente{pendingName ? ` de ${pendingName}` : ''}. Si es este registro, completa los datos con el mismo nombre y pulsa Reintentar registro. Si es de otra cuenta, confirma primero el registro anterior.</p>
+        <Button type="button" disabled={busy} onClick={finishPending}>Confirmar registro anterior</Button>
+      </div>}
+      {notice && <p role="status" className="text-sm text-masi-navy">{notice}</p>}
+      {!ready && <p className="text-sm text-masi-muted">Para continuar, completa: {missing.join(', ')}.</p>}
       {error && <p role="alert" className="text-sm text-masi-error">{error}</p>}
       <Button type="submit" disabled={!ready || busy}>
         {busy ? 'Guardando…' : existingContract ? 'Guardar perfil' : pending ? 'Reintentar registro' : 'Crear cuenta con huella'}
