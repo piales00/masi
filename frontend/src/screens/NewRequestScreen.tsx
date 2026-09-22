@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { ArrowRight, Camera, LocateFixed, MapPin, Search, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { TradeChips } from '../components/TradeChips';
 import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
+import { toStoredImage } from '../images';
 import { TRADES } from '../marketplace';
 import type { Trade } from '../marketplace';
 import { serviceOf } from '../trades';
@@ -48,6 +49,7 @@ function suggestService(description: string): Service | null {
   return best ? serviceOf(best.id) : null;
 }
 
+/** `url` ya es el data URL definitivo: la vista previa y lo que se guarda son lo mismo. */
 interface Photo { id: string; url: string; name: string }
 
 function Options({ legend, options, value, onChange }: {
@@ -90,54 +92,64 @@ export function NewRequestScreen() {
   const [date, setDate] = useState('');
   /** Solo se abre la grilla completa cuando el usuario pide cambiar de servicio. */
   const [picking, setPicking] = useState(false);
-
-  // Las vistas previas son URLs de objeto: hay que liberarlas al salir de la pantalla.
-  const photosRef = useRef(photos);
-  photosRef.current = photos;
-  useEffect(() => () => { photosRef.current.forEach(photo => URL.revokeObjectURL(photo.url)); }, []);
+  const [publicando, setPublicando] = useState(false);
+  const [error, setError] = useState('');
 
   const suggestion = !trade && !picking ? suggestService(description) : null;
   const showPicker = picking || (!trade && !suggestion);
   const chosen = trade ? serviceOf(trade) : null;
   const today = new Date().toLocaleDateString('en-CA');
 
-  const addPhotos = (event: ChangeEvent<HTMLInputElement>) => {
-    const chosen = [...(event.target.files ?? [])].filter(file => file.type.startsWith('image/'));
-    setPhotos(current => [
-      ...current,
-      ...chosen.slice(0, MAX_PHOTOS - current.length).map(file => ({ id: crypto.randomUUID(), url: URL.createObjectURL(file), name: file.name })),
-    ]);
+  const addPhotos = async (event: ChangeEvent<HTMLInputElement>) => {
+    const elegidas = [...(event.target.files ?? [])].filter(file => file.type.startsWith('image/'));
     event.target.value = '';
+    const hueco = MAX_PHOTOS - photos.length;
+    const listas = await Promise.all(elegidas.slice(0, hueco).map(async (file): Promise<Photo | null> => {
+      try {
+        return { id: crypto.randomUUID(), url: await toStoredImage(file), name: file.name };
+      } catch {
+        // Una imagen ilegible se descarta en silencio; las demás siguen su curso.
+        return null;
+      }
+    }));
+    const validas = listas.filter((photo): photo is Photo => photo !== null);
+    if (validas.length > 0) setPhotos(current => [...current, ...validas].slice(0, MAX_PHOTOS));
   };
 
-  const removePhoto = (id: string) => setPhotos(current => {
-    const gone = current.find(photo => photo.id === id);
-    if (gone) URL.revokeObjectURL(gone.url);
-    return current.filter(photo => photo.id !== id);
-  });
+  const removePhoto = (id: string) => setPhotos(current => current.filter(photo => photo.id !== id));
 
   const ready = Boolean(trade && description.trim());
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!trade || !description.trim()) return;
-    publishRequest({
-      servicio: trade,
-      descripcion: description.trim(),
-      fotos: photos.length,
-      ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
-      distrito: district.trim(),
-      cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
-    });
-    navigate(`/profesionales?servicio=${encodeURIComponent(trade)}`);
+    if (!trade || !description.trim() || publicando) return;
+    setPublicando(true);
+    setError('');
+    try {
+      const solicitud = await publishRequest({
+        servicio: trade,
+        descripcion: description.trim(),
+        fotos: photos.map(photo => photo.url),
+        ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
+        distrito: district.trim(),
+        cuando: timing === 'Elegir fecha' && date ? `El ${date}` : timing,
+        cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
+      });
+      navigate(`/solicitudes/${solicitud.id}`, { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Algo salió mal. Inténtalo de nuevo.');
+    } finally {
+      setPublicando(false);
+    }
   };
 
   return <Screen
     header={<ScreenHeader title="Nueva solicitud" subtitle="Cuéntanos qué está pasando" />}
     footer={<ScreenFooter className="border-t border-masi-gray bg-white">
-      <Button type="submit" form="solicitud" disabled={!ready}>
-        Publicar solicitud<ArrowRight size={18} aria-hidden="true" />
+      <Button type="submit" form="solicitud" disabled={!ready || publicando}>
+        {publicando ? 'Publicando…' : 'Publicar solicitud'}<ArrowRight size={18} aria-hidden="true" />
       </Button>
+      {error && <p role="alert" className="mt-2 text-center text-sm text-masi-error">{error}</p>}
       <p className="mt-2 flex items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-masi-muted">
         <ShieldCheck size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
         <span>Los acuerdos realizados fuera de la app no están cubiertos por la garantía de Masi.</span>
@@ -212,7 +224,7 @@ export function NewRequestScreen() {
         {photos.length < MAX_PHOTOS && <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-masi-input border border-dashed border-masi-gray bg-white px-4 text-sm font-semibold text-masi-blue transition-colors duration-200 ease-out hover:border-masi-blue">
           <Camera size={18} aria-hidden="true" />
           {photos.length === 0 ? 'Agregar fotos' : `Agregar otra (${photos.length}/${MAX_PHOTOS})`}
-          <input type="file" accept="image/*" multiple onChange={addPhotos} className="sr-only" />
+          <input type="file" accept="image/*" multiple onChange={event => { void addPhotos(event); }} className="sr-only" />
         </label>}
       </section>
 

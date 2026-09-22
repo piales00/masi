@@ -132,6 +132,26 @@ rate({ job_id, stars, comment_hash })
 
 ---
 
+## Ya está conectado: `VITE_ESCROW=contract`
+
+`frontend/src/escrow/contractEscrow.ts` implementa el mismo `EscrowGateway` que el mock, contra el contrato real. Ninguna pantalla cambia: `escrow/index.ts` elige la implementación.
+
+| Variable | Efecto |
+|---|---|
+| sin `VITE_ESCROW` | Simulación: `mockEscrow` en el navegador, o `remoteDemoEscrow` si `VITE_STORE=api` |
+| `VITE_ESCROW=contract` | **Escrow real en testnet.** Cada acción se firma con la huella y la envía el relayer. Las estrellas del perfil salen de `rating_of` |
+
+Cómo funciona una escritura: se arma con `contract.Client`, se firma con `kit.sign(tx)` y se manda el XDR a `POST /api/relayer`. El relayer reconoce una sola operación `invokeHostFunction` sin firma de la cuenta fuente y la envía por la vía `{ func, auth }` de Channels, pagando la comisión. El usuario nunca necesita XLM.
+
+Dos cosas que se comprobaron contra el contrato vivo y conviene no olvidar:
+
+- **`get_job` devuelve el valor envuelto** (hay que llamar a `unwrap()`), mientras que `rating_of` y `jobs_of` lo devuelven plano. El ayudante `valor()` acepta las dos formas.
+- **`jobs_of` solo indexa por proveedor.** Los trabajos del cliente se recuerdan en un índice local al crearlos; si algún día hace falta que sobrevivan a un cambio de teléfono, ese índice se mueve al almacén compartido.
+
+`resolve` no se ofrece en la app: la firma el árbitro de Masi.
+
+---
+
 ## Errores del contrato
 
 Llegan como `Error(Contract, #N)`. Tradúcelos a lenguaje humano — el usuario nunca ve un número:

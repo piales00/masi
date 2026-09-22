@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ImageIcon, Info, MapPin, Send } from 'lucide-react';
+import { Info, MapPin, Send } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -21,6 +21,8 @@ export function ProviderAlertScreen() {
   const { providerProfile, solicitudes, sendProposal } = useDemo();
   const [precio, setPrecio] = useState('');
   const [minutos, setMinutos] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState('');
 
   const solicitud = solicitudes.find(item => item.id === id);
   if (!solicitud) return <Navigate to="/profesional" replace />;
@@ -29,24 +31,33 @@ export function ProviderAlertScreen() {
   const Icon = service.icon;
   const ready = Number(precio) > 0 && Number(minutos) > 0;
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!ready || !providerProfile) return;
-    sendProposal({
-      solicitudId: solicitud.id,
-      providerId: providerProfile.id,
-      precio: Number(precio),
-      minutos: Number(minutos),
-    });
-    navigate('/profesional', { replace: true, state: { sent: true } });
+    if (!ready || !providerProfile || enviando) return;
+    setEnviando(true);
+    setError('');
+    try {
+      await sendProposal({
+        solicitudId: solicitud.id,
+        providerId: providerProfile.id,
+        precio: Number(precio),
+        minutos: Number(minutos),
+      });
+      navigate('/profesional', { replace: true, state: { sent: true } });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Algo salió mal. Inténtalo de nuevo.');
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return <Screen
     header={<ScreenHeader title="Detalle de la solicitud" subtitle={solicitud.servicio} />}
     footer={<ScreenFooter className="border-t border-masi-gray bg-white">
-      <Button type="submit" form="propuesta" disabled={!ready}>
-        Enviar mi propuesta<Send size={18} aria-hidden="true" />
+      <Button type="submit" form="propuesta" disabled={!ready || enviando}>
+        {enviando ? 'Enviando…' : 'Enviar mi propuesta'}<Send size={18} aria-hidden="true" />
       </Button>
+      {error && <p role="alert" className="mt-2 text-center text-sm text-masi-error">{error}</p>}
     </ScreenFooter>}
   >
     <div className="px-4 py-6">
@@ -66,17 +77,20 @@ export function ProviderAlertScreen() {
 
       <section className="mt-6">
         <h2 className="text-sm font-semibold text-masi-navy">Fotos del cliente</h2>
-        {solicitud.fotos > 0
+        {solicitud.fotos.length > 0
           ? <ul className="mt-3 grid grid-cols-3 gap-2">
-            {Array.from({ length: solicitud.fotos }, (_, index) => <li
-              key={index}
-              className="grid aspect-square place-items-center rounded-masi-input border border-masi-gray bg-masi-blue-50 text-masi-blue"
-            ><ImageIcon size={22} aria-hidden="true" /><span className="sr-only">Foto {index + 1}</span></li>)}
+            {solicitud.fotos.map((foto, index) => <li key={index}>
+              <img
+                src={foto}
+                alt={`Foto ${index + 1} del cliente`}
+                className="aspect-square w-full rounded-masi-input border border-masi-gray object-cover"
+              />
+            </li>)}
           </ul>
           : <p className="mt-2 text-sm text-masi-muted">El cliente no adjuntó fotos.</p>}
       </section>
 
-      <form id="propuesta" onSubmit={submit} className="mt-8 space-y-4">
+      <form id="propuesta" onSubmit={event => { void submit(event); }} className="mt-8 space-y-4">
         <h2 className="text-sm font-semibold text-masi-navy">Tu propuesta</h2>
         <Field
           label="Precio (S/)"

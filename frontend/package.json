@@ -7,6 +7,9 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-passkey-kit.mjs",
+    "prebuild": "node scripts/patch-passkey-kit.mjs",
+    "pretest": "node scripts/patch-passkey-kit.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -14,12 +17,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "13.3.0",
     "@fontsource/montserrat": "5.3.0",
+    "@stellar/stellar-sdk": "16.3.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@upstash/redis": "^1.39.0",
     "@vitejs/plugin-react": "6.1.1",
+    "buffer": "^6.0.3",
     "lucide-react": "1.47.0",
+    "passkey-kit": "0.19.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-router-dom": "7.18.4",
@@ -30,6 +38,7 @@
   "devDependencies": {
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
+    "@types/node": "^26.6.2",
     "jsdom": "30.1.0",
     "vitest": "5.0.1"
   }

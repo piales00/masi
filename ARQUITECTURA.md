@@ -1,5 +1,5 @@
 # Arquitectura
-
+# piero estuvo aqui 
 **Stellar Odyssey Perú 2026 · Track 6 · Open Build**
 
 La idea que ordena todo lo demás: **casi todo Masi es una app normal**. Solo dos cosas viven en la cadena, y son exactamente las dos donde "confía en nosotros" es una respuesta débil.

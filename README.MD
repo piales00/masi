@@ -1,5 +1,11 @@
 # Masi
 
+> **Entrega P2, 22/09/2026:** [revisión de requisitos, pruebas y límites](./REVISION_P2_ENTREGA.md).
+> La demo personal autorizada usa passkeys reales para confirmar identidad y pagos
+> **simulados**, sin dinero real. Con `VITE_STORE=api`, ambos celulares comparten
+> solicitudes y estados de pedidos mediante Redis. Esto no acredita firma de pagos
+> on-chain ni cumplimiento total de los documentos originales.
+
 > *Tu hogar en buenas manos*
 
 Marketplace de servicios donde todo pago va protegido. El cliente bloquea el dinero en un contrato Soroban, el trabajador recibe un adelanto para materiales al empezar y el saldo al aprobar. Las calificaciones solo las puede dejar quien pagó por el contrato.
@@ -122,6 +128,7 @@ vencimiento: el contrato no ejecuta tareas programadas.
 - Las calificaciones se pueden falsear, pero cada reseña falsa cuesta la comisión de un trabajo real.
 - El árbitro de las disputas es Masi. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales.
 - Recuperación de cuenta: depende de la sincronización de passkeys con Google o iCloud.
+- La API compartida de la demo no tiene autenticación. El dinero y el estado de los trabajos siguen protegidos por el contrato; solicitudes, postulaciones, cotizaciones y texto de reseñas viven temporalmente en Upstash Redis.
 
 ## Documentación
 

@@ -199,7 +199,7 @@ Se intentan con una prueba de 3 horas el 20 de septiembre; si el 22 en la noche 
 3. **Cada acción:** la app arma la llamada, la simula y el usuario firma la autorización con la huella.
 4. **Envío:** el relayer mete la autorización en una transacción, paga el XLM y la envía. Solo acepta llamadas a nuestro contrato y al SAC de PEN-test.
 
-**Condiciones:** HTTPS y dominio definitivo desde el día 1 (la passkey queda atada al dominio exacto). Se hostea en Netlify, que da HTTPS automático: se elige el subdominio `*.netlify.app` hoy y no se renombra nunca, porque al cambiarlo las cuentas creadas antes dejan de entrar. Se prueba siempre en la URL principal, nunca en un deploy preview (`deploy-preview-N--...`), que es otro origen. El dominio tiene que estar fijo **antes** de sembrar los trabajos del 24. En `localhost` las passkeys funcionan sin HTTPS, así que el riesgo aparece recién al pasar al celular.
+**Condiciones:** HTTPS y dominio definitivo desde el día 1 (la passkey queda atada al dominio exacto). Se hostea en Vercel, que da HTTPS automático: `https://masiapp.vercel.app` no se renombra nunca, porque al cambiarlo las cuentas creadas antes dejan de entrar. Se prueba siempre en la URL principal, nunca en un deploy preview (`masiapp-git-…vercel.app`), que es otro origen. El dominio tiene que estar fijo **antes** de sembrar los trabajos del 24. En `localhost` las passkeys funcionan sin HTTPS, así que el riesgo aparece recién al pasar al celular.
 
 > **21/09:** el hosting se migró a Vercel por falta de créditos en Netlify, antes de crear ninguna wallet definitiva. El dominio congelado es ahora **`https://masiapp.vercel.app`**.
 

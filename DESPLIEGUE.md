@@ -204,3 +204,36 @@ rating_of(juan) → {"completed_jobs":1,"disputes":1,"rating_count":1,"stars_sum
 ## Lo que este despliegue todavía no prueba
 
 - Nada se ha probado aún con direcciones C ni con passkeys. Eso es el punto de integración del 22.
+
+## Vercel, Upstash y relayer
+
+Actualización P2 (22/09/2026): el entorno personal autorizado de pruebas es
+`https://masiapp-nine.vercel.app`, proyecto `masiapp` de `jossepv117-5688`.
+Usa la base Upstash **masi-pruebas**. No reemplaza el dominio del equipo descrito
+abajo. `VITE_STORE=api` activa datos y pedidos simulados compartidos; las claves
+adicionales `demo-trabajos/` almacenan únicamente simulaciones. Nunca se debe vaciar
+la base compartida sin aprobación del equipo. La revisión actual está en
+`REVISION_P2_ENTREGA.md`; los relatos históricos de este archivo no prueban la
+integración actual de passkeys y pagos.
+
+El proyecto de Vercel usa `frontend` como **Root Directory** y publica en
+`https://masiapp.vercel.app`. La configuración SPA está en `frontend/vercel.json`;
+las rutas `/api/` y `/passkey-test/` quedan fuera del fallback a `index.html`.
+
+En Vercel se configuran, para producción, las variables listadas en
+`frontend/.env.example`. `RELAYER_API_KEY` y los tokens de Upstash son secretos:
+no se copian al repositorio ni se crean con prefijo `VITE_`.
+
+La base de Upstash se conecta desde **Storage → Marketplace → Upstash Redis**.
+La API utiliza las claves `solicitudes/`, `postulaciones/`, `cotizaciones/` y
+`resenas/`. Antes de grabar el video, se vacía exclusivamente esta base de demo
+con `FLUSHDB` desde la consola de Upstash; esa operación elimina todos sus datos.
+
+Comprobaciones posteriores al despliegue:
+
+```text
+GET  https://masiapp.vercel.app/api/salud
+POST https://masiapp.vercel.app/api/relayer
+```
+
+`/api/salud` debe devolver `{"ok":true}` y nunca el HTML de la aplicación.

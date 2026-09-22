@@ -22,7 +22,10 @@
   },
   "include": [
     "src",
+    "server",
+    "api",
     "vite.config.ts",
-    "../shared/escrow.ts"
+    "../shared/escrow.ts",
+    "../shared/api.ts"
   ]
 }
