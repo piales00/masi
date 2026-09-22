@@ -152,23 +152,21 @@ del problema a las postulaciones, se puede dejar como está.
 
 ## Si sobrara tiempo
 
-En el orden en que yo los tomaría. Los tres primeros tapan huecos reales; los demás son adorno.
+En el orden en que yo los tomaría. Ninguno bloquea la entrega: el flujo funciona entero.
 
-1. **Quién dispara `auto_release`.** Hoy nadie. Si el cliente desaparece, el dinero se queda
-   quieto hasta que alguien firme, y en la demo ese alguien somos nosotros. Un **Vercel Cron**
-   diario que recorra los trabajos vencidos y los libere lo convierte en lo que el pitch promete:
-   *"si no responde en 24 horas, te pagan solo"*. Es media hora de trabajo y es la diferencia
-   entre una promesa y una función.
-2. **Pantalla del árbitro para `resolve`.** El contrato sabe resolver disputas, pero resolverlas
-   hoy exige la CLI. Una pantalla mínima —ver la disputa, mover un deslizador de reparto, firmar—
-   cierra el único caso del flujo que no se puede enseñar dentro de la app.
-3. **Qué ve el usuario cuando una firma falla.** Si el relayer se cae o cancelan la huella, hay que
-   asegurarse de que sale un mensaje en cristiano y el botón vuelve a estar disponible. Es el
-   escenario más probable de un directo con wifi de evento.
-4. **Notificaciones de verdad** en lugar de la campana decorativa: avisar al técnico de una
-   solicitud nueva y al cliente de una postulación.
-5. **Buscador y filtros** en la lista de profesionales.
-6. **Reintento e idempotencia en la recarga**, para que un doble toque no acredite dos veces.
+1. **Pantalla del árbitro para `resolve`.** El contrato sabe repartir una disputa, pero hoy
+   resolverla exige la CLI. Es el único paso del flujo que no se puede hacer dentro de la app.
+   Si en el vídeo se enseña la disputa, se abre desde el teléfono pero se cierra por consola.
+2. **Un disparador propio para `auto_release`.** Ya funciona: salta solo cuando el cliente o el
+   profesional abren el trabajo pasadas las 24 h. Lo que falta es que no dependa de que alguien
+   abra la app. Un **Vercel Cron** diario que recorra los vencidos lo dejaría redondo, pero no
+   es un agujero: hoy se libera igual.
+3. **Notificaciones de verdad.** La campana de Inicio hoy no hace nada: avisar al profesional de
+   una solicitud nueva y al cliente de una propuesta es lo que más acercaría la demo a un
+   producto.
+4. **Buscador y filtros** en la lista de profesionales: hoy solo filtra por oficio.
+5. **Cerrojo de la recarga**: usa estado y no un `ref` como la pantalla de trabajo, así que dos
+   toques en el mismo instante podrían acreditar dos veces.
 
 Lo que **no** haría aunque sobre tiempo: tocar el contrato. Cada función nueva obliga a
 redesplegar, cambia el contract ID y arrastra la documentación, el frontend y el historial
