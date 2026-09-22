@@ -6,7 +6,8 @@ import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
 import { fieldBox } from '../components/Field';
-import { EXPLORER_TX } from '../config';
+import { confirmDemoIdentity } from '../passkeys';
+import { usePolling } from '../usePolling';
 import { friendlyError } from '../contractErrors';
 import { useDemo } from '../demo/DemoContext';
 import { guardarIncidencia, leerIncidencia } from '../demo/incidencias';
@@ -103,12 +104,26 @@ export function JobScreen({ role }: { role: JobRole }) {
   const [comentario, setComentario] = useState('');
   /** El cerrojo va en un ref: dos clics del mismo tick leerían el mismo estado en null. */
   const ocupado = useRef(false);
+  const activeAccount = useRef<string | undefined>(undefined);
+  activeAccount.current = role === 'client' ? profile?.contractId : providerProfile?.contractId;
+
+  const confirmar = async (requiredRole?: JobRole) => {
+    if (!job || (requiredRole && role !== requiredRole)) throw new Error('HostError: Error(Contract, #5)');
+    const expected = role === 'client' ? job.client : job.provider;
+    if (activeAccount.current !== expected) throw new Error('HostError: Error(Contract, #5)');
+    await confirmDemoIdentity(expected);
+    if (activeAccount.current !== expected) throw new Error('HostError: Error(Contract, #5)');
+  };
 
   const releer = useCallback(async (id: bigint) => {
     const encontrado = await escrow.getJob(id);
     setJob(encontrado);
     return encontrado;
   }, []);
+
+  usePolling(async () => {
+    if (jobId && /^[1-9][0-9]*$/.test(jobId) && !ocupado.current) await releer(BigInt(jobId));
+  }, { activo: import.meta.env.VITE_STORE === 'api', intervalo: 3000 });
 
   useEffect(() => {
     let vigente = true;
@@ -159,7 +174,7 @@ export function JobScreen({ role }: { role: JobRole }) {
     setEnCurso(accion);
     setError('');
     try {
-      // La firma real con huella entra aquí cuando exista el adaptador; ver el reporte.
+      await confirmar(accion === 'fund' || accion === 'approve' ? 'client' : 'provider');
       if (accion === 'accept') await escrow.accept(job.id);
       if (accion === 'fund') await escrow.fund(job.id);
       if (accion === 'start') await escrow.start(job.id);
@@ -185,6 +200,7 @@ export function JobScreen({ role }: { role: JobRole }) {
     setEnCurso('dispute');
     setError('');
     try {
+      await confirmar();
       guardarIncidencia({
         jobId: job.id.toString(),
         reportadaPor: role,
@@ -215,6 +231,7 @@ export function JobScreen({ role }: { role: JobRole }) {
     setEnCurso('rate');
     setError('');
     try {
+      await confirmar('client');
       const texto = comentario.trim();
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
       const hash = new Uint8Array(digest);
@@ -269,6 +286,7 @@ export function JobScreen({ role }: { role: JobRole }) {
 
   return <Screen header={<ScreenHeader title="Tu trabajo" subtitle={solicitud?.servicio} />}>
     <div className="px-4 py-6">
+      <p className="mb-4 rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Modo de prueba: los pagos son simulados, no se mueve dinero. Confirma cada acción con tu huella o el bloqueo de tu celular.</p>
       <section className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
           {Icon && solicitud
@@ -427,12 +445,7 @@ export function JobScreen({ role }: { role: JobRole }) {
         <p className="font-mono text-xs">{job.id.toString()}</p>
         <p className="mt-3 text-xs text-masi-muted">Creado</p>
         <p className="text-xs">{job.created_at > 0n ? fecha(job.created_at) : 'Sin fecha'}</p>
-        {cotizacion?.txHash && <a
-          className="mt-3 block break-all text-xs text-masi-blue underline"
-          href={`${EXPLORER_TX}${cotizacion.txHash}`}
-          target="_blank"
-          rel="noreferrer"
-        >Ver comprobante</a>}
+        {cotizacion?.txHash && <p className="mt-3 break-all text-xs">Comprobante simulado (no existe en el explorador): {cotizacion.txHash}</p>}
       </details>
     </div>
   </Screen>;

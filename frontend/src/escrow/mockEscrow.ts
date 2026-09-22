@@ -1,6 +1,6 @@
-import { MAX_MATERIALS_BPS } from '../config';
-import { portion } from '../money';
-import { JOB_STATES } from '../../../shared/escrow';
+import { MAX_MATERIALS_BPS } from '../config.js';
+import { portion } from '../money.js';
+import { JOB_STATES } from '../../../shared/escrow.js';
 import type { EscrowArguments, Job, JobState } from '../../../shared/escrow';
 import type { EscrowGateway } from './gateway';
 
@@ -16,7 +16,7 @@ export type Tag = Job['state']['tag'];
  * `remaining_amount` se recalculan igual que el contrato, así nunca se contradicen.
  * Los campos opcionales faltan en los trabajos que creó F3, y por eso se toleran.
  */
-interface StoredJob {
+export interface StoredJob {
   id: string;
   client: string;
   provider: string;
@@ -39,7 +39,8 @@ interface StoredJob {
 
 const estado = (tag: Tag): JobState => ({ tag, values: undefined as unknown as void });
 const ahora = (): bigint => BigInt(Math.floor(Date.now() / 1000));
-const nuevoHash = (): string => crypto.randomUUID().replaceAll('-', '');
+// Identificador ficticio de 64 caracteres, compatible con la API. No es un hash de red.
+const nuevoHash = (): string => [...crypto.getRandomValues(new Uint8Array(32))].map(byte => byte.toString(16).padStart(2, '0')).join('');
 // El tipo va en la constante, no solo en la flecha: así TypeScript sabe que corta el flujo.
 const fallo: (codigo: number) => never = codigo => {
   throw new Error(`HostError: Error(Contract, #${codigo})`);
@@ -130,9 +131,11 @@ function fixtures(): StoredJob[] {
   ];
 }
 
+/** Motor compartido por la demo local y la API; cada petición tiene su propio almacén. */
+export function createMockEscrow(storage: Pick<Storage, 'getItem' | 'setItem'>, seedFixtures = true): EscrowGateway {
 function writeRows(rows: StoredJob[]): void {
   try {
-    localStorage.setItem(JOBS_KEY, JSON.stringify(rows));
+    storage.setItem(JOBS_KEY, JSON.stringify(rows));
   } catch {
     // Sin almacenamiento el trabajo solo vive en esta pestaña.
   }
@@ -141,14 +144,14 @@ function writeRows(rows: StoredJob[]): void {
 function readRows(): StoredJob[] {
   let rows: StoredJob[] = [];
   try {
-    const raw = localStorage.getItem(JOBS_KEY);
+    const raw = storage.getItem(JOBS_KEY);
     const value = raw ? JSON.parse(raw) : null;
     rows = Array.isArray(value) ? value as StoredJob[] : [];
   } catch {
     rows = [];
   }
   // Se siembra una sola vez y nunca se pisa lo que ya existe.
-  if (!rows.some(row => BigInt(row.id) > PRIMER_FIXTURE)) {
+  if (seedFixtures && !rows.some(row => BigInt(row.id) > PRIMER_FIXTURE)) {
     rows = [...rows, ...fixtures()];
     writeRows(rows);
   }
@@ -173,7 +176,7 @@ function avanzar(jobId: bigint, desde: readonly Tag[], cambio: (row: StoredJob) 
   return { hash: nuevoHash() };
 }
 
-export const mockEscrow: EscrowGateway = {
+return {
   async createJob(args: EscrowArguments['create_job']) {
     if (args.amount <= 0n) fallo(6);
     if (args.materials_bps > MAX_MATERIALS_BPS) fallo(7);
@@ -282,3 +285,9 @@ export const mockEscrow: EscrowGateway = {
     return { hash: nuevoHash() };
   },
 };
+}
+
+export const mockEscrow = createMockEscrow({
+  getItem: key => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+});

@@ -317,7 +317,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setCotizaciones(datos.cotizaciones);
   }, []);
 
-  const { error: syncError, recargar: retrySync } = usePolling(cargar, { activo: store.remoto });
+  const { error: syncError, recargar: retrySync } = usePolling(cargar, { activo: store.remoto, intervalo: 3000 });
 
   const openSession = useCallback((role: Role) => {
     setSession(current => {

@@ -15,6 +15,10 @@ const MENSAJES: Record<number, string> = {
 const GENERICO = 'Algo salió mal. Inténtalo de nuevo.';
 
 export function friendlyError(err: unknown): string {
+  // El kit conserva la cancelación del navegador como causa del error WebAuthn.
+  if (err instanceof Error && err.cause instanceof DOMException && err.cause.name === 'NotAllowedError') {
+    return 'No se confirmó tu huella. Inténtalo de nuevo.';
+  }
   if (err instanceof DOMException && err.name === 'NotAllowedError') {
     return 'No se confirmó tu huella. Inténtalo de nuevo.';
   }

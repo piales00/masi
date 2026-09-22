@@ -22,6 +22,20 @@ export class RedisStore implements KeyValueStore {
     await this.redis.set(key, value);
   }
 
+  async compareAndSet(key: string, revision: number | null, value: { revision: number }): Promise<boolean> {
+    const result = await this.redis.eval(`
+      local raw = redis.call('GET', KEYS[1])
+      if ARGV[1] == 'new' then
+        if raw then return 0 end
+      else
+        if not raw or cjson.decode(raw).revision ~= tonumber(ARGV[1]) then return 0 end
+      end
+      redis.call('SET', KEYS[1], ARGV[2])
+      return 1
+    `, [key], [revision === null ? 'new' : String(revision), JSON.stringify(value)]);
+    return result === 1;
+  }
+
   async list(prefix: string): Promise<string[]> {
     let cursor = '0';
     const keys: string[] = [];

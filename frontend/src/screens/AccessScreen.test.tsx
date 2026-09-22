@@ -5,10 +5,11 @@ import { DemoProvider, readProfileForAddress, readProviderForAddress, useDemo } 
 import { AccessScreen } from './AccessScreen';
 import { ProviderSetupScreen } from './ProviderSetupScreen';
 import { SetupScreen } from './SetupScreen';
-import { createAccount, signIn } from '../passkeys';
+import { createAccount, signIn, hasPendingAccount, pendingAccountName, resumeAccountCreation } from '../passkeys';
 
 vi.mock('../passkeys', () => ({
-  signIn: vi.fn(), createAccount: vi.fn(), hasPendingAccount: () => false,
+  signIn: vi.fn(), createAccount: vi.fn(), hasPendingAccount: vi.fn(() => false),
+  pendingAccountName: vi.fn(() => null), resumeAccountCreation: vi.fn(),
 }));
 
 function Destination() {
@@ -27,10 +28,44 @@ function mount(path: string) {
   </Routes></MemoryRouter></DemoProvider>);
 }
 
-beforeEach(() => { localStorage.clear(); vi.resetAllMocks(); });
+beforeEach(() => { localStorage.clear(); sessionStorage.clear(); vi.resetAllMocks(); });
 afterEach(cleanup);
 
 describe('integración de perfiles y passkeys después del merge', () => {
+  it('confirma un registro anterior sin exigir llenar otro perfil ni abrir sesión', async () => {
+    vi.mocked(hasPendingAccount).mockReturnValue(true);
+    vi.mocked(pendingAccountName).mockReturnValue('Cliente anterior');
+    vi.mocked(resumeAccountCreation).mockResolvedValue({ contractId: 'C_OLD', hash: 'hash', confirmed: true });
+    mount('/profesional/configuracion');
+    expect(screen.getByText(/Hay un registro pendiente de Cliente anterior/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Reintentar registro' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar registro anterior' }));
+    await screen.findByRole('status');
+    expect(createAccount).not.toHaveBeenCalled();
+    expect(localStorage.getItem('masi.demo.sesion.v2')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirmar registro anterior' })).toBeNull();
+  });
+
+  it('conserva el aviso cuando la confirmación sigue pendiente', async () => {
+    vi.mocked(hasPendingAccount).mockReturnValue(true);
+    vi.mocked(resumeAccountCreation).mockResolvedValue({ contractId: 'C_OLD', hash: 'hash', confirmed: false });
+    mount('/profesional/configuracion');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar registro anterior' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('sigue pendiente');
+    expect(screen.getByRole('button', { name: 'Confirmar registro anterior' })).toBeTruthy();
+  });
+
+  it('recupera el formulario profesional al volver y permite cero años de experiencia', () => {
+    const view = mount('/profesional/configuracion');
+    fireEvent.change(screen.getByLabelText('Nombre completo'), { target: { value: 'Ana' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pintura' }));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Surco' } });
+    fireEvent.change(screen.getByLabelText('Años de experiencia'), { target: { value: '0' } });
+    view.unmount();
+    mount('/profesional/configuracion');
+    expect((screen.getByLabelText('Nombre completo') as HTMLInputElement).value).toBe('Ana');
+    expect((screen.getByRole('button', { name: 'Crear cuenta con huella' }) as HTMLButtonElement).disabled).toBe(false);
+  });
   it('restaura el cliente autenticado y conserva su cuenta tras recargar', async () => {
     const profile = { firstName: 'María', lastName: 'Torres', phone: '', district: 'Surco', contractId: 'C_CLIENT', deploymentHash: 'hash' };
     localStorage.setItem('masi.profile.C_CLIENT', JSON.stringify(profile));
