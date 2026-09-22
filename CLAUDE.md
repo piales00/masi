@@ -13,7 +13,7 @@ Si algo de esto no funciona, el scope ya tiene el fallback definido. No inventes
 ## Reglas duras
 
 - **En la interfaz nunca aparecen** las palabras *wallet*, *XLM*, *gas* ni *seed phrase*. Los montos siempre en soles.
-- **El dominio de Vercel es `https://masiapp.vercel.app` y no se cambia.** Las passkeys quedan atadas al dominio exacto; si se renombra, las cuentas creadas antes dejan de entrar. Probar siempre en la URL principal, nunca en un deploy preview.
+- **El dominio es `https://masiapp.vercel.app` y no se cambia.** Se migró de Netlify a Vercel el 21/09, antes de crear ninguna wallet definitiva. Las passkeys quedan atadas al dominio exacto; si se renombra, las cuentas creadas antes dejan de entrar. Probar siempre en la URL principal, nunca en un deploy preview.
 - **No depender de eventos del RPC para el historial.** Solo se guardan un tiempo limitado. El historial va en storage persistente, extendiendo el TTL en cada escritura.
 - **El adelanto de materiales no se puede disputar** una vez entregado.
 - **Cada función de escritura exige `require_auth`** del rol indicado en la tabla.
@@ -26,11 +26,11 @@ Vivo en **testnet** desde el 20 de septiembre:
 
 | | |
 | --- | --- |
-| Contrato `escrow` | `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` |
+| Contrato `escrow` | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 | Red | `Test SDF Network ; September 2015` · RPC `https://soroban-testnet.stellar.org` |
 
-`CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` es un despliegue **viejo y superado**; si lo encuentras en algún sitio, está mal.
+`CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` (sin `rate`) y `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` (sin `dispute`) son despliegues **viejos y superados**; si lo encuentras en algún sitio, está mal.
 
 **Para conectar el frontend al contrato, lee [`INTEGRACION.md`](./INTEGRACION.md).** Los tipos están en `shared/escrow.ts` y son la referencia; el ABI real es el código Rust.
 

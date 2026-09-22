@@ -2,7 +2,9 @@
 
 **21 de septiembre de 2026.** Cada respuesta sobre el contrato está comprobada contra el código de `contracts/escrow/` y contra el despliegue en testnet, no de memoria.
 
-Resumen: **la propuesta del PO de separar oferta y cotización final se acepta y no toca el contrato.** Lo que sí hay que decidir hoy es si se construye `dispute`, porque añadirlo cambia el contract ID.
+Resumen: **la propuesta del PO de separar oferta y cotización final se acepta y no toca el contrato.**
+
+> **Decisiones del PO, 21/09 por la tarde:** se construyen `dispute` y `resolve` (**hechos y desplegados**, nuevo contract ID `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`); datos **compartidos** con la API del backend; `resolve` **cuenta como trabajo completado**; plazo de revisión por defecto **24 h**, no 72 h, porque a la gente no le gusta esperar. Con la disputa disponible, un plazo corto ya no deja al cliente desprotegido.
 
 ---
 
@@ -37,7 +39,7 @@ Hay que partirlo en dos, porque son dos cosas distintas:
 - **Lo que ya es un trabajo** (desde `create_job`): vive en el contrato. `get_job` y `jobs_of` lo devuelven a cualquier dispositivo. Esto ya está resuelto.
 - **Lo que todavía no es un trabajo** (solicitud, ofertas, cotización, texto de las reseñas): necesita un almacén compartido fuera de la cadena.
 
-Recomendación: **Netlify Blobs detrás de una Netlify Function.** Ya estamos en Netlify y el relayer también va a necesitar una Function, así que no suma servicios nuevos. Si no llega a tiempo, el plan B es grabar el vídeo con los dos roles en el mismo dispositivo, que es lo que hoy funciona.
+Recomendación: **Upstash Redis (Vercel Marketplace, plan gratuito) detrás de una Vercel Function.** Se descartó Vercel Blob: es para archivos, sus lecturas pasan por caché y el plan Hobby solo incluye 2.000 operaciones de escritura y listado al mes. Ya estamos en Vercel y el relayer también va a necesitar una Function, así que no suma servicios nuevos. Si no llega a tiempo, el plan B es grabar el vídeo con los dos roles en el mismo dispositivo, que es lo que hoy funciona.
 
 **Decisión que falta:** cuál de las dos. Condiciona la pregunta 8.
 
@@ -133,5 +135,5 @@ Mi opinión donde afecta a la implementación:
 ## Lo que hay que decidir hoy
 
 1. **¿Se construye `dispute`?** Recomendación: sí, y antes de conectar el frontend, por el cambio de contract ID.
-2. **¿Almacén compartido o demo en un solo dispositivo?** Recomendación: Netlify Blobs.
-3. **Plazo de revisión por defecto.** Recomendación: 72 h mientras no exista `dispute`.
+2. **¿Almacén compartido o demo en un solo dispositivo?** Decidido: **datos compartidos, con Upstash Redis**.
+3. ~~Plazo de revisión por defecto~~ → **24 h**, decidido.

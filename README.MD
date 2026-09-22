@@ -49,8 +49,8 @@ En construcción. Entrega el 25 de septiembre de 2026.
 
 | | |
 |---|---|
-| App | https://masiapp.netlify.app |
-| Contrato `escrow` | [`CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV`](https://stellar.expert/explorer/testnet/contract/CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV) |
+| App | https://masiapp.vercel.app |
+| Contrato `escrow` | [`CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`](https://stellar.expert/explorer/testnet/contract/CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL) |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
 El caso del demo está ejecutado de punta a punta en la red, no solo en tests: María
@@ -59,10 +59,9 @@ aprobar), Masi cobra S/60 de comisión y el contrato queda en cero. Los hashes d
 cada transacción están en [`DESPLIEGUE.md`](./DESPLIEGUE.md), verificables por
 cualquiera en el explorador.
 
-**Contrato** — 17/17 tests. `create_job`, `accept`, `fund`, `start`, `submit`,
-`approve`, `cancel`, `rate` y `auto_release` funcionan y están probados en red.
-`dispute` y `resolve` devuelven `NotImplemented`; son los primeros de la lista de
-recortes.
+**Contrato** — 22/22 tests. Las doce funciones de escritura están implementadas y
+probadas en red, incluida la disputa: `dispute` congela el saldo y `resolve` lo
+reparte entre técnico y cliente, sin tocar nunca el adelanto de materiales.
 
 **Cuentas** — passkeys verificadas en un Android real: se desplegó una smart wallet
 con huella. Falta repetirlo en el dominio definitivo e integrar el relayer.

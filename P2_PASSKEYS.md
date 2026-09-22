@@ -187,13 +187,13 @@ Comprueba:
 
 ## Dominio: fijado ✅
 
-**`https://masiapp.vercel.app`** — dominio definitivo.
+**`https://masiapp.vercel.app`** — confirmado y respondiendo (HTTP 200, 20 de septiembre).
 
 **Este es el origen de todas las passkeys. No se renombra nunca.** Si cambia, todas las cuentas creadas antes dejan de entrar.
 
 Es el origen contra el que hay que probar y sembrar los trabajos del 24.
 
-- Probar siempre en la URL principal. **Nunca** en un deploy preview (`masiapp-git-…vercel.app`): es otro origen y la passkey no funciona ahí.
+- Probar siempre en la URL principal. **Nunca** en un deploy preview (`deploy-preview-N--...`): es otro origen y la passkey no funciona ahí.
 - `localhost` sirve para desarrollar (WebAuthn lo permite sin HTTPS), pero no prueba nada sobre el dominio real.
 
 ---
