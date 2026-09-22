@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
 import { alertasPara, cotizacionesPorEnviar, solicitudesPorAtender } from '../demo/selectors';
+import { useJobsPorAtender } from '../escrow/useJobsPorAtender';
 
 type BadgeKey = 'clientRequests' | 'providerAlerts' | 'providerQuotes';
 
@@ -21,7 +22,7 @@ export interface NavItem {
 const BADGE_LABEL: Record<BadgeKey, (count: number) => string> = {
   clientRequests: count => (count === 1 ? '1 solicitud necesita tu respuesta' : `${count} solicitudes necesitan tu respuesta`),
   providerAlerts: count => (count === 1 ? '1 solicitud disponible' : `${count} solicitudes disponibles`),
-  providerQuotes: count => (count === 1 ? '1 cotización por enviar' : `${count} cotizaciones por enviar`),
+  providerQuotes: count => (count === 1 ? '1 asunto por atender' : `${count} asuntos por atender`),
 };
 
 export const CLIENT_NAV: readonly NavItem[] = [
@@ -44,11 +45,12 @@ export const PROVIDER_NAV: readonly NavItem[] = [
  */
 export function MainNav({ items }: { items: readonly NavItem[] }) {
   const { clienteId, providerProfile, solicitudes, postulaciones, cotizaciones } = useDemo();
+  const trabajos = useJobsPorAtender();
 
   const counts: Record<BadgeKey, number> = {
-    clientRequests: solicitudesPorAtender(clienteId, solicitudes, postulaciones).length,
+    clientRequests: solicitudesPorAtender(clienteId, solicitudes, postulaciones).length + trabajos.client,
     providerAlerts: alertasPara(providerProfile, solicitudes, postulaciones).length,
-    providerQuotes: cotizacionesPorEnviar(providerProfile, solicitudes, postulaciones, cotizaciones).length,
+    providerQuotes: cotizacionesPorEnviar(providerProfile, solicitudes, postulaciones, cotizaciones).length + trabajos.provider,
   };
 
   return <nav
