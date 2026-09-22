@@ -123,10 +123,15 @@ function resenaInput(value: Record<string, unknown>): ResenaInput | null {
   return value as unknown as ResenaInput;
 }
 
-export async function handleApi(req: Request, store: KeyValueStore): Promise<Response> {
+/**
+ * `rutaExplicita` la usa el enrutado de Vercel: una sola Function atiende todas las
+ * rutas y recibe el camino como parámetro, en vez de depender de cómo interprete
+ * la plataforma un archivo comodín. Sin ella se deduce de la URL, como en los tests.
+ */
+export async function handleApi(req: Request, store: KeyValueStore, rutaExplicita?: string): Promise<Response> {
   try {
     const url = new URL(req.url);
-    const path = url.pathname.replace(/^\/api\/?/, '').replace(/\/$/, '');
+    const path = (rutaExplicita ?? url.pathname.replace(/^\/api\/?/, '')).replace(/^\//, '').replace(/\/$/, '');
     const segments = path ? path.split('/').map(decodeURIComponent) : [];
 
     if (req.method === 'GET' && path === 'salud') return response({ ok: true });

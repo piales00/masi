@@ -107,3 +107,24 @@ describe('API del almacén', () => {
     expect(retry.status).toBe(201);
   });
 });
+
+describe('ruta explícita: el enrutado de Vercel', () => {
+  test('atiende rutas de varios niveles cuando la ruta llega por parámetro', async () => {
+    const store = new MemoryStore();
+    const creada = await handleApi(new Request('https://masiapp.vercel.app/api/index?ruta=solicitudes', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(solicitud),
+    }), store, 'solicitudes');
+    expect(creada.status).toBe(201);
+    const { id } = await creada.json();
+
+    const leida = await handleApi(
+      new Request(`https://masiapp.vercel.app/api/index?ruta=solicitudes/${id}`), store, `solicitudes/${id}`);
+    expect(leida.status).toBe(200);
+    expect((await leida.json()).id).toBe(id);
+  });
+
+  test('sin ruta explícita sigue deduciéndola de la URL', async () => {
+    const respuesta = await handleApi(new Request('https://masiapp.vercel.app/api/salud'), new MemoryStore());
+    expect(await respuesta.json()).toEqual({ ok: true });
+  });
+});
