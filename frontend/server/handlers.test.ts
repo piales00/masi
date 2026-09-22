@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { GET } from '../api/[...ruta].js';
+import { GET } from '../api/index.js';
 import { POST } from '../api/relayer.js';
 
 describe('entradas de Vercel', () => {
   it('responde salud sin credenciales de Redis', async () => {
-    const result = await GET(new Request('https://masiapp.vercel.app/api/salud'));
+    // En producción la ruta llega como parámetro; el enrutado de Vercel la pone ahí.
+    const result = await GET(new Request('https://masiapp.vercel.app/api/index?ruta=salud'));
     expect(result.status).toBe(200);
     expect(await result.json()).toEqual({ ok: true });
   });
