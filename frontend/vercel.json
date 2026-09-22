@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/api/((?!relayer|router).*)", "destination": "/api/router?ruta=$1" },
     { "source": "/((?!api|passkey-test).*)", "destination": "/index.html" }
   ]
 }
