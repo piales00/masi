@@ -1,5 +1,22 @@
 # Tareas del 21 de septiembre — Backend
 
+> ## ✅ Entregado — 22 de septiembre
+>
+> **Este documento queda como referencia, no como lista de pendientes.** Todo lo de abajo está
+> en `main` y desplegado en `https://masiapp.vercel.app`:
+>
+> - `dispute` y `resolve` en el contrato, con tests, redesplegados. Contract ID definitivo en `CLAUDE.md`.
+> - La API del almacén (sección 2) sobre Vercel Functions + Upstash Redis. Verificado hoy en
+>   producción: `/api/salud` responde `{"ok":true}` y `/api/solicitudes` responde 200.
+> - La Function del relayer, con la clave solo en variables de servidor.
+> - Añadido después: `POST /api/recarga`, que acredita saldo con un `mint` del SAC firmado en el
+>   servidor con `ISSUER_SECRET`.
+>
+> Lo que **sigue abierto** está en [`AVANCE.md`](./AVANCE.md), sección "Lo que falta para
+> entregar". De este documento solo queda una cosa: **vaciar Upstash (`FLUSHDB`) antes de grabar
+> el vídeo**, para que no salgan las solicitudes `prueba-tpo`.
+
+
 **Resumen.** Hoy te toca todo lo que no se ve: `dispute` y `resolve` en el contrato con su redespliegue, la API del almacén compartido (solicitudes, postulaciones, cotizaciones y reseñas) y la Function del relayer. Tu primera entrega es **la definición de la API de la [sección 2](#2-la-api-del-almacén--el-punto-de-integración)**, versionada en `shared/api.ts`, porque el frontend trabaja contra ella en paralelo. **Todas las decisiones que te afectaban ya están tomadas** (sección 0), y la disputa con su redespliegue ya está hecha. Checkpoint el 23 y entrega el 25.
 
 Documento hermano: [`TAREAS_21SEP_FRONTEND.md`](./TAREAS_21SEP_FRONTEND.md).

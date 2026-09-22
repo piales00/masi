@@ -1,5 +1,22 @@
 # Tareas del 21 de septiembre — Frontend
 
+> ## ✅ Entregado — 22 de septiembre
+>
+> **Este documento queda como referencia, no como lista de pendientes.** Todo lo de abajo está
+> en `main` y desplegado en `https://masiapp.vercel.app`, con **213 tests en verde**:
+>
+> - El cliente ve las postulaciones y elige (M3): detalle de solicitud y detalle de propuesta.
+> - Cotización final del técnico y aceptación del cliente, que dispara `create_job` (M4–M5).
+> - Pantalla de trabajo por rol, con las firmas: `fund`, `start`, `submit`, `approve`, `dispute` y `rate`.
+> - Almacén compartido contra la API (`VITE_STORE=api`), así que los dos teléfonos ven lo mismo.
+> - Conexión al contrato real (`VITE_ESCROW=contract`): producción firma contra testnet, no contra el mock.
+> - Añadido después: pantalla de recarga simulada y la dirección de la cuenta en el perfil.
+>
+> Lo que **sigue abierto** está en [`AVANCE.md`](./AVANCE.md), sección "Lo que falta para
+> entregar". De este documento solo queda una cosa: **poner la dirección real de Juan** en
+> `frontend/src/data/providers.json`, que hoy tiene direcciones de relleno.
+
+
 **Resumen.** Hoy cierras el recorrido que falta entre "el técnico se postula" y "el cliente califica": el cliente ve las postulaciones y elige (M3), el técnico envía la cotización final y el cliente la acepta, lo que dispara `create_job` (M4–M5), y la **pantalla de trabajo**, una por rol, con las firmas del tramo que se muestra en vivo. Todo se construye hoy contra datos de prueba, con la misma forma que el contrato y que la API, y se conecta después. La API del almacén la define el backend en un solo sitio: [la sección 2 de `TAREAS_21SEP_BACKEND.md`](./TAREAS_21SEP_BACKEND.md#2-la-api-del-almacén--el-punto-de-integración). Aquí se enlaza, no se repite.
 
 
