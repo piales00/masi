@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { DemoProvider } from '../demo/DemoContext';
 import { escrow } from '../escrow';
 import { solesToStroops } from '../money';
+import { leerIncidencia } from '../demo/incidencias';
 import { JobScreen } from './JobScreen';
 import type { JobRole } from '../escrow/jobs';
 
@@ -188,5 +189,95 @@ describe('calificación', () => {
     montar(jobId, 'provider');
     expect(await screen.findByRole('heading', { name: 'Servicio completado' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Enviar calificación' })).toBeNull();
+  });
+});
+
+describe('reportar un problema', () => {
+  async function hasta(estado: 'Started' | 'Submitted'): Promise<bigint> {
+    const jobId = await crearTrabajo();
+    await escrow.accept(jobId);
+    await escrow.fund(jobId);
+    await escrow.start(jobId);
+    if (estado === 'Submitted') await escrow.submit(jobId);
+    return jobId;
+  }
+
+  it('desde Started, el profesional reporta y el trabajo queda en revisión', async () => {
+    const jobId = await hasta('Started');
+    montar(jobId, 'provider');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tengo un problema' }));
+    await userEvent.type(screen.getByRole('textbox'), 'El cliente no me dejó entrar.');
+    await userEvent.click(screen.getByRole('button', { name: 'Reportar problema' }));
+
+    await waitFor(async () => {
+      expect((await escrow.getJob(jobId)).state.tag).toBe('Disputed');
+    });
+    expect(await screen.findByRole('heading', { name: 'Problema reportado' })).toBeTruthy();
+    expect(leerIncidencia(jobId.toString())?.motivo).toBe('El cliente no me dejó entrar.');
+  });
+
+  it('desde Submitted, el cliente también puede reportar', async () => {
+    const jobId = await hasta('Submitted');
+    montar(jobId, 'client');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tengo un problema' }));
+    await userEvent.type(screen.getByRole('textbox'), 'El trabajo quedó a medias.');
+    await userEvent.click(screen.getByRole('button', { name: 'Reportar problema' }));
+
+    await waitFor(async () => {
+      expect((await escrow.getJob(jobId)).state.tag).toBe('Disputed');
+    });
+    expect(leerIncidencia(jobId.toString())?.reportadaPor).toBe('client');
+  });
+
+  it('no se envía sin motivo y se puede cancelar', async () => {
+    const jobId = await hasta('Started');
+    montar(jobId, 'provider');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tengo un problema' }));
+    expect(screen.getByRole('button', { name: 'Reportar problema' }).hasAttribute('disabled')).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect((await escrow.getJob(jobId)).state.tag).toBe('Started');
+  });
+
+  it('dos clics seguidos reportan una sola vez', async () => {
+    const jobId = await hasta('Started');
+    const espia = vi.spyOn(escrow, 'dispute');
+    montar(jobId, 'provider');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tengo un problema' }));
+    await userEvent.type(screen.getByRole('textbox'), 'Se rompió una tubería.');
+    const enviar = screen.getByRole('button', { name: 'Reportar problema' });
+    await Promise.all([userEvent.click(enviar), userEvent.click(enviar)]);
+
+    await waitFor(async () => expect((await escrow.getJob(jobId)).state.tag).toBe('Disputed'));
+    expect(espia).toHaveBeenCalledTimes(1);
+    espia.mockRestore();
+  });
+
+  it('un fallo del contrato se muestra traducido', async () => {
+    const jobId = await hasta('Started');
+    const espia = vi.spyOn(escrow, 'dispute').mockRejectedValueOnce(new Error('HostError: Error(Contract, #5)'));
+    montar(jobId, 'provider');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tengo un problema' }));
+    await userEvent.type(screen.getByRole('textbox'), 'Algo pasó.');
+    await userEvent.click(screen.getByRole('button', { name: 'Reportar problema' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe('No puedes hacer esto en este trabajo.');
+    espia.mockRestore();
+  });
+
+  it('un trabajo en revisión ya no ofrece reportar ni aprobar', async () => {
+    const jobId = await hasta('Submitted');
+    await escrow.dispute(jobId, 'cliente-1');
+    montar(jobId, 'client');
+
+    expect(await screen.findByRole('heading', { name: 'Problema reportado' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Aprobar servicio' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tengo un problema' })).toBeNull();
   });
 });

@@ -48,7 +48,7 @@ export const ETIQUETA: Record<Tag, string> = {
   Submitted: 'Pendiente de revisión',
   Released: 'Servicio completado',
   Disputed: 'Problema en revisión',
-  Resolved: 'Caso resuelto',
+  Resolved: 'Problema resuelto',
   Cancelled: 'Servicio cancelado',
 };
 
@@ -199,8 +199,8 @@ export function vistaDelTrabajo(
 
   if (tag === 'Disputed') {
     return armar({
-      titulo: 'Problema en revisión',
-      detalle: 'Estamos revisando este trabajo. Te avisaremos cuando haya una respuesta.',
+      titulo: 'Problema reportado',
+      detalle: 'Este servicio está en revisión. El caso está pendiente de resolución.',
       principal: null,
       secundaria: null,
     });
@@ -208,8 +208,8 @@ export function vistaDelTrabajo(
 
   if (tag === 'Resolved') {
     return armar({
-      titulo: 'Caso resuelto',
-      detalle: 'La revisión terminó y el saldo ya se repartió.',
+      titulo: 'Problema resuelto',
+      detalle: 'La revisión terminó y el caso quedó cerrado.',
       principal: null,
       secundaria: null,
     });

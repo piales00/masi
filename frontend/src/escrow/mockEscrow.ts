@@ -252,8 +252,11 @@ export const mockEscrow: EscrowGateway = {
     return { hash: nuevoHash() };
   },
 
-  async dispute(jobId: bigint) {
-    return avanzar(jobId, ['Started', 'Submitted'], row => { row.state = 'Disputed'; });
+  async dispute(jobId: bigint, caller: string) {
+    // El contrato exige `require_party`: solo el cliente o el profesional del trabajo.
+    const row = buscar(readRows(), jobId);
+    if (caller !== row.client && caller !== row.provider) fallo(5);
+    return avanzar(jobId, ['Started', 'Submitted'], item => { item.state = 'Disputed'; });
   },
 
   async resolve(jobId: bigint, providerBps: number) {

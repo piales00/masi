@@ -5,9 +5,11 @@ import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
+import { fieldBox } from '../components/Field';
 import { EXPLORER_TX } from '../config';
 import { friendlyError } from '../contractErrors';
 import { useDemo } from '../demo/DemoContext';
+import { guardarIncidencia, leerIncidencia } from '../demo/incidencias';
 import { escrow } from '../escrow';
 import { puedeCalificar, puedeLiberarseSolo, vistaDelTrabajo } from '../escrow/jobs';
 import type { JobActionId, JobRole } from '../escrow/jobs';
@@ -96,6 +98,8 @@ export function JobScreen({ role }: { role: JobRole }) {
   const [error, setError] = useState('');
   const [enCurso, setEnCurso] = useState<JobActionId | 'rate' | null>(null);
   const [estrellas, setEstrellas] = useState(0);
+  const [reportando, setReportando] = useState(false);
+  const [motivo, setMotivo] = useState('');
   /** El cerrojo va en un ref: dos clics del mismo tick leerían el mismo estado en null. */
   const ocupado = useRef(false);
 
@@ -170,6 +174,35 @@ export function JobScreen({ role }: { role: JobRole }) {
     }
   };
 
+  /**
+   * El contrato exige que quien reporta sea parte del trabajo, y no guarda ningún texto:
+   * el motivo queda solo como contexto local de la demo. Ver demo/incidencias.ts.
+   */
+  const reportar = async () => {
+    if (!job || ocupado.current || !motivo.trim()) return;
+    ocupado.current = true;
+    setEnCurso('dispute');
+    setError('');
+    try {
+      guardarIncidencia({
+        jobId: job.id.toString(),
+        reportadaPor: role,
+        motivo: motivo.trim(),
+        creadaEn: new Date().toISOString(),
+      });
+      await escrow.dispute(job.id, role === 'client' ? job.client : job.provider);
+      await releer(job.id);
+      notificarCambioDeTrabajos();
+      setReportando(false);
+      setMotivo('');
+    } catch (cause) {
+      setError(friendlyError(cause));
+    } finally {
+      ocupado.current = false;
+      setEnCurso(null);
+    }
+  };
+
   const calificar = async () => {
     if (!job || ocupado.current || estrellas < 1) return;
     ocupado.current = true;
@@ -210,6 +243,7 @@ export function JobScreen({ role }: { role: JobRole }) {
   const contraparte = role === 'client' ? nombreProfesional : nombreCliente;
 
   const vista = vistaDelTrabajo(job, role, { contraparte });
+  const incidencia = leerIncidencia(job.id.toString());
   const servicio = solicitud ? serviceOf(solicitud.servicio) : null;
   const Icon = servicio?.icon;
   const pagoDelCliente = job.amount + job.fee_amount;
@@ -290,6 +324,14 @@ export function JobScreen({ role }: { role: JobRole }) {
             : `Si el cliente no responde, el pago se libera solo el ${fecha(vista.liberaSolo)}.`}</span>
       </p>}
 
+      {job.state.tag === 'Disputed' && incidencia && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
+        <h2 className="text-sm font-semibold text-masi-navy">Lo que se reportó</h2>
+        <p className="mt-2 text-sm leading-relaxed text-masi-text">{incidencia.motivo}</p>
+        <p className="mt-2 text-xs text-masi-muted">
+          Reportado por {incidencia.reportadaPor === 'client' ? 'el cliente' : 'el profesional'}.
+        </p>
+      </section>}
+
       {puedeCalificar(job, role) && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         <h2 className="text-base font-bold text-masi-navy">¿Cómo fue tu experiencia con {contraparte || 'el profesional'}?</h2>
         <div className="mt-3 flex justify-center">
@@ -313,11 +355,38 @@ export function JobScreen({ role }: { role: JobRole }) {
           onClick={() => { void ejecutar(vista.principal!.id); }}
         >{enCurso === vista.principal.id ? EN_CURSO[vista.principal.id] : vista.principal.label}</Button>}
 
-        {/* La disputa es F4-E: se deja a la vista para no cambiar la pantalla después. */}
-        {vista.secundaria && <>
-          <Button variant="secondary" className="mt-3" disabled>{vista.secundaria.label}</Button>
-          <p className="mt-2 text-center text-xs text-masi-muted">Disponible en el siguiente avance.</p>
-        </>}
+        {vista.secundaria && !reportando && <Button
+          variant="secondary"
+          className="mt-3"
+          disabled={enCurso !== null}
+          onClick={() => { setReportando(true); setError(''); }}
+        >{vista.secundaria.label}</Button>}
+
+        {vista.secundaria && reportando && <section className="mt-3 rounded-masi-card border border-masi-gray bg-white p-4">
+          <h2 className="text-base font-bold text-masi-navy">¿Qué pasó?</h2>
+          <p className="mt-1 text-sm text-masi-muted">
+            Cuéntanos el problema. El servicio queda en revisión y el pago no se libera mientras tanto.
+          </p>
+          <label className="mt-3 block">
+            <span className="sr-only">Describe el problema</span>
+            <textarea
+              value={motivo}
+              onChange={event => setMotivo(event.target.value.slice(0, 300))}
+              rows={4}
+              placeholder="Ej. El trabajo quedó a medias y no pude comunicarme."
+              className={cn(fieldBox, 'resize-none py-3')}
+            />
+          </label>
+          <Button className="mt-3" disabled={!motivo.trim() || enCurso !== null} onClick={reportar}>
+            {enCurso === 'dispute' ? EN_CURSO.dispute : 'Reportar problema'}
+          </Button>
+          <Button
+            variant="secondary"
+            className="mt-2"
+            disabled={enCurso !== null}
+            onClick={() => { setReportando(false); setMotivo(''); }}
+          >Cancelar</Button>
+        </section>}
       </div>}
 
       <details className="mt-6 rounded-masi-card border border-masi-gray bg-white p-4 text-sm text-masi-navy">
