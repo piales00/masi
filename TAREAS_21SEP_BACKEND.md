@@ -145,6 +145,8 @@ Lo único que te queda de esto: en B5a, `ESCROW_CONTRACT_ID` vale `CAGC224PARRU3
 
 ### B5a · Relayer: Function que envía las transacciones firmadas
 
+> **⚠️ Ya existe un relayer, y no sirve para el escrow (hallazgo del 21/09).** El demo de `/passkey-test/` usa el relayer-proxy oficial de `passkey-kit`, desplegado a mano en Cloudflare Workers: `https://passkey-kit-relayer-proxy.josspe-masi.workers.dev`. Ese Worker **solo** patrocina dos cosas: desplegar una wallet y llamar a métodos de administración de la propia wallet (`ALLOWED_WALLET_FUNCTIONS = add_signer, add_secp256r1, update_signer, remove_signer, upgrade`). Cualquier llamada a otro contrato la rechaza con 403 (`relayer-proxy/src/index.ts`, línea 426). Es decir: **sirve para B6 (crear las wallets), pero no para `fund`, `start`, `submit`, `approve`, `rate` ni `dispute`**. Para eso sigue haciendo falta esta tarea. Cuando B5 esté desplegado y cubra también el despliegue de wallets, el Worker se puede retirar: así queda un solo relayer, dentro de nuestro repo.
+
 **Objetivo.** Un endpoint `POST /api/relayer` que reciba una transacción ya firmada con la passkey y la envíe por el relayer de OpenZeppelin, que paga la comisión.
 
 **Por qué importa.** Sin relayer no hay ninguna firma con huella que llegue a la red: ni la creación de las wallets (B6) ni pagar, iniciar, terminar, aprobar o calificar en el vídeo. Es el paso 2 de [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md), y el contexto está en [`P2_PASSKEYS.md`](./P2_PASSKEYS.md) (sección "Relayer: operativo").
@@ -199,6 +201,8 @@ Content-Type: application/json
 **Objetivo y pasos:** están completos en [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md), ya actualizado a Vercel. No se repiten aquí.
 
 **Lo que conviene recordar.**
+- **Hoy se puede hacer con el Worker de Cloudflare**, sin esperar a B5b: solo patrocina despliegues de wallet, que es justo lo que hace falta aquí. Lo único que exige es que su variable `ALLOWED_ORIGINS` incluya **exactamente** `https://masiapp.vercel.app` (sin barra final), seguido de `wrangler deploy`. Si no, el navegador bloquea la petición por CORS.
+- **Ni los contratos ni el bundle de `/passkey-test/` tienen el dominio grabado.** El `rpId` de la passkey se toma solo del `location.hostname` del navegador, y ni el escrow ni la wallet guardan el dominio. Cambiar de dominio **no** exige tocar contratos ni recompilar el demo: solo el `ALLOWED_ORIGINS` del Worker.
 - **Solo en `https://masiapp.vercel.app`.** Las passkeys quedan atadas al dominio exacto: nada creado en `masiapp.netlify.app`, en `localhost` ni en una URL de preview `masiapp-git-…` sirve después.
 - Con huella **real**, en el teléfono. El autenticador virtual de DevTools no vale para estas dos cuentas.
 - El relayer es B5b: sin él, no llegan a la red.
