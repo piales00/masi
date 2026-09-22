@@ -1,14 +1,14 @@
 # Estado del proyecto
 
-**Actualizado: 21 de septiembre de 2026, tarde.** Entrega el 25. Checkpoint el 23.
+**Actualizado: 22 de septiembre de 2026, tarde.** Entrega el 25. Checkpoint el 23.
 
-En una línea: **el contrato está completo en testnet, disputa incluida, y el frontend ya cubre la mitad del flujo, pero la parte que usa Stellar —pagar, iniciar, terminar, aprobar, calificar— todavía no tiene ninguna pantalla.**
+En una línea: **el producto está construido de punta a punta y desplegado contra el contrato real de testnet; lo que queda no es programar, es probarlo con huellas de verdad y prepararlo para el vídeo.**
 
 La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md), del PO, con sus preguntas respondidas en [`RESPUESTAS_TPO.md`](./RESPUESTAS_TPO.md).
 
 ---
 
-## Lo que ya está vivo
+## Lo que está vivo
 
 | | |
 |---|---|
@@ -17,29 +17,32 @@ La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md
 | Contrato `escrow` | `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` |
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 
+Comprobado hoy contra producción: `/api/salud` responde `ok`, `/api/solicitudes` responde 200,
+`/api/recarga` devuelve saldo, y el bundle publicado lleva dentro el contract ID
+—es decir, **la app en producción firma contra el contrato real, no contra la simulación**.
+
 Hashes y reproducción: [`DESPLIEGUE.md`](./DESPLIEGUE.md).
 
 ---
 
 ## El flujo, paso por paso
 
-Medido contra el diagrama del PO. **En negrita, el tramo que se propone mostrar en vivo.**
+Medido contra el diagrama del PO. **En negrita, el tramo que se muestra en vivo.**
 
 | Paso | Contrato | Pantalla |
 |---|---|---|
-| Registro del técnico | No aplica | ✅ Configuración, inicio, alertas, actividad y perfil |
+| Registro del técnico | No aplica | ✅ |
 | M1 · Cliente publica la solicitud | No aplica | ✅ |
 | M2 · Técnico se postula con precio | No aplica | ✅ |
-| M3 · Cliente compara y elige | No aplica | ❌ Ninguna pantalla del cliente lee las postulaciones |
-| M4–M5 · Visita y cotización final | Dispara `create_job` | ❌ No existe |
-| **M6 · Pagar** | ✅ `fund` | ❌ |
-| **M8–M9 · Iniciar, recibe materiales** | ✅ `start` | ❌ |
-| **M10 · Terminar** | ✅ `submit` | ❌ |
-| **M11 · Aprobar, o vence el plazo** | ✅ `approve`, `auto_release` | ❌ |
-| **M14 · Calificar** | ✅ `rate` | ❌ |
-| M12 · Disputa | ✅ `dispute`, `resolve` | ❌ |
-
-**El frontend no tiene ninguna conexión con la cadena:** no instala `@stellar/stellar-sdk` ni `passkey-kit`, y `dataSource.ts` sigue apuntando a datos de prueba.
+| M3 · Cliente compara y elige | No aplica | ✅ Detalle de solicitud y de propuesta |
+| M4–M5 · Visita y cotización final | Dispara `create_job` | ✅ Cotización del técnico |
+| **M6 · Pagar** | ✅ `fund` | ✅ |
+| **M8–M9 · Iniciar, recibe materiales** | ✅ `start` | ✅ |
+| **M10 · Terminar** | ✅ `submit` | ✅ |
+| **M11 · Aprobar, o vence el plazo** | ✅ `approve`, `auto_release` | ✅ |
+| **M14 · Calificar** | ✅ `rate` | ✅ |
+| M12 · Disputa | ✅ `dispute`, `resolve` | 🔶 El cliente y el técnico la abren desde la app; **resolverla es del árbitro y hoy se hace por CLI** |
+| Recarga de saldo | `mint` del SAC | ✅ Simulada, acredita de verdad |
 
 ---
 
@@ -47,74 +50,125 @@ Medido contra el diagrama del PO. **En negrita, el tramo que se propone mostrar 
 
 ### P1 — Contrato ✅ completo
 
-22/22 tests. Flujo completo, `rate`, `auto_release` y **la disputa** verificados en testnet. `dispute` congela el saldo y bloquea `approve` y `auto_release`; `resolve` reparte solo el saldo (el adelanto de materiales nunca entra), la comisión va a Masi, y cuenta como trabajo completado y como disputa en el perfil. Hashes en [`DESPLIEGUE.md`](./DESPLIEGUE.md).
-
-**El contract ID cambió** a `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` al añadir la disputa. Es el definitivo salvo que haga falta otra función: el frontend ya puede conectar contra él.
+22/22 tests. Flujo completo, `rate`, `auto_release` y la disputa verificados en testnet con saldos
+reales. `dispute` congela el saldo y bloquea `approve` y `auto_release`; `resolve` reparte solo el
+saldo (el adelanto de materiales nunca entra), la comisión va a Masi, y cuenta como trabajo
+completado y como disputa en el perfil.
 
 ### P2 — Cuentas 🔶
 
-Funciona en un Android real y el demo ya está en el dominio bueno (`/passkey-test/`). Falta crear las wallets de María y Juan ahí e integrar el relayer. Tarea: [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md).
+El demo funciona en Android real y vive en el dominio definitivo. La integración está escrita:
+`passkeys.ts` expone `connectedAddress()` y `signAndSend()`, y el relayer corre como Function con
+su clave solo en el servidor. **Falta lo que nadie puede hacer por código: crear las cuentas de
+María y Juan con huella y firmar un trabajo completo.**
 
-### P3 / P4 — Frontend 🔶
+### P3 / P4 — Frontend ✅ completo
 
-Avanzó mucho: el técnico ya no es un muro, tiene su propio recorrido completo hasta postularse. Pantallas: splash, bienvenida, rol, acceso, configuración de cliente y de técnico, inicio de cliente y de técnico, nueva solicitud, alertas, actividad, profesionales y perfiles.
+27 archivos de test, **213 tests en verde**. Pantallas: splash, bienvenida, rol, acceso,
+configuración de cliente y de técnico, inicio de ambos, nueva solicitud, detalle de solicitud,
+detalle de propuesta, cotización, alertas, actividad, profesionales, perfiles, **pantalla de
+trabajo con las seis firmas** y **recarga**.
 
-Dos problemas:
-
-- **Los datos viven en el `localStorage` del navegador.** Lo que publica María en su teléfono no llega al de Juan. Solo funciona con los dos roles en el mismo navegador.
-- **No hay tests del frontend.** `npm test` responde "No test files found", y nunca hubo archivos de test en git: hay que escribirlos, no recuperarlos. El build sí compila.
+Los dos problemas del 21 están resueltos: los datos ya son compartidos (API + Upstash Redis, así
+que lo que publica María sí llega al teléfono de Juan) y los tests existen.
 
 ---
 
 ## Cambios respecto al scope
 
-**1. Ofertas para elegir, cotización para pagar.** El PO separa dos momentos: las postulaciones sirven para elegir al técnico, y el escrow nace con la **cotización final**, después de la visita. `create_job` se llama entonces. **El contrato no cambia.**
+**1. Ofertas para elegir, cotización para pagar.** Las postulaciones sirven para elegir al técnico;
+el escrow nace con la **cotización final**, después de la visita. **El contrato no cambia.**
 
-**2. El porcentaje de materiales sale de cada cotización** (opción A del PO): materiales ÷ total. Topado en 50 %; si se pasa, el técnico pone la diferencia.
+**2. El porcentaje de materiales sale de cada cotización** (opción A del PO): materiales ÷ total,
+topado en 50 %.
 
 **3. Tres funciones reciben `caller`** (`cancel`, `dispute`, `auto_release`), porque admiten más de un rol.
 
-**4. La cuenta de comisiones sigue siendo una dirección G** hasta que `passkey-kit` permita convertirla en smart wallet sin bloquear los fondos.
+**4. La cuenta de comisiones sigue siendo una dirección G** hasta que `passkey-kit` permita
+convertirla en smart wallet sin bloquear los fondos.
 
-**5. Hosting en Vercel y un backend mínimo.** El 21 Netlify se quedó en 30 de 300 créditos (cada despliegue a producción cuesta 15) y el período no se renueva hasta el 19 de octubre. Se migró a Vercel Hobby **antes de crear ninguna wallet definitiva**, así que el cambio de dominio no rompió nada. El dominio congelado es ahora `https://masiapp.vercel.app`. `main` está protegido por un ruleset: todo entra por PR. El modelo de ofertas necesita datos compartidos antes del contrato, así que se añade un backend mínimo (Vercel Functions + Upstash Redis del Marketplace. Se descartó Vercel Blob, que es para archivos y con el plan Hobby se quedaría corto de operaciones), aunque el scope original decía "sin backend propio".
+**5. Hosting en Vercel y un backend mínimo.** Netlify se quedó sin créditos el 21; se migró
+**antes de crear ninguna wallet definitiva**, así que no se perdió ninguna passkey. Dominio
+congelado: `https://masiapp.vercel.app`. `main` está protegido: todo entra por PR.
+
+**6. Pantalla de recarga simulada.** Era lo último del orden de recorte y entró igual. La emisora
+de PEN-test acredita el saldo con un `mint` firmado **en el servidor**; la pantalla lo presenta
+como un pago por QR, con el aviso de que es una simulación. En producción esto sería un anchor
+por SEP-24, que está fuera del alcance.
 
 ---
 
-## Tareas para encargar hoy
+## Decisiones del PO
 
-Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle para cada programador está en `TAREAS_21SEP_BACKEND.md` y `TAREAS_21SEP_FRONTEND.md` (PR #4).
-
-### 0. Decidir, antes de repartir nada
-
-- [x] **`dispute` y `resolve`:** se construyen, y `resolve` cuenta como trabajo completado. **Hechos y desplegados**; nuevo contract ID.
+- [x] **`dispute` y `resolve`:** se construyen, y `resolve` cuenta como trabajo completado.
 - [x] **Hosting:** Vercel, `https://masiapp.vercel.app`.
-- [x] **Datos compartidos** con la API del backend (Vercel Functions + Upstash Redis del Marketplace. Se descartó Vercel Blob, que es para archivos y con el plan Hobby se quedaría corto de operaciones).
-- [x] **Plazo de revisión por defecto: 24 h** (`review_secs = 86400`). Decisión del PO: a la gente no le gusta esperar. Con la disputa disponible, el cliente puede frenar el pago dentro de ese plazo.
-- [ ] Pendientes, con la recomendación como valor por defecto mientras no se decidan: tras publicar, el cliente va al **detalle de su solicitud**; botón **"Tengo un problema"** en la pantalla de trabajo; comentario de reseña **opcional**; la API **sin autenticación**, declarado en el README.
+- [x] **Datos compartidos** con la API del backend (Vercel Functions + Upstash Redis).
+- [x] **Plazo de revisión: 24 h** (`review_secs = 86400`).
+- [ ] Abiertas, con la recomendación aplicada como valor por defecto: tras publicar, el cliente va
+      al **detalle de su solicitud**; comentario de reseña **opcional**; la API **sin
+      autenticación**, declarado en el README; la dirección exacta se enseña **solo al técnico
+      elegido**.
 
-### P1 — Contrato
+---
 
-- [x] **`dispute` y `resolve`**, con tests. Hecho.
-- [x] Redesplegado y ID actualizado en `CLAUDE.md`, `INTEGRACION.md`, `DESPLIEGUE.md` y el README.
+## Lo hecho (cerrado)
 
-### P2 — Cuentas
+- [x] Contrato completo, desplegado y verificado en testnet: flujo feliz, `auto_release` y una disputa 70/30.
+- [x] `rate` guardado en storage persistente, no en eventos.
+- [x] Migración de Netlify a Vercel, con el dominio congelado.
+- [x] Backend mínimo: API de solicitudes, postulaciones y cotizaciones sobre Upstash Redis, funcionando en producción.
+- [x] F8: frontend conectado al contrato real, con firma por huella y relayer.
+- [x] `develop` → `main` y producción sirviendo la versión buena.
+- [x] Pantalla de trabajo con las seis firmas, por rol.
+- [x] Pantalla de recarga simulada, con la llave de la emisora solo en el servidor.
+- [x] Dirección de la cuenta visible en el perfil, con enlace al explorador.
+- [x] 213 tests de frontend y 22 del contrato, todos en verde.
 
-- [ ] Wallets de María y Juan en `masiapp.vercel.app`, con huella real.
-- [ ] Relayer en una Vercel Function. La clave nunca en el bundle.
+---
 
-### P3 / P4 — Frontend
+## Lo que falta para entregar
 
-- [ ] **Cliente ve las postulaciones y elige una** (M3). Los datos ya existen: `postulaciones` en `DemoContext`.
-- [ ] **Cotización final** (M4–M5). El técnico carga total y monto de materiales; el cliente la ve y acepta. Ese botón dispara `create_job`.
-- [ ] **Pantalla de trabajo, una por rol,** con los cinco botones de firma: pagar, iniciar, terminar, aprobar y calificar. Se puede empezar hoy contra los 9 estados de `shared/escrow.ts` con datos de prueba y conectar después.
-- [ ] **Almacén compartido** para solicitudes, postulaciones, cotizaciones y texto de reseñas, si se decide en el punto 0.
-- [ ] Escribir los tests del frontend.
+Por orden de riesgo. **Nada de esto es programar.**
 
-### Después de lo anterior
+1. **Un trabajo completo firmado con huella, de principio a fin.** Nunca se ha hecho. Todo lo
+   demás está probado por partes; esto es lo único que puede sorprender el día del vídeo.
+   Hacerlo hoy, no el 24.
+2. **Crear las cuentas de María y Juan** en `masiapp.vercel.app` (nunca en un preview: la passkey
+   queda atada al dominio exacto) y recargarle saldo a María desde la pantalla nueva.
+3. **Poner la dirección real de Juan** en `frontend/src/data/providers.json`. Las ocho direcciones
+   de ahí son de relleno.
+4. **Sembrar el historial de Juan** contra su cuenta definitiva, para que su perfil no salga vacío
+   en el vídeo. Previsto para el 24, después del punto 2.
+5. **Borrar las dos solicitudes `prueba-tpo`** de Upstash antes de grabar.
+6. **Reescribir el guion del vídeo** con el flujo de ofertas.
+7. **Decidir passkeys o fallback** (checkpoint del 23). Con lo de hoy funcionando, la respuesta
+   esperable es passkeys.
 
-- [ ] Conectar `dataSource.ts` y la pantalla de trabajo al contrato → [`INTEGRACION.md`](./INTEGRACION.md). Ya no espera a nada: el contrato es el definitivo.
-- [ ] Reescribir el guion del vídeo con el flujo del PO.
-- [ ] 24: sembrar el historial de Juan **contra su wallet definitiva**.
+---
+
+## Si sobrara tiempo
+
+En el orden en que yo los tomaría. Los tres primeros tapan huecos reales; los demás son adorno.
+
+1. **Quién dispara `auto_release`.** Hoy nadie. Si el cliente desaparece, el dinero se queda
+   quieto hasta que alguien firme, y en la demo ese alguien somos nosotros. Un **Vercel Cron**
+   diario que recorra los trabajos vencidos y los libere lo convierte en lo que el pitch promete:
+   *"si no responde en 24 horas, te pagan solo"*. Es media hora de trabajo y es la diferencia
+   entre una promesa y una función.
+2. **Pantalla del árbitro para `resolve`.** El contrato sabe resolver disputas, pero resolverlas
+   hoy exige la CLI. Una pantalla mínima —ver la disputa, mover un deslizador de reparto, firmar—
+   cierra el único caso del flujo que no se puede enseñar dentro de la app.
+3. **Qué ve el usuario cuando una firma falla.** Si el relayer se cae o cancelan la huella, hay que
+   asegurarse de que sale un mensaje en cristiano y el botón vuelve a estar disponible. Es el
+   escenario más probable de un directo con wifi de evento.
+4. **Notificaciones de verdad** en lugar de la campana decorativa: avisar al técnico de una
+   solicitud nueva y al cliente de una postulación.
+5. **Buscador y filtros** en la lista de profesionales.
+6. **Reintento e idempotencia en la recarga**, para que un doble toque no acredite dos veces.
+
+Lo que **no** haría aunque sobre tiempo: tocar el contrato. Cada función nueva obliga a
+redesplegar, cambia el contract ID y arrastra la documentación, el frontend y el historial
+sembrado. A tres días de la entrega no compensa.
 
 ---
 
@@ -122,23 +176,22 @@ Ordenadas por dependencia: las de arriba desbloquean las de abajo. El detalle pa
 
 | Riesgo | Por qué importa |
 |---|---|
-| **El tramo con Stellar no tiene pantallas** | Es lo único que se muestra en vivo y lo que evalúa el track. A 4 días de la entrega, es el riesgo mayor |
-| ~~Redesplegar después de conectar~~ | Resuelto: la disputa se añadió antes de conectar |
-| Datos solo en el navegador | Con dos teléfonos, el técnico no ve lo que publica el cliente |
-| Perfiles vacíos en el vídeo | El historial de Juan depende de que su wallet exista antes del 24 |
-| Passkeys | Decisión el 22 por la noche; fallback a Blux definido |
+| **Ninguna firma real todavía** | Es el único punto sin verificar de la cadena completa. Riesgo número uno |
+| Perfiles vacíos en el vídeo | El historial de Juan depende de que su cuenta exista antes del 24 |
+| Direcciones de relleno en el catálogo | Si se graba sin cambiarlas, el perfil de Juan no enlaza a nada real |
+| `auto_release` sin disparador | Se puede enseñar firmándolo a mano, pero la promesa suena automática |
+| Wifi del evento | El relayer y el RPC son remotos: conviene tener el vídeo grabado como respaldo |
 
 ---
 
 ## Checkpoint del 23
 
-- [x] Interfaz del contrato — alineada con la ABI real
+- [x] Interfaz del contrato alineada con la ABI real
 - [x] Contract ID en testnet
 - [x] README con el estado real y el contract ID
 - [x] Diagrama de arquitectura → [`ARQUITECTURA.md`](./ARQUITECTURA.md)
-- [ ] Decisión sobre passkeys o fallback — el 22 por la noche
-
-El ID que se entrega es el nuevo, con la disputa: `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL`.
+- [x] Frontend conectado al contrato y desplegado
+- [ ] Decisión sobre passkeys o fallback — depende de la prueba con huella
 
 ---
 
@@ -146,11 +199,11 @@ El ID que se entrega es el nuevo, con la disputa: `CAGC224PARRU3DZOCRUKOPCFGJU2A
 
 | Archivo | Para qué |
 |---|---|
-| [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md) | Flujo del PO: proceso actual, flujo de MASI, decisiones |
+| [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md) | Flujo del PO |
 | [`RESPUESTAS_TPO.md`](./RESPUESTAS_TPO.md) | Respuestas a las diez preguntas del PO |
 | [`ARQUITECTURA.md`](./ARQUITECTURA.md) | Qué vive en la cadena y por qué |
 | [`INTEGRACION.md`](./INTEGRACION.md) | Cómo conectar el frontend al contrato |
 | [`DESPLIEGUE.md`](./DESPLIEGUE.md) | Contract ID, hashes, reproducción |
-| [`TAREA_PASSKEYS_DOMINIO.md`](./TAREA_PASSKEYS_DOMINIO.md) | Tarea abierta de P2 |
+| [`P2_PRUEBA_PASSKEYS.md`](./P2_PRUEBA_PASSKEYS.md) | Cómo probar las passkeys |
 | [`masi-scope.md`](./masi-scope.md) | Alcance y cronograma originales |
 | [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) | Obligatorio antes de tocar interfaz |
