@@ -132,17 +132,21 @@ Por orden de riesgo. **Nada de esto es programar.**
 
 1. **Un trabajo completo firmado con huella, de principio a fin.** Nunca se ha hecho. Todo lo
    demás está probado por partes; esto es lo único que puede sorprender el día del vídeo.
-   Hacerlo hoy, no el 24.
-2. **Crear las cuentas de María y Juan** en `masiapp.vercel.app` (nunca en un preview: la passkey
-   queda atada al dominio exacto) y recargarle saldo a María desde la pantalla nueva.
-3. **Poner la dirección real de Juan** en `frontend/src/data/providers.json`. Las ocho direcciones
-   de ahí son de relleno.
-4. **Sembrar el historial de Juan** contra su cuenta definitiva, para que su perfil no salga vacío
-   en el vídeo. Previsto para el 24, después del punto 2.
-5. **Borrar las dos solicitudes `prueba-tpo`** de Upstash antes de grabar.
-6. **Reescribir el guion del vídeo** con el flujo de ofertas.
-7. **Decidir passkeys o fallback** (checkpoint del 23). Con lo de hoy funcionando, la respuesta
-   esperable es passkeys.
+   Hacerlo hoy, no el 24. Guion paso a paso: [`PRUEBA_E2E.md`](./PRUEBA_E2E.md).
+2. **Crear las dos cuentas**, una por teléfono, en `masiapp.vercel.app` (nunca en un preview: la
+   llave queda atada al dominio exacto) y recargar saldo **a la del cliente**, que es quien paga.
+   No hacen falta los nombres del guion: la cuenta del cliente puede ser la tuya.
+3. **Sembrar el historial del técnico** contra su cuenta definitiva, para que su perfil no salga
+   vacío en el vídeo. Previsto para el 24, después del punto 2.
+4. **Borrar las solicitudes de prueba** de Upstash antes de grabar.
+5. **Reescribir el guion del vídeo** con el flujo de ofertas.
+6. **Decidir passkeys o fallback** (checkpoint del 23). Depende del punto 1.
+
+**`providers.json` no bloquea nada.** Un técnico que se registra por el camino normal se queda
+con su propia dirección y su propio nombre, y la postulación los lleva consigo: el flujo completo
+funciona sin tocar ese archivo. Solo alimenta la pantalla de *explorar profesionales*, que es una
+vitrina. Si el vídeo la enseña, hay que meter ahí al técnico con su dirección real; si va directo
+del problema a las postulaciones, se puede dejar como está.
 
 ---
 
@@ -204,6 +208,7 @@ sembrado. A tres días de la entrega no compensa.
 | [`ARQUITECTURA.md`](./ARQUITECTURA.md) | Qué vive en la cadena y por qué |
 | [`INTEGRACION.md`](./INTEGRACION.md) | Cómo conectar el frontend al contrato |
 | [`DESPLIEGUE.md`](./DESPLIEGUE.md) | Contract ID, hashes, reproducción |
+| [`PRUEBA_E2E.md`](./PRUEBA_E2E.md) | Prueba de punta a punta con dos teléfonos |
 | [`P2_PRUEBA_PASSKEYS.md`](./P2_PRUEBA_PASSKEYS.md) | Cómo probar las passkeys |
 | [`masi-scope.md`](./masi-scope.md) | Alcance y cronograma originales |
 | [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) | Obligatorio antes de tocar interfaz |
