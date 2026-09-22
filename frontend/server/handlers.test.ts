@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GET } from '../api/index.js';
+import { GET } from '../api/router.js';
 import { POST } from '../api/relayer.js';
 
 describe('entradas de Vercel', () => {
