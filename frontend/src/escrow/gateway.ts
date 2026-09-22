@@ -4,8 +4,9 @@ import type { EscrowArguments, Job } from '../../../shared/escrow';
  * Frontera con el contrato. F3 usa createJob; F4 completa el resto contra el mock y
  * el día de la integración se cambia la implementación sin tocar ninguna pantalla.
  *
- * dispute y resolve existen en el ABI (`EscrowArguments`) y hoy el contrato desplegado
- * responde NotImplemented (#13): el mock sí las reproduce para poder construir la UI.
+ * Con `VITE_ESCROW=contract` la implementación es `contractEscrow`, que habla con el
+ * escrow real en testnet. `dispute` y `resolve` ya están implementadas en el contrato
+ * desde el 21/09; `resolve` la firma el árbitro, no un usuario de la app.
  */
 export interface EscrowGateway {
   getJob(jobId: bigint): Promise<Job>;

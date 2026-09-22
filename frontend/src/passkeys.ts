@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 import { MercuryIndexer, PasskeyKit, SignerKey } from 'passkey-kit';
 import type { CreateWalletResult } from 'passkey-kit';
+import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 import { IndexedDBStorage } from 'passkey-kit/storage';
 import { requirePasskeyOrigin } from './passkeyOrigin';
 import { verifiedWebAuthn } from './verifiedWebAuthn';
@@ -146,4 +147,38 @@ export async function confirmDemoIdentity(expectedContractId: string | undefined
   if (!expectedContractId) throw new Error('HostError: Error(Contract, #5)');
   const actual = await connectVerifiedAccount();
   if (actual !== expectedContractId) throw new Error('HostError: Error(Contract, #5)');
+}
+
+/** Dirección `C…` de la cuenta conectada en esta pestaña, si la hay. */
+export function connectedAddress(): string | undefined {
+  return kit.contractId;
+}
+
+/**
+ * Firma una llamada al contrato con la huella y la envía por `/api/relayer`.
+ *
+ * El relayer paga la comisión, así que el usuario nunca necesita XLM. `PasskeyServer.send`
+ * reconoce una sola operación `invokeHostFunction` sin firma de la cuenta fuente y la manda
+ * por la vía `{ func, auth }` de Channels, que es la documentada por Stellar.
+ *
+ * Solo vuelve a pedir la huella para reconectar si la cuenta no es la esperada: la firma en sí
+ * ya es una ceremonia, y encadenar dos seguidas se siente como un trámite repetido.
+ */
+export async function signAndSend<T>(tx: AssembledTransaction<T>, expectedAddress: string): Promise<string> {
+  requireFinalDomain();
+  if (kit.contractId !== expectedAddress) await confirmDemoIdentity(expectedAddress);
+  await kit.sign(tx);
+  const xdr = tx.built?.toXDR();
+  if (!xdr) throw new Error('La transacción no llegó a construirse.');
+
+  const response = await fetch('/api/relayer', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ xdr }),
+  });
+  const result = await response.json() as { hash?: string; error?: { message?: string } };
+  if (!response.ok || !result.hash) {
+    throw new Error(result.error?.message || 'No se pudo enviar la transacción. Inténtalo de nuevo.');
+  }
+  return result.hash;
 }
