@@ -13,14 +13,16 @@ import { escrow } from '../escrow';
 import { confirmDemoIdentity } from '../passkeys';
 import { formatSoles, portion } from '../money';
 import { formatPrice, formatRating } from '../marketplace';
-import type { ProviderWithRating } from '../marketplace';
+import type { RatingSummary } from '../../../shared/escrow';
 import { serviceOf } from '../trades';
 import { useMarketplace } from '../useMarketplace';
+import { useProviderRatings } from '../useProviderRatings';
 
 /** Solo hay calificación si el profesional existe en el catálogo; si no, es nuevo. */
-function ratingTexto(match: ProviderWithRating | undefined, ready: boolean): string | null {
+/** Sin reseñas es "Nuevo en Masi", venga del catálogo o de la cadena. */
+function ratingTexto(rating: RatingSummary | null, ready: boolean): string | null {
   if (!ready) return null;
-  return match ? formatRating(match.rating) : 'Nuevo en Masi';
+  return rating && rating.rating_count > 0 ? formatRating(rating) : 'Nuevo en Masi';
 }
 
 /** Mismo reparto que hizo el profesional, recalculado igual que lo hará el contrato. */
@@ -47,6 +49,10 @@ export function RequestDetailScreen() {
    * `procesando` en false y firmarían dos veces, creando dos trabajos para una cotización.
    */
   const enCurso = useRef(false);
+  /** Antes del `return` temprano: los hooks no pueden ir detrás de una condición. */
+  const cadena = useProviderRatings(
+    postulaciones.filter(item => item.solicitudId === id).map(item => item.providerAddress),
+  );
 
   const solicitud = solicitudes.find(item => item.id === id && item.clienteId === clienteId);
   if (!solicitud) return <Navigate to="/solicitudes" replace />;
@@ -250,8 +256,9 @@ export function RequestDetailScreen() {
           </div>
           : <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {propuestas.map(propuesta => {
-              const match = items.find(item => item.id === propuesta.providerId);
-              const rating = ratingTexto(match, status === 'ready');
+              const ficha = items.find(item => item.id === propuesta.providerId);
+              const resumen = ficha?.rating ?? cadena.get(propuesta.providerAddress ?? '') ?? null;
+              const rating = ratingTexto(resumen, status === 'ready');
               const esElegida = propuesta.id === solicitud.postulacionElegidaId;
               const descartada = Boolean(elegida) && !esElegida;
 
@@ -268,7 +275,7 @@ export function RequestDetailScreen() {
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold text-masi-navy">{propuesta.providerNombre}</h3>
                     {rating && <p className="mt-0.5 flex items-center gap-1.5 text-sm text-masi-muted">
-                      {match && match.rating.rating_count > 0 && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
+                      {resumen && resumen.rating_count > 0 && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
                       {rating}
                     </p>}
                   </div>

@@ -11,6 +11,7 @@ import { useDemo } from '../demo/DemoContext';
 import { formatPrice, formatRating } from '../marketplace';
 import { serviceOf } from '../trades';
 import { useMarketplace } from '../useMarketplace';
+import { useProviderRating } from '../useProviderRatings';
 
 function Dato({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return <p className="flex items-center gap-1.5 text-sm text-masi-muted">
@@ -23,16 +24,20 @@ export function ProposalDetailScreen() {
   const navigate = useNavigate();
   const { clienteId, solicitudes, postulaciones, chooseProposal } = useDemo();
   const { status, items } = useMarketplace();
+  const propuestaDe = postulaciones.find(item => item.id === postulacionId && item.solicitudId === id);
+  /** Antes del `return` temprano: los hooks no pueden ir detrás de una condición. */
+  const deLaCadena = useProviderRating(propuestaDe?.providerAddress);
 
   const solicitud = solicitudes.find(item => item.id === id && item.clienteId === clienteId);
-  const propuesta = postulaciones.find(item => item.id === postulacionId && item.solicitudId === id);
+  const propuesta = propuestaDe;
   if (!solicitud || !propuesta) return <Navigate to="/solicitudes" replace />;
 
   // Del catálogo salen calificación y trabajos; del perfil creado en la app, sus datos.
   const ficha = items.find(item => item.id === propuesta.providerId);
+  const resumen = ficha?.rating ?? deLaCadena;
   const perfil = propuesta.providerPerfil;
   const service = serviceOf(solicitud.servicio);
-  const conResenas = Boolean(ficha && ficha.rating.rating_count > 0);
+  const conResenas = Boolean(resumen && resumen.rating_count > 0);
   const esElegida = propuesta.id === solicitud.postulacionElegidaId;
   const hayOtroElegido = solicitud.estado === 'profesional_elegido' && !esElegida;
 
@@ -60,7 +65,7 @@ export function ProposalDetailScreen() {
             {ficha && <p className="mt-0.5 truncate text-sm text-masi-blue">{ficha.profession}</p>}
             <p className="mt-1 flex items-center gap-1.5 text-sm text-masi-muted">
               {conResenas && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
-              {status === 'ready' && (ficha ? formatRating(ficha.rating) : 'Nuevo en Masi')}
+              {status === 'ready' && (conResenas && resumen ? formatRating(resumen) : 'Nuevo en Masi')}
             </p>
           </div>
         </div>
@@ -80,6 +85,10 @@ export function ProposalDetailScreen() {
               {perfil && perfil.servicios.length > 0 && <Dato icon={Briefcase}>{perfil.servicios.join(' · ')}</Dato>}
               {perfil && perfil.aniosExperiencia > 0 && <Dato icon={BadgeCheck}>
                 {perfil.aniosExperiencia} {perfil.aniosExperiencia === 1 ? 'año' : 'años'} de experiencia
+              </Dato>}
+              {resumen && resumen.completed_jobs > 0 && <Dato icon={CheckCircle2}>
+                {resumen.completed_jobs} {resumen.completed_jobs === 1 ? 'trabajo completado' : 'trabajos completados'}
+                {resumen.rating_count > 0 && ` · ${resumen.rating_count} ${resumen.rating_count === 1 ? 'valoración' : 'valoraciones'}`}
               </Dato>}
             </>}
         </dl>
