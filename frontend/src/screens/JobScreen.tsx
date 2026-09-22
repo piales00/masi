@@ -91,7 +91,7 @@ function Linea({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; f
 export function JobScreen({ role }: { role: JobRole }) {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  const { solicitudes, postulaciones, cotizaciones, profile, providerProfile } = useDemo();
+  const { solicitudes, postulaciones, cotizaciones, profile, providerProfile, saveReview } = useDemo();
 
   const [job, setJob] = useState<Job | null>(null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
@@ -100,6 +100,7 @@ export function JobScreen({ role }: { role: JobRole }) {
   const [estrellas, setEstrellas] = useState(0);
   const [reportando, setReportando] = useState(false);
   const [motivo, setMotivo] = useState('');
+  const [comentario, setComentario] = useState('');
   /** El cerrojo va en un ref: dos clics del mismo tick leerían el mismo estado en null. */
   const ocupado = useRef(false);
 
@@ -203,19 +204,36 @@ export function JobScreen({ role }: { role: JobRole }) {
     }
   };
 
+  /**
+   * El comentario es opcional. Si lo hay, se guarda **antes** de firmar: al revés
+   * quedaría un hash en la cadena sin texto que lo respalde. Si el guardado falla, no
+   * se firma nada y se dice; nunca se da por guardada una reseña que no llegó.
+   */
   const calificar = async () => {
     if (!job || ocupado.current || estrellas < 1) return;
     ocupado.current = true;
     setEnCurso('rate');
     setError('');
     try {
-      // Sin comentario todavía: se firma el hash del texto vacío. El texto llega en F5.
-      const vacio = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(''));
-      await escrow.rate(job.id, estrellas, new Uint8Array(vacio));
+      const texto = comentario.trim();
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+      const hash = new Uint8Array(digest);
+
+      if (texto && cotizacion?.providerAddress) {
+        await saveReview(job.id.toString(), {
+          providerId: cotizacion.providerId,
+          providerAddress: cotizacion.providerAddress,
+          estrellas: estrellas as 1 | 2 | 3 | 4 | 5,
+          texto,
+          hash: [...hash].map(byte => byte.toString(16).padStart(2, '0')).join(''),
+        });
+      }
+
+      await escrow.rate(job.id, estrellas, hash);
       await releer(job.id);
       notificarCambioDeTrabajos();
     } catch (cause) {
-      setError(friendlyError(cause));
+      setError(cause instanceof Error && cause.name === 'ApiCallError' ? cause.message : friendlyError(cause));
     } finally {
       ocupado.current = false;
       setEnCurso(null);
@@ -337,6 +355,20 @@ export function JobScreen({ role }: { role: JobRole }) {
         <div className="mt-3 flex justify-center">
           <Estrellas valor={estrellas} onElegir={setEstrellas} bloqueado={enCurso !== null} />
         </div>
+
+        {cotizacion?.providerAddress && <label className="mt-4 block">
+          <span className="text-sm font-semibold text-masi-navy">
+            Cuéntanos más <span className="font-normal text-masi-muted">(opcional)</span>
+          </span>
+          <textarea
+            value={comentario}
+            onChange={event => setComentario(event.target.value.slice(0, 500))}
+            rows={3}
+            placeholder="Ej. Llegó puntual y dejó todo limpio."
+            className={cn(fieldBox, 'mt-2 resize-none py-3')}
+          />
+        </label>}
+
         <Button className="mt-4" disabled={estrellas < 1 || enCurso !== null} onClick={calificar}>
           {enCurso === 'rate' ? 'Enviando…' : 'Enviar calificación'}
         </Button>

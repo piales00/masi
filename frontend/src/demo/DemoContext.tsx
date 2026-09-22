@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Cotizacion, CotizacionInput, SolicitudEstado } from '../../../shared/api';
+import type { Resena, ResenaInput } from '../../../shared/api';
 import { providers } from '../marketplace';
+import { usePolling } from '../usePolling';
+import { store } from './store';
 import type { Trade } from '../marketplace';
 
 export type { Cotizacion } from '../../../shared/api';
@@ -278,6 +281,12 @@ interface DemoValue {
   sendQuote: (input: CotizacionInput) => Promise<Cotizacion>;
   acceptQuote: (id: string, jobId: string, txHash: string) => Promise<Cotizacion>;
   rejectQuote: (id: string) => Promise<Cotizacion>;
+  /** Guarda la reseña donde corresponda según el almacén activo. */
+  saveReview: (jobId: string, input: ResenaInput) => Promise<Resena>;
+  readReview: (jobId: string) => Promise<Resena | null>;
+  /** Vacío cuando el almacén responde; con texto cuando la última lectura falló. */
+  syncError: string;
+  retrySync: () => void;
   setAvailable: (next: boolean) => void;
 }
 
@@ -293,6 +302,22 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? []));
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => read(QUOTES_KEY, parseList<Cotizacion>) ?? []);
   const [available, setAvailableState] = useState<boolean>(() => read<boolean>(AVAILABLE_KEY, v => (typeof v === 'boolean' ? v : null)) ?? true);
+
+  /** En modo API la fuente es el almacén compartido: no se duplica en localStorage. */
+  const persistir = useCallback((key: string, value: unknown) => {
+    if (!store.remoto) write(key, value);
+  }, []);
+
+  /** Relee lo compartido. En local devuelve null y no toca el estado. */
+  const cargar = useCallback(async () => {
+    const datos = await store.cargar();
+    if (!datos) return;
+    setSolicitudes(datos.solicitudes);
+    setPostulaciones(datos.postulaciones);
+    setCotizaciones(datos.cotizaciones);
+  }, []);
+
+  const { error: syncError, recargar: retrySync } = usePolling(cargar, { activo: store.remoto });
 
   const openSession = useCallback((role: Role) => {
     setSession(current => {
@@ -351,13 +376,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       estado: 'buscando_profesionales',
       creadaEn: new Date().toISOString(),
     };
+    const creada = await store.crearSolicitud(solicitud);
     setSolicitudes(current => {
-      const next = [solicitud, ...current];
-      write(REQUESTS_KEY, next);
+      const next = [creada, ...current];
+      persistir(REQUESTS_KEY, next);
       return next;
     });
-    return solicitud;
-  }, [clienteId]);
+    return creada;
+  }, [clienteId, persistir]);
 
   const sendProposal = useCallback(async (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre' | 'providerAddress' | 'providerPerfil'>) => {
     const postulacion: Postulacion = {
@@ -376,39 +402,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         : undefined,
       fecha: new Date().toISOString(),
     };
+    const creada = await store.crearPostulacion(postulacion);
     setPostulaciones(current => {
-      const next = [postulacion, ...current];
-      write(PROPOSALS_KEY, next);
+      const next = [creada, ...current];
+      persistir(PROPOSALS_KEY, next);
       return next;
     });
-    return postulacion;
-  }, [providerAccount]);
+    return creada;
+  }, [providerAccount, persistir]);
 
   const chooseProposal = useCallback(async (solicitudId: string, postulacionId: string) => {
     const current = solicitudes.find(item => item.id === solicitudId);
     if (!current) throw new Error(`No existe la solicitud ${solicitudId}`);
+    await store.elegir(solicitudId, postulacionId);
     const updated: Solicitud = { ...current, estado: 'profesional_elegido', postulacionElegidaId: postulacionId };
     setSolicitudes(list => {
       const next = list.map(item => (item.id === solicitudId ? updated : item));
-      write(REQUESTS_KEY, next);
+      persistir(REQUESTS_KEY, next);
       return next;
     });
     return updated;
-  }, [solicitudes]);
+  }, [solicitudes, persistir]);
 
   /** Cambia el estado de una solicitud y lo persiste, devolviendo la lista nueva. */
   const patchSolicitud = useCallback((solicitudId: string, estado: EstadoSolicitud) => {
     setSolicitudes(list => {
       const next = list.map(item => (item.id === solicitudId ? { ...item, estado } : item));
-      write(REQUESTS_KEY, next);
+      persistir(REQUESTS_KEY, next);
       return next;
     });
-  }, []);
+  }, [persistir]);
 
   const guardarCotizaciones = useCallback((next: Cotizacion[]) => {
-    write(QUOTES_KEY, next);
+    persistir(QUOTES_KEY, next);
     setCotizaciones(next);
-  }, []);
+  }, [persistir]);
 
   const sendQuote = useCallback(async (input: CotizacionInput) => {
     const ahora = new Date().toISOString();
@@ -421,14 +449,16 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       creadaEn: ahora,
       actualizadaEn: ahora,
     };
-    guardarCotizaciones([cotizacion, ...cotizaciones]);
+    const creada = await store.crearCotizacion(cotizacion);
+    guardarCotizaciones([creada, ...cotizaciones]);
     patchSolicitud(input.solicitudId, 'cotizada');
-    return cotizacion;
+    return creada;
   }, [cotizaciones, guardarCotizaciones, patchSolicitud]);
 
   const acceptQuote = useCallback(async (id: string, jobId: string, txHash: string) => {
     const actual = cotizaciones.find(item => item.id === id);
     if (!actual) throw new Error(`No existe la cotización ${id}`);
+    if (store.remoto) await store.patchCotizacion(id, { estado: 'aceptada', jobId, txHash });
     const actualizada: Cotizacion = { ...actual, estado: 'aceptada', jobId, txHash, actualizadaEn: new Date().toISOString() };
     guardarCotizaciones(cotizaciones.map(item => (item.id === id ? actualizada : item)));
     patchSolicitud(actual.solicitudId, 'contratada');
@@ -444,11 +474,15 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const rejectQuote = useCallback(async (id: string) => {
     const actual = cotizaciones.find(item => item.id === id);
     if (!actual) throw new Error(`No existe la cotización ${id}`);
+    if (store.remoto) await store.patchCotizacion(id, { estado: 'rechazada' });
     const actualizada: Cotizacion = { ...actual, estado: 'rechazada', actualizadaEn: new Date().toISOString() };
     guardarCotizaciones(cotizaciones.map(item => (item.id === id ? actualizada : item)));
     patchSolicitud(actual.solicitudId, 'profesional_elegido');
     return actualizada;
   }, [cotizaciones, guardarCotizaciones, patchSolicitud]);
+
+  const saveReview = useCallback((jobId: string, input: ResenaInput) => store.guardarResena(jobId, input), []);
+  const readReview = useCallback((jobId: string) => store.leerResena(jobId), []);
 
   const setAvailable = useCallback((next: boolean) => {
     setAvailableState(next);
@@ -459,8 +493,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const providerProfile = session.provider ? providerAccount : null;
 
   const value = useMemo(
-    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, setAvailable }),
-    [profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, setAvailable],
+    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable }),
+    [profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable],
   );
   return <DemoContext value={value}>{children}</DemoContext>;
 }

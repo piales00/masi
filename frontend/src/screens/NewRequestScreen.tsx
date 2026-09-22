@@ -92,6 +92,8 @@ export function NewRequestScreen() {
   const [date, setDate] = useState('');
   /** Solo se abre la grilla completa cuando el usuario pide cambiar de servicio. */
   const [picking, setPicking] = useState(false);
+  const [publicando, setPublicando] = useState(false);
+  const [error, setError] = useState('');
 
   const suggestion = !trade && !picking ? suggestService(description) : null;
   const showPicker = picking || (!trade && !suggestion);
@@ -120,25 +122,34 @@ export function NewRequestScreen() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!trade || !description.trim()) return;
-    const solicitud = await publishRequest({
-      servicio: trade,
-      descripcion: description.trim(),
-      fotos: photos.map(photo => photo.url),
-      ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
-      distrito: district.trim(),
-      cuando: timing === 'Elegir fecha' && date ? `El ${date}` : timing,
-      cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
-    });
-    navigate(`/solicitudes/${solicitud.id}`, { replace: true });
+    if (!trade || !description.trim() || publicando) return;
+    setPublicando(true);
+    setError('');
+    try {
+      const solicitud = await publishRequest({
+        servicio: trade,
+        descripcion: description.trim(),
+        fotos: photos.map(photo => photo.url),
+        ubicacion: locationMode === 'actual' ? 'Ubicación actual' : address.trim(),
+        distrito: district.trim(),
+        cuando: timing === 'Elegir fecha' && date ? `El ${date}` : timing,
+        cliente: [profile?.firstName, profile?.lastName].filter(Boolean).join(' '),
+      });
+      navigate(`/solicitudes/${solicitud.id}`, { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Algo salió mal. Inténtalo de nuevo.');
+    } finally {
+      setPublicando(false);
+    }
   };
 
   return <Screen
     header={<ScreenHeader title="Nueva solicitud" subtitle="Cuéntanos qué está pasando" />}
     footer={<ScreenFooter className="border-t border-masi-gray bg-white">
-      <Button type="submit" form="solicitud" disabled={!ready}>
-        Publicar solicitud<ArrowRight size={18} aria-hidden="true" />
+      <Button type="submit" form="solicitud" disabled={!ready || publicando}>
+        {publicando ? 'Publicando…' : 'Publicar solicitud'}<ArrowRight size={18} aria-hidden="true" />
       </Button>
+      {error && <p role="alert" className="mt-2 text-center text-sm text-masi-error">{error}</p>}
       <p className="mt-2 flex items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-masi-muted">
         <ShieldCheck size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
         <span>Los acuerdos realizados fuera de la app no están cubiertos por la garantía de Masi.</span>

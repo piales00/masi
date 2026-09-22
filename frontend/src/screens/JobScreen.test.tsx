@@ -6,6 +6,7 @@ import { DemoProvider } from '../demo/DemoContext';
 import { escrow } from '../escrow';
 import { solesToStroops } from '../money';
 import { leerIncidencia } from '../demo/incidencias';
+import { store } from '../demo/store';
 import { JobScreen } from './JobScreen';
 import type { JobRole } from '../escrow/jobs';
 
@@ -279,5 +280,94 @@ describe('reportar un problema', () => {
     expect(await screen.findByRole('heading', { name: 'Problema reportado' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Aprobar servicio' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Tengo un problema' })).toBeNull();
+  });
+});
+
+describe('reseña con comentario', () => {
+  /** Un trabajo Released con su cotización, que es de donde salen providerId y dirección. */
+  async function conCotizacion(): Promise<bigint> {
+    const jobId = await crearTrabajo();
+    await escrow.accept(jobId);
+    await escrow.fund(jobId);
+    await escrow.start(jobId);
+    await escrow.submit(jobId);
+    await escrow.approve(jobId);
+    localStorage.setItem('masi.demo.cotizaciones.v1', JSON.stringify([{
+      id: 'c1', solicitudId: 's1', postulacionId: 'p1', providerId: 'juan', providerAddress: PROFESIONAL,
+      clienteId: CLIENTE, totalStroops: '12000000000', materialesStroops: '3600000000',
+      materialsBps: 3000, feeBps: 500, reviewSecs: 86400, descripcion: 'x', estado: 'aceptada',
+      jobId: jobId.toString(), txHash: 'abc', creadaEn: new Date().toISOString(), actualizadaEn: new Date().toISOString(),
+    }]));
+    return jobId;
+  }
+
+  it('guarda estrellas y comentario, y deja leerlo después', async () => {
+    const jobId = await conCotizacion();
+    montar(jobId, 'client');
+
+    await userEvent.click(await screen.findByRole('radio', { name: '5 estrellas' }));
+    await userEvent.type(screen.getByRole('textbox'), 'Llegó puntual y dejó todo limpio.');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar calificación' }));
+
+    await waitFor(async () => expect((await escrow.getJob(jobId)).rated).toBe(true));
+    const guardada = await store.leerResena(jobId.toString());
+    expect(guardada?.texto).toBe('Llegó puntual y dejó todo limpio.');
+    expect(guardada?.estrellas).toBe(5);
+    expect(guardada?.providerAddress).toBe(PROFESIONAL);
+  });
+
+  it('el comentario es opcional: sin texto no se guarda reseña pero sí la calificación', async () => {
+    const jobId = await conCotizacion();
+    montar(jobId, 'client');
+
+    await userEvent.click(await screen.findByRole('radio', { name: '3 estrellas' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar calificación' }));
+
+    await waitFor(async () => expect((await escrow.getJob(jobId)).stars).toBe(3));
+    expect(await store.leerResena(jobId.toString())).toBeNull();
+  });
+
+  it('si el guardado falla no se califica ni se dice que se guardó', async () => {
+    const jobId = await conCotizacion();
+    const espiaGuardar = vi.spyOn(store, 'guardarResena').mockRejectedValueOnce(new Error('Algo salió mal. Inténtalo de nuevo.'));
+    const espiaRate = vi.spyOn(escrow, 'rate');
+    montar(jobId, 'client');
+
+    await userEvent.click(await screen.findByRole('radio', { name: '4 estrellas' }));
+    await userEvent.type(screen.getByRole('textbox'), 'No me convenció.');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar calificación' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Algo salió mal. Inténtalo de nuevo.');
+    expect(espiaRate).not.toHaveBeenCalled();
+    expect((await escrow.getJob(jobId)).rated).toBe(false);
+    expect(screen.getByRole('button', { name: 'Enviar calificación' })).toBeTruthy();
+
+    espiaGuardar.mockRestore();
+    espiaRate.mockRestore();
+  });
+
+  it('una vez calificado no hay segundo envío', async () => {
+    const jobId = await conCotizacion();
+    montar(jobId, 'client');
+
+    await userEvent.click(await screen.findByRole('radio', { name: '5 estrellas' }));
+    await userEvent.type(screen.getByRole('textbox'), 'Muy bien.');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar calificación' }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Enviar calificación' })).toBeNull());
+    expect(await screen.findByText('Tu calificación')).toBeTruthy();
+  });
+
+  it('sin cotización no se ofrece el comentario, solo las estrellas', async () => {
+    const jobId = await crearTrabajo();
+    await escrow.accept(jobId);
+    await escrow.fund(jobId);
+    await escrow.start(jobId);
+    await escrow.submit(jobId);
+    await escrow.approve(jobId);
+    montar(jobId, 'client');
+
+    expect(await screen.findByRole('button', { name: 'Enviar calificación' })).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
