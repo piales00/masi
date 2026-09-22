@@ -19,6 +19,7 @@ import { ProviderSetupScreen } from './screens/ProviderSetupScreen';
 import { ProposalDetailScreen } from './screens/ProposalDetailScreen';
 import { ProvidersScreen } from './screens/ProvidersScreen';
 import { RequestDetailScreen } from './screens/RequestDetailScreen';
+import { RechargeScreen } from './screens/RechargeScreen';
 import { RequestsScreen } from './screens/RequestsScreen';
 import { RoleScreen } from './screens/RoleScreen';
 import { SetupScreen } from './screens/SetupScreen';
@@ -80,6 +81,7 @@ export function App() {
       <Route path="profesionales" element={<ProvidersScreen />} />
       {/* Actividad es el historial; lo que sigue en curso vive en Solicitudes. */}
       <Route path="actividad" element={<ActivityScreen role="client" />} />
+      <Route path="recargar" element={<RechargeScreen />} />
       <Route path="perfil" element={<ProfileScreen />} />
       <Route path="trabajos/:jobId" element={<JobScreen role="client" />} />
     </Route>
