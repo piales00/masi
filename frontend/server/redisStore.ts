@@ -1,12 +1,24 @@
 import { Redis } from '@upstash/redis';
 import type { KeyValueStore } from './store.js';
 
+/**
+ * La integración de Upstash en Vercel inyecta `KV_REST_API_*`, mientras que la
+ * instalación manual usa `UPSTASH_REDIS_REST_*`. `Redis.fromEnv()` acepta las dos,
+ * así que esta comprobación previa tiene que aceptarlas igual: si no, la API
+ * responde 500 con la base perfectamente conectada.
+ */
+export function hayConfiguracion(env: Record<string, string | undefined>): boolean {
+  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
+  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  return Boolean(url && token);
+}
+
 export class RedisStore implements KeyValueStore {
   constructor(private client?: Redis) {}
 
   private get redis(): Redis {
     if (!this.client) {
-      if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      if (!hayConfiguracion(process.env)) {
         throw new Error('Falta configurar Upstash Redis en el servidor.');
       }
       this.client = Redis.fromEnv();
@@ -41,7 +53,7 @@ export class RedisStore implements KeyValueStore {
     const keys: string[] = [];
     do {
       const [next, page] = await this.redis.scan(cursor, { match: `${prefix}*`, count: 100 });
-      cursor = next;
+      cursor = String(next);
       keys.push(...page);
     } while (cursor !== '0');
     return keys.sort();
