@@ -7,6 +7,7 @@ import {
   esTerminal,
   liberaSolo,
   puedeLiberarseSolo,
+  puedeCalificar,
   requiereAccionDe,
   trabajosPorAtender,
   vistaDelTrabajo,
@@ -109,14 +110,20 @@ describe('liberación automática', () => {
     expect(puedeLiberarseSolo(job('Submitted', { submitted_at: AHORA - 86400n }), AHORA)).toBe(true);
   });
 
-  it('el profesional puede cobrar solo cuando venció', () => {
+  it('no le pide nada al profesional cuando vence: la liberación es automática', () => {
     const vigente = vistaDelTrabajo(job('Submitted', { submitted_at: AHORA - 60n }), 'provider', { contraparte: 'María', ahora: AHORA });
     expect(vigente.principal).toBeNull();
     expect(vigente.vencido).toBe(false);
 
     const vencido = vistaDelTrabajo(job('Submitted', { submitted_at: AHORA - 90000n }), 'provider', { contraparte: 'María', ahora: AHORA });
-    expect(vencido.principal?.id).toBe('autoRelease');
     expect(vencido.vencido).toBe(true);
+    expect(vencido.principal).toBeNull();
+    expect(vencido.detalle).toContain('automáticamente');
+  });
+
+  it('el cliente conserva aprobar aunque el plazo haya vencido', () => {
+    const vencido = vistaDelTrabajo(job('Submitted', { submitted_at: AHORA - 90000n }), 'client', { contraparte: 'Juan', ahora: AHORA });
+    expect(vencido.principal?.id).toBe('approve');
   });
 });
 
@@ -168,5 +175,20 @@ describe('lenguaje de la interfaz', () => {
     const vista = vistaDelTrabajo({ ...raro, state: { tag: 'Loquesea' as Tag, values: undefined as unknown as void } }, 'client', { contraparte: 'Juan', ahora: AHORA });
     expect(vista.principal).toBeNull();
     expect(vista.titulo).toBe('Trabajo');
+  });
+});
+
+describe('calificar', () => {
+  it('solo el cliente, una vez y con el trabajo cerrado', () => {
+    expect(puedeCalificar(job('Released'), 'client')).toBe(true);
+    expect(puedeCalificar(job('Resolved'), 'client')).toBe(true);
+    expect(puedeCalificar(job('Released'), 'provider')).toBe(false);
+    expect(puedeCalificar(job('Released', { rated: true, stars: 5 }), 'client')).toBe(false);
+  });
+
+  it('no se ofrece mientras el trabajo sigue vivo', () => {
+    for (const tag of ['Requested', 'Accepted', 'Funded', 'Started', 'Submitted', 'Disputed', 'Cancelled'] as Tag[]) {
+      expect(puedeCalificar(job(tag), 'client')).toBe(false);
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { addressOfProvider, useDemo } from '../demo/DemoContext';
 import type { ProviderProfile } from '../demo/DemoContext';
 import type { Job } from '../../../shared/escrow';
@@ -15,11 +15,34 @@ export function direccionDelProfesional(perfil: ProviderProfile | null): string 
 }
 
 /**
+ * Los trabajos viven en el gateway, no en React, así que cuando una acción cambia uno
+ * hay que avisar a quien los esté mostrando: la pantalla del trabajo, la lista de
+ * Solicitudes y el badge. Un contador basta; nadie guarda copia del trabajo.
+ */
+let revision = 0;
+const oyentes = new Set<() => void>();
+
+export function notificarCambioDeTrabajos(): void {
+  revision += 1;
+  for (const avisar of oyentes) avisar();
+}
+
+function suscribir(avisar: () => void): () => void {
+  oyentes.add(avisar);
+  return () => { oyentes.delete(avisar); };
+}
+
+export function useRevisionDeTrabajos(): number {
+  return useSyncExternalStore(suscribir, () => revision, () => revision);
+}
+
+/**
  * Los trabajos de una dirección, para pintarlos. Devuelve una lista vacía mientras carga:
  * quien la use debe poder mostrar la tarjeta sin el estado todavía resuelto.
  */
 export function useJobsDe(address: string | null): Job[] {
   const { cotizaciones } = useDemo();
+  const revision = useRevisionDeTrabajos();
   const [jobs, setJobs] = useState<Job[]>([]);
 
   useEffect(() => {
@@ -37,7 +60,7 @@ export function useJobsDe(address: string | null): Job[] {
       }
     })();
     return () => { vigente = false; };
-  }, [address, cotizaciones]);
+  }, [address, cotizaciones, revision]);
 
   return jobs;
 }
@@ -49,6 +72,7 @@ export function useJobsDe(address: string | null): Job[] {
  */
 export function useJobsPorAtender(): { client: number; provider: number } {
   const { clienteId, providerProfile, cotizaciones } = useDemo();
+  const revision = useRevisionDeTrabajos();
   const [counts, setCounts] = useState({ client: 0, provider: 0 });
   const direccionProfesional = direccionDelProfesional(providerProfile);
 
@@ -70,7 +94,7 @@ export function useJobsPorAtender(): { client: number; provider: number } {
       }
     })();
     return () => { vigente = false; };
-  }, [clienteId, direccionProfesional, cotizaciones]);
+  }, [clienteId, direccionProfesional, cotizaciones, revision]);
 
   return counts;
 }

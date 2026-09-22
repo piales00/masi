@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CalendarClock, MapPin, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CalendarClock, MapPin, ShieldCheck, Star, TriangleAlert } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -9,8 +9,9 @@ import { EXPLORER_TX } from '../config';
 import { friendlyError } from '../contractErrors';
 import { useDemo } from '../demo/DemoContext';
 import { escrow } from '../escrow';
-import { vistaDelTrabajo } from '../escrow/jobs';
-import type { JobRole } from '../escrow/jobs';
+import { puedeCalificar, puedeLiberarseSolo, vistaDelTrabajo } from '../escrow/jobs';
+import type { JobActionId, JobRole } from '../escrow/jobs';
+import { notificarCambioDeTrabajos } from '../escrow/useJobsPorAtender';
 import { formatSoles } from '../money';
 import { serviceOf } from '../trades';
 import type { Job } from '../../../shared/escrow';
@@ -37,6 +38,41 @@ function Aviso({ texto, onVolver }: { texto: string; onVolver: () => void }) {
   </div>;
 }
 
+/** Cada acción con su texto de espera; el botón nunca se queda mudo mientras trabaja. */
+const EN_CURSO: Record<JobActionId, string> = {
+  accept: 'Confirmando…',
+  fund: 'Procesando…',
+  start: 'Iniciando…',
+  submit: 'Finalizando…',
+  approve: 'Aprobando…',
+  dispute: 'Enviando…',
+};
+
+/** Horas que le quedan al cliente para revisar, redondeadas hacia arriba. */
+function horasRestantes(limite: bigint, ahora: bigint): number {
+  return Math.max(1, Math.ceil(Number(limite - ahora) / 3600));
+}
+
+function Estrellas({ valor, onElegir, bloqueado }: { valor: number; onElegir?: (n: number) => void; bloqueado?: boolean }) {
+  return <div className="flex gap-1" role={onElegir ? 'radiogroup' : undefined} aria-label={onElegir ? 'Estrellas' : undefined}>
+    {[1, 2, 3, 4, 5].map(n => {
+      const activa = n <= valor;
+      const icono = <Star size={28} aria-hidden="true" className={activa ? 'fill-masi-orange text-masi-orange' : 'text-masi-gray'} />;
+      if (!onElegir) return <span key={n}>{icono}</span>;
+      return <button
+        key={n}
+        type="button"
+        role="radio"
+        aria-checked={valor === n}
+        aria-label={n === 1 ? '1 estrella' : `${n} estrellas`}
+        disabled={bloqueado}
+        onClick={() => onElegir(n)}
+        className="rounded-full p-0.5 disabled:opacity-60"
+      >{icono}</button>;
+    })}
+  </div>;
+}
+
 function Linea({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fuerte?: boolean }) {
   return <div className="flex items-baseline justify-between gap-3">
     <dt className={cn('text-masi-muted', fuerte && 'font-semibold text-masi-navy')}>{etiqueta}</dt>
@@ -58,6 +94,16 @@ export function JobScreen({ role }: { role: JobRole }) {
   const [job, setJob] = useState<Job | null>(null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [error, setError] = useState('');
+  const [enCurso, setEnCurso] = useState<JobActionId | 'rate' | null>(null);
+  const [estrellas, setEstrellas] = useState(0);
+  /** El cerrojo va en un ref: dos clics del mismo tick leerían el mismo estado en null. */
+  const ocupado = useRef(false);
+
+  const releer = useCallback(async (id: bigint) => {
+    const encontrado = await escrow.getJob(id);
+    setJob(encontrado);
+    return encontrado;
+  }, []);
 
   useEffect(() => {
     let vigente = true;
@@ -77,6 +123,71 @@ export function JobScreen({ role }: { role: JobRole }) {
     })();
     return () => { vigente = false; };
   }, [jobId]);
+
+  /**
+   * Vencido el plazo de revisión, el pago se libera solo. El contrato necesita que
+   * alguien firme `auto_release`, pero eso es una necesidad técnica, no una tarea del
+   * profesional: en producción lo dispara la plataforma. Aquí lo hace la app al abrir.
+   */
+  useEffect(() => {
+    if (!job || ocupado.current) return;
+    if (!puedeLiberarseSolo(job, BigInt(Math.floor(Date.now() / 1000)))) return;
+    let vigente = true;
+    ocupado.current = true;
+    (async () => {
+      try {
+        await escrow.autoRelease(job.id, role === 'client' ? job.client : job.provider);
+        if (vigente) await releer(job.id);
+        notificarCambioDeTrabajos();
+      } catch {
+        // Si todavía no procede, la pantalla sigue mostrando el plazo tal cual.
+      } finally {
+        ocupado.current = false;
+      }
+    })();
+    return () => { vigente = false; };
+  }, [job, role, releer]);
+
+  const ejecutar = async (accion: JobActionId) => {
+    if (!job || ocupado.current) return;
+    ocupado.current = true;
+    setEnCurso(accion);
+    setError('');
+    try {
+      // La firma real con huella entra aquí cuando exista el adaptador; ver el reporte.
+      if (accion === 'accept') await escrow.accept(job.id);
+      if (accion === 'fund') await escrow.fund(job.id);
+      if (accion === 'start') await escrow.start(job.id);
+      if (accion === 'submit') await escrow.submit(job.id);
+      if (accion === 'approve') await escrow.approve(job.id);
+      await releer(job.id);
+      notificarCambioDeTrabajos();
+    } catch (cause) {
+      setError(friendlyError(cause));
+    } finally {
+      ocupado.current = false;
+      setEnCurso(null);
+    }
+  };
+
+  const calificar = async () => {
+    if (!job || ocupado.current || estrellas < 1) return;
+    ocupado.current = true;
+    setEnCurso('rate');
+    setError('');
+    try {
+      // Sin comentario todavía: se firma el hash del texto vacío. El texto llega en F5.
+      const vacio = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(''));
+      await escrow.rate(job.id, estrellas, new Uint8Array(vacio));
+      await releer(job.id);
+      notificarCambioDeTrabajos();
+    } catch (cause) {
+      setError(friendlyError(cause));
+    } finally {
+      ocupado.current = false;
+      setEnCurso(null);
+    }
+  };
 
   const volver = () => navigate(role === 'client' ? '/solicitudes' : '/profesional/solicitudes');
 
@@ -173,14 +284,40 @@ export function JobScreen({ role }: { role: JobRole }) {
       )}>
         <CalendarClock size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
         <span>{vista.vencido
-          ? `El plazo de revisión terminó el ${fecha(vista.liberaSolo)}. El pago ya se puede cobrar.`
-          : `Si el cliente no responde, el pago se libera solo el ${fecha(vista.liberaSolo)}.`}</span>
+          ? 'El plazo de revisión terminó. El pago se libera automáticamente.'
+          : role === 'client'
+            ? `Puedes revisar el trabajo hasta el ${fecha(vista.liberaSolo)}. Te quedan unas ${horasRestantes(vista.liberaSolo, BigInt(Math.floor(Date.now() / 1000)))} horas.`
+            : `Si el cliente no responde, el pago se libera solo el ${fecha(vista.liberaSolo)}.`}</span>
       </p>}
 
+      {puedeCalificar(job, role) && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
+        <h2 className="text-base font-bold text-masi-navy">¿Cómo fue tu experiencia con {contraparte || 'el profesional'}?</h2>
+        <div className="mt-3 flex justify-center">
+          <Estrellas valor={estrellas} onElegir={setEstrellas} bloqueado={enCurso !== null} />
+        </div>
+        <Button className="mt-4" disabled={estrellas < 1 || enCurso !== null} onClick={calificar}>
+          {enCurso === 'rate' ? 'Enviando…' : 'Enviar calificación'}
+        </Button>
+      </section>}
+
+      {job.rated && role === 'client' && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
+        <h2 className="text-sm font-semibold text-masi-navy">Tu calificación</h2>
+        <div className="mt-3 flex justify-center"><Estrellas valor={job.stars} /></div>
+      </section>}
+
+      {error && <p role="alert" className="mt-4 rounded-masi-input bg-masi-blue-50 p-3 text-sm text-masi-navy">{error}</p>}
+
       {(vista.principal || vista.secundaria) && <div className="mt-6">
-        {vista.principal && <Button disabled>{vista.principal.label}</Button>}
-        {vista.secundaria && <Button variant="secondary" className="mt-3" disabled>{vista.secundaria.label}</Button>}
-        <p className="mt-2 text-center text-xs text-masi-muted">Disponible en el siguiente avance.</p>
+        {vista.principal && <Button
+          disabled={enCurso !== null}
+          onClick={() => { void ejecutar(vista.principal!.id); }}
+        >{enCurso === vista.principal.id ? EN_CURSO[vista.principal.id] : vista.principal.label}</Button>}
+
+        {/* La disputa es F4-E: se deja a la vista para no cambiar la pantalla después. */}
+        {vista.secundaria && <>
+          <Button variant="secondary" className="mt-3" disabled>{vista.secundaria.label}</Button>
+          <p className="mt-2 text-center text-xs text-masi-muted">Disponible en el siguiente avance.</p>
+        </>}
       </div>}
 
       <details className="mt-6 rounded-masi-card border border-masi-gray bg-white p-4 text-sm text-masi-navy">

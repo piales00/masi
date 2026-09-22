@@ -8,7 +8,12 @@ import type { Tag } from './mockEscrow';
  */
 export type JobRole = 'client' | 'provider';
 
-export type JobActionId = 'accept' | 'fund' | 'start' | 'submit' | 'approve' | 'autoRelease' | 'dispute';
+/**
+ * Acciones que se ofrecen como botón. `autoRelease` no está aquí a propósito: el
+ * contrato necesita que alguien firme esa transacción, pero para el usuario la
+ * liberación por vencimiento es automática y no una tarea suya. Ver `vencido`.
+ */
+export type JobActionId = 'accept' | 'fund' | 'start' | 'submit' | 'approve' | 'dispute';
 
 export interface JobCta {
   id: JobActionId;
@@ -116,8 +121,8 @@ export function vistaDelTrabajo(
         secundaria: null,
       })
       : armar({
-        titulo: 'Confirmaste el trabajo',
-        detalle: `${otro} está realizando el pago protegido.`,
+        titulo: 'Trabajo confirmado',
+        detalle: `Esperando que ${otro} realice el pago protegido.`,
         principal: null,
         secundaria: null,
       });
@@ -167,9 +172,9 @@ export function vistaDelTrabajo(
     return armar({
       titulo: 'Trabajo enviado',
       detalle: vencido
-        ? `${otro} no respondió dentro del plazo. Ya puedes cobrar tu pago.`
+        ? `${otro} no respondió dentro del plazo. Tu pago se libera automáticamente.`
         : `Esperando la aprobación de ${otro}.`,
-      principal: vencido ? { id: 'autoRelease', label: 'Cobrar mi pago' } : null,
+      principal: null,
       secundaria: TENGO_UN_PROBLEMA,
     });
   }
@@ -180,7 +185,7 @@ export function vistaDelTrabajo(
         titulo: 'Servicio completado',
         detalle: job.rated
           ? 'Gracias por calificar este servicio.'
-          : `El pago se liberó a ${otro}. Pronto podrás calificar el servicio.`,
+          : `El pago se liberó a ${otro}.`,
         principal: null,
         secundaria: null,
       })
@@ -226,6 +231,15 @@ export function vistaDelTrabajo(
     principal: null,
     secundaria: null,
   });
+}
+
+/**
+ * Calificar lo hace el cliente, una sola vez y con el trabajo ya cerrado. Son las mismas
+ * condiciones que exige el contrato, para no ofrecer algo que luego va a rebotar.
+ */
+export function puedeCalificar(job: Job, role: JobRole): boolean {
+  if (role !== 'client' || job.rated) return false;
+  return job.state.tag === 'Released' || job.state.tag === 'Resolved';
 }
 
 /** Un trabajo cuenta para el badge solo si está activo y la acción es de este rol. */

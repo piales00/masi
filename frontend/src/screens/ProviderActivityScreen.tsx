@@ -9,7 +9,7 @@ import { useDemo } from '../demo/DemoContext';
 import type { Cotizacion, Postulacion, Solicitud } from '../demo/DemoContext';
 import type { Trade } from '../marketplace';
 import { alertasPara } from '../demo/selectors';
-import { requiereAccionDe, vistaDelTrabajo } from '../escrow/jobs';
+import { esTerminal, requiereAccionDe, vistaDelTrabajo } from '../escrow/jobs';
 import { direccionDelProfesional, useJobsDe } from '../escrow/useJobsPorAtender';
 import { formatPrice } from '../marketplace';
 import { serviceOf } from '../trades';
@@ -228,11 +228,13 @@ export function ProviderActivityScreen() {
     if (solicitud && elegida && solicitud.estado !== 'buscando_profesionales') {
       const cotizacion = cotizacionDe(postulacion.id);
       const job = jobs.find(item => item.id.toString() === cotizacion?.jobId);
+      // Un servicio terminado ya no es un proceso activo: sale de Solicitudes. El
+      // historial lo recogerá Actividad en F4-E.
+      if (job && esTerminal(job)) continue;
       const tarjeta = enProceso(postulacion, solicitud, cotizacion, job, solicitud.cliente || 'El cliente');
-      if (tarjeta) {
-        proceso.push(tarjeta);
-        continue;
-      }
+      // Elegido pero sin trabajo legible todavía: tampoco vuelve a ser una oportunidad.
+      if (tarjeta) proceso.push(tarjeta);
+      continue;
     }
     oportunidades.push(oportunidad(postulacion, solicitud));
   }
@@ -256,7 +258,7 @@ export function ProviderActivityScreen() {
 
       {proceso.length > 0 && <section aria-labelledby="en-proceso">
         <h2 id="en-proceso" className="text-lg font-bold text-masi-navy">Trabajos en proceso</h2>
-        <p className="mt-1 text-sm text-masi-muted">Clientes que ya te eligieron.</p>
+        <p className="mt-1 text-sm text-masi-muted">Servicios activos con tus clientes.</p>
         <Tarjetas items={proceso} onAbrir={navigate} />
       </section>}
 
