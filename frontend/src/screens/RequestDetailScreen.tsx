@@ -53,7 +53,20 @@ export function RequestDetailScreen() {
   const service = serviceOf(solicitud.servicio);
   const Icon = service.icon;
 
-  const elegir = (postulacion: Postulacion) => { void chooseProposal(solicitud.id, postulacion.id); };
+  const elegir = async (postulacion: Postulacion) => {
+    if (enCurso.current) return;
+    enCurso.current = true;
+    setProcesando(true);
+    setErrorCotizacion('');
+    try {
+      await chooseProposal(solicitud.id, postulacion.id);
+    } catch (cause) {
+      setErrorCotizacion(friendlyError(cause));
+    } finally {
+      enCurso.current = false;
+      setProcesando(false);
+    }
+  };
 
   // Una rechazada deja de estar activa: solo la enviada espera respuesta del cliente.
   const cotizacion = cotizaciones.find(item => item.solicitudId === solicitud.id && item.estado === 'enviada');
@@ -264,7 +277,9 @@ export function RequestDetailScreen() {
                     <CheckCircle2 size={16} aria-hidden="true" />Profesional elegido
                   </p>
                   : <div className="mt-3 flex flex-col gap-2">
-                    <Button disabled={descartada} onClick={() => elegir(propuesta)}>Elegir a {propuesta.providerNombre}</Button>
+                    <Button disabled={descartada || procesando} onClick={() => { void elegir(propuesta); }}>
+                      {procesando ? 'Enviando…' : `Elegir a ${propuesta.providerNombre}`}
+                    </Button>
                     <Button variant="secondary" onClick={() => navigate(`/solicitudes/${solicitud.id}/propuesta/${propuesta.id}`)}>
                       Ver perfil
                     </Button>

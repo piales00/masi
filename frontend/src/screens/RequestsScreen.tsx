@@ -5,8 +5,12 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
 import { useDemo } from '../demo/DemoContext';
 import type { Cotizacion, Postulacion, Solicitud } from '../demo/DemoContext';
-import { solicitudesPorAtender } from '../demo/selectors';
+import { grupoDeSolicitud, jobIdDeSolicitud, solicitudesPorAtender } from '../demo/selectors';
+import type { GrupoCliente } from '../demo/selectors';
+import { ETIQUETA, vistaDelTrabajo } from '../escrow/jobs';
+import { useJobsDe } from '../escrow/useJobsPorAtender';
 import { serviceOf } from '../trades';
+import type { Job } from '../../../shared/escrow';
 
 const formatDate = (iso: string): string =>
   new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
@@ -31,19 +35,26 @@ const CHIP_HECHO = 'bg-masi-green-50 text-masi-navy';
 const CHIP_ESPERA = 'bg-masi-gray text-masi-text';
 const CHIP_ATENCION = 'bg-masi-blue text-white';
 
-function etapaDe(solicitud: Solicitud, propuestas: Postulacion[], cotizaciones: readonly Cotizacion[]): Etapa {
+function etapaDe(
+  solicitud: Solicitud,
+  propuestas: Postulacion[],
+  cotizaciones: readonly Cotizacion[],
+  job: Job | undefined,
+): Etapa {
   const elegida = propuestas.find(item => item.id === solicitud.postulacionElegidaId);
   const ficha = `/solicitudes/${solicitud.id}`;
 
   if (solicitud.estado === 'contratada') {
     const trabajo = cotizaciones.find(item => item.solicitudId === solicitud.id && item.estado === 'aceptada');
+    // Con el trabajo a la vista, la tarjeta dice su estado real y ofrece lo que toca.
+    const vista = job ? vistaDelTrabajo(job, 'client', { contraparte: elegida?.providerNombre ?? '' }) : null;
     return {
-      chip: 'Contratado',
-      chipClase: CHIP_HECHO,
+      chip: job ? ETIQUETA[job.state.tag] : 'Contratado',
+      chipClase: vista?.principal ? CHIP_ATENCION : CHIP_HECHO,
       detalle: elegida && `Con ${elegida.providerNombre}`,
-      cta: trabajo?.jobId ? 'Ver trabajo' : undefined,
+      cta: trabajo?.jobId ? (vista?.principal?.label ?? 'Ver servicio') : undefined,
       destino: trabajo?.jobId ? `/trabajos/${trabajo.jobId}` : ficha,
-      atencion: false,
+      atencion: Boolean(vista?.principal),
     };
   }
 
@@ -81,11 +92,27 @@ function etapaDe(solicitud: Solicitud, propuestas: Postulacion[], cotizaciones: 
   };
 }
 
+/** Cada grupo con su título y su explicación; los vacíos no se dibujan. */
+const GRUPOS: readonly { id: GrupoCliente; titulo: string; ayuda: string }[] = [
+  { id: 'buscando', titulo: 'Buscando profesional', ayuda: 'Revisa las propuestas y elige al profesional para tu servicio.' },
+  { id: 'coordinando', titulo: 'Coordinando el servicio', ayuda: 'Coordina los pasos necesarios antes de iniciar el servicio.' },
+  { id: 'enCurso', titulo: 'Servicios en curso', ayuda: 'Sigue los servicios que ya están siendo atendidos.' },
+];
+
 export function RequestsScreen() {
   const { clienteId, solicitudes, postulaciones, cotizaciones } = useDemo();
   const navigate = useNavigate();
+  const jobs = useJobsDe(clienteId);
 
   const mias = solicitudes.filter(item => item.clienteId === clienteId);
+  // Una solicitud cae en un único grupo, y la que ya terminó no cae en ninguno.
+  const porGrupo = new Map<GrupoCliente, Solicitud[]>();
+  for (const solicitud of mias) {
+    const grupo = grupoDeSolicitud(solicitud, cotizaciones, jobs);
+    if (!grupo) continue;
+    porGrupo.set(grupo, [...(porGrupo.get(grupo) ?? []), solicitud]);
+  }
+  const activas = [...porGrupo.values()].reduce((total, lista) => total + lista.length, 0);
 
   // Se parte del mismo selector que el badge, así resumen y navegación nunca discrepan.
   const porAtender = solicitudesPorAtender(clienteId, solicitudes, postulaciones);
@@ -108,50 +135,61 @@ export function RequestsScreen() {
         </dl>
       </section>}
 
-      {mias.length === 0
+      {activas === 0
         ? <div className="rounded-masi-card border border-dashed border-masi-gray bg-white px-6 py-10 text-center">
           <ClipboardList size={30} aria-hidden="true" className="mx-auto text-masi-blue" />
           <p className="mt-3 text-sm text-masi-muted">Aquí verás las solicitudes que publiques y las propuestas que recibas.</p>
         </div>
-        : <ul className="grid gap-3 lg:grid-cols-2">
-          {mias.map(solicitud => {
-            const propuestas = postulaciones.filter(item => item.solicitudId === solicitud.id);
-            const Icon = serviceOf(solicitud.servicio).icon;
-            const etapa = etapaDe(solicitud, propuestas, cotizaciones);
-            return <li key={solicitud.id}>
-              <button
-                onClick={() => navigate(etapa.destino)}
-                className={cn(
-                  'w-full rounded-masi-card border bg-white p-4 text-left shadow-masi-sm transition-colors duration-200 ease-out hover:border-masi-blue',
-                  etapa.atencion ? 'border-masi-blue' : 'border-masi-gray',
-                )}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-masi-blue">
-                    <Icon size={15} aria-hidden="true" className="shrink-0" />
-                    <span className="min-w-0 break-words">{solicitud.servicio}</span>
-                  </p>
-                  {etapa.chip && <span className={cn('max-w-full rounded-full px-3 py-1 text-xs font-semibold break-words', etapa.chipClase)}>
-                    {etapa.chip}
-                  </span>}
-                </div>
+        : GRUPOS.filter(grupo => (porGrupo.get(grupo.id)?.length ?? 0) > 0).map((grupo, indice) => <section
+          key={grupo.id}
+          aria-labelledby={grupo.id}
+          className={cn(indice > 0 && 'mt-8')}
+        >
+          <h2 id={grupo.id} className="text-lg font-bold text-masi-navy">{grupo.titulo}</h2>
+          <p className="mt-1 text-sm text-masi-muted">{grupo.ayuda}</p>
 
-                <p className="mt-2 line-clamp-2 text-sm text-masi-text">{solicitud.descripcion}</p>
+          <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+            {(porGrupo.get(grupo.id) ?? []).map(solicitud => {
+              const propuestas = postulaciones.filter(item => item.solicitudId === solicitud.id);
+              const Icon = serviceOf(solicitud.servicio).icon;
+              const jobId = jobIdDeSolicitud(solicitud.id, cotizaciones);
+              const job = jobs.find(item => item.id.toString() === jobId);
+              const etapa = etapaDe(solicitud, propuestas, cotizaciones, job);
+              return <li key={solicitud.id}>
+                <button
+                  onClick={() => navigate(etapa.destino)}
+                  className={cn(
+                    'w-full rounded-masi-card border bg-white p-4 text-left shadow-masi-sm transition-colors duration-200 ease-out hover:border-masi-blue',
+                    etapa.atencion ? 'border-masi-blue' : 'border-masi-gray',
+                  )}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                    <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-masi-blue">
+                      <Icon size={15} aria-hidden="true" className="shrink-0" />
+                      <span className="min-w-0 break-words">{solicitud.servicio}</span>
+                    </p>
+                    {etapa.chip && <span className={cn('max-w-full rounded-full px-3 py-1 text-xs font-semibold break-words', etapa.chipClase)}>
+                      {etapa.chip}
+                    </span>}
+                  </div>
 
-                {etapa.detalle && <p className="mt-1.5 text-sm font-semibold break-words text-masi-navy">{etapa.detalle}</p>}
-                {etapa.nota && <p className="mt-0.5 text-xs text-masi-muted">{etapa.nota}</p>}
+                  <p className="mt-2 line-clamp-2 text-sm text-masi-text">{solicitud.descripcion}</p>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-masi-gray pt-3">
-                  <p className="text-xs text-masi-muted">{formatDate(solicitud.creadaEn)}</p>
-                  {etapa.cta && <span className="flex min-w-0 items-center gap-0.5 text-sm font-semibold text-masi-blue">
-                    <span className="min-w-0 break-words">{etapa.cta}</span>
-                    <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
-                  </span>}
-                </div>
-              </button>
-            </li>;
-          })}
-        </ul>}
+                  {etapa.detalle && <p className="mt-1.5 text-sm font-semibold break-words text-masi-navy">{etapa.detalle}</p>}
+                  {etapa.nota && <p className="mt-0.5 text-xs text-masi-muted">{etapa.nota}</p>}
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-masi-gray pt-3">
+                    <p className="text-xs text-masi-muted">{formatDate(solicitud.creadaEn)}</p>
+                    {etapa.cta && <span className="flex min-w-0 items-center gap-0.5 text-sm font-semibold text-masi-blue">
+                      <span className="min-w-0 break-words">{etapa.cta}</span>
+                      <ChevronRight size={16} aria-hidden="true" className="shrink-0" />
+                    </span>}
+                  </div>
+                </button>
+              </li>;
+            })}
+          </ul>
+        </section>)}
     </div>
   </Screen>;
 }

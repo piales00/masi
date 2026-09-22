@@ -1,3 +1,5 @@
+import type { Job } from '../../../shared/escrow';
+import { esTerminal } from '../escrow/jobs';
 import type { Cotizacion, Postulacion, ProviderProfile, Solicitud } from './DemoContext';
 
 /**
@@ -55,4 +57,40 @@ export function cotizacionesPorEnviar(
     && item.postulacionElegidaId !== undefined
     && mias.has(item.postulacionElegidaId)
     && !cotizaciones.some(row => row.solicitudId === item.id && row.estado === 'enviada'));
+}
+
+/**
+ * En qué momento del proceso está una solicitud del cliente. No son categorías ni
+ * estados nuevos: es una lectura de los que ya existen, para que la misma solicitud
+ * vaya cambiando de grupo en pantalla sin duplicarse nunca.
+ *
+ * Devuelve null cuando la solicitud ya no es un proceso activo (el trabajo terminó) o
+ * cuando su trabajo todavía no se ha leído; en ambos casos no se muestra.
+ */
+export type GrupoCliente = 'buscando' | 'coordinando' | 'enCurso';
+
+/** El trabajo que nació de esta solicitud, si la cotización aceptada ya lo registró. */
+export function jobIdDeSolicitud(solicitudId: string, cotizaciones: readonly Cotizacion[]): string | null {
+  return cotizaciones.find(item => item.solicitudId === solicitudId && item.estado === 'aceptada')?.jobId ?? null;
+}
+
+export function grupoDeSolicitud(
+  solicitud: Solicitud,
+  cotizaciones: readonly Cotizacion[],
+  jobs: readonly Job[],
+): GrupoCliente | null {
+  if (solicitud.estado === 'buscando_profesionales') return 'buscando';
+  // Elegido y cotizada siguen siendo coordinación: todavía no hay trabajo que seguir.
+  if (solicitud.estado !== 'contratada') return 'coordinando';
+
+  const jobId = jobIdDeSolicitud(solicitud.id, cotizaciones);
+  // Contratada sin trabajo registrado: se sigue coordinando, no se esconde.
+  if (!jobId) return 'coordinando';
+
+  const job = jobs.find(item => item.id.toString() === jobId);
+  if (!job) return null;
+  if (esTerminal(job)) return null;
+
+  const tag = job.state.tag;
+  return tag === 'Requested' || tag === 'Accepted' ? 'coordinando' : 'enCurso';
 }
