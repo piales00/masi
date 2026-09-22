@@ -3,6 +3,7 @@ import { MercuryIndexer, PasskeyKit, SignerKey } from 'passkey-kit';
 import type { CreateWalletResult } from 'passkey-kit';
 import { IndexedDBStorage } from 'passkey-kit/storage';
 import { requirePasskeyOrigin } from './passkeyOrigin';
+import { verifiedWebAuthn } from './verifiedWebAuthn';
 
 // passkey-kit and stellar-sdk use Buffer while constructing Stellar XDR.
 (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer ??= Buffer;
@@ -13,6 +14,8 @@ const kit = new PasskeyKit({
   networkPassphrase,
   walletWasmHash: '97ce047884106b1c6c3bb40b8973cc48db1c4dad95c9e20462bf2c701daa764e',
   storage: new IndexedDBStorage(),
+  requireUserVerification: true,
+  WebAuthn: verifiedWebAuthn,
 });
 const indexer = MercuryIndexer.forNetwork({ rpc: kit.rpc }, networkPassphrase);
 const pendingKey = 'masi.passkey.pending.v1';
@@ -116,7 +119,7 @@ export async function resumeAccountCreation(): Promise<AccountReceipt> {
   }
 }
 
-export async function signIn(): Promise<string> {
+async function connectVerifiedAccount(): Promise<string> {
   requireFinalDomain();
   const connected = await kit.connectWallet({
     getWalletCandidates: async keyId => {
@@ -125,4 +128,22 @@ export async function signIn(): Promise<string> {
     },
   });
   return connected.contractId;
+}
+
+export async function signIn(): Promise<string> {
+  const contractId = await connectVerifiedAccount();
+  try {
+    const key = `masi.logins.${contractId}`;
+    const saved: unknown = JSON.parse(localStorage.getItem(key) || '[]');
+    const dates = Array.isArray(saved) ? saved.filter(item => typeof item === 'string') : [];
+    localStorage.setItem(key, JSON.stringify([new Date().toISOString(), ...dates].slice(0, 10)));
+  } catch { /* El historial local no debe impedir un acceso válido. */ }
+  return contractId;
+}
+
+/** Reautenticación de la demo: no firma ni envía transacciones de pago. */
+export async function confirmDemoIdentity(expectedContractId: string | undefined): Promise<void> {
+  if (!expectedContractId) throw new Error('HostError: Error(Contract, #5)');
+  const actual = await connectVerifiedAccount();
+  if (actual !== expectedContractId) throw new Error('HostError: Error(Contract, #5)');
 }

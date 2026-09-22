@@ -9,6 +9,9 @@ import { leerIncidencia } from '../demo/incidencias';
 import { store } from '../demo/store';
 import { JobScreen } from './JobScreen';
 import type { JobRole } from '../escrow/jobs';
+import { confirmDemoIdentity } from '../passkeys';
+
+vi.mock('../passkeys', () => ({ confirmDemoIdentity: vi.fn() }));
 
 const CLIENTE = 'cliente-1';
 const PROFESIONAL = 'profesional-1';
@@ -27,6 +30,9 @@ async function crearTrabajo(): Promise<bigint> {
 }
 
 function montar(jobId: bigint, role: JobRole) {
+  localStorage.setItem('masi.demo.cliente.v2', JSON.stringify({ firstName: 'Cliente', lastName: '', district: 'Surco', phone: '', contractId: CLIENTE }));
+  localStorage.setItem('masi.demo.profesional.v2', JSON.stringify({ fullName: 'Profesional', id: PROFESIONAL, contractId: PROFESIONAL, services: ['Pintura'], district: 'Surco', yearsExperience: 1, bio: '' }));
+  localStorage.setItem('masi.demo.sesion.v2', JSON.stringify({ client: role === 'client', provider: role === 'provider' }));
   return render(<DemoProvider>
     <MemoryRouter initialEntries={[`/t/${jobId}`]}>
       <Routes><Route path="/t/:jobId" element={<JobScreen role={role} />} /></Routes>
@@ -45,6 +51,7 @@ async function pulsar(jobId: bigint, role: JobRole, texto: string) {
 beforeEach(() => {
   cleanup();
   localStorage.clear();
+  vi.mocked(confirmDemoIdentity).mockReset().mockResolvedValue(undefined);
 });
 
 describe('camino feliz desde la pantalla', () => {
@@ -91,6 +98,29 @@ describe('camino feliz desde la pantalla', () => {
 });
 
 describe('doble clic y errores', () => {
+  it('cancelar la huella no modifica el trabajo y permite reintentar', async () => {
+    const jobId = await crearTrabajo();
+    vi.mocked(confirmDemoIdentity).mockRejectedValueOnce(new DOMException('Cancelado', 'NotAllowedError'));
+    montar(jobId, 'provider');
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirmar trabajo' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('No se confirmó tu huella');
+    expect((await escrow.getJob(jobId)).state.tag).toBe('Requested');
+    expect(confirmDemoIdentity).toHaveBeenCalledWith(PROFESIONAL);
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar trabajo' }));
+    await waitFor(async () => expect((await escrow.getJob(jobId)).state.tag).toBe('Accepted'));
+    expect(confirmDemoIdentity).toHaveBeenCalledTimes(2);
+  });
+
+  it('una llave de otra cuenta no paga ni cambia el estado', async () => {
+    const jobId = await crearTrabajo();
+    await escrow.accept(jobId);
+    vi.mocked(confirmDemoIdentity).mockRejectedValueOnce(new Error('HostError: Error(Contract, #5)'));
+    montar(jobId, 'client');
+    await userEvent.click(await screen.findByRole('button', { name: 'Realizar pago protegido' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('No puedes hacer esto');
+    expect((await escrow.getJob(jobId)).state.tag).toBe('Accepted');
+    expect(confirmDemoIdentity).toHaveBeenCalledWith(CLIENTE);
+  });
   it('dos clics seguidos ejecutan la acción una sola vez', async () => {
     const jobId = await crearTrabajo();
     const espia = vi.spyOn(escrow, 'accept');

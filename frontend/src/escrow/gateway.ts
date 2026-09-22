@@ -15,7 +15,7 @@ export interface EscrowGateway {
    * de F5. Para la demo local basta con recorrer el almacén.
    */
   jobsOf(address: string): Promise<Job[]>;
-  createJob(args: EscrowArguments['create_job']): Promise<{ jobId: bigint; hash: string }>;
+  createJob(args: EscrowArguments['create_job'], quotationId?: string): Promise<{ jobId: bigint; hash: string }>;
   accept(jobId: bigint): Promise<{ hash: string }>;
   fund(jobId: bigint): Promise<{ hash: string }>;
   start(jobId: bigint): Promise<{ hash: string }>;

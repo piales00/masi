@@ -10,6 +10,7 @@ import { friendlyError } from '../contractErrors';
 import { readPendingAcceptance, useDemo, writePendingAcceptance } from '../demo/DemoContext';
 import type { Cotizacion, Postulacion } from '../demo/DemoContext';
 import { escrow } from '../escrow';
+import { confirmDemoIdentity } from '../passkeys';
 import { formatSoles, portion } from '../money';
 import { formatPrice, formatRating } from '../marketplace';
 import type { ProviderWithRating } from '../marketplace';
@@ -35,7 +36,9 @@ function desglose(cotizacion: Cotizacion) {
 export function RequestDetailScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { clienteId, solicitudes, postulaciones, cotizaciones, chooseProposal, acceptQuote, rejectQuote } = useDemo();
+  const { profile, clienteId, solicitudes, postulaciones, cotizaciones, chooseProposal, acceptQuote, rejectQuote } = useDemo();
+  const activeAccount = useRef(profile?.contractId);
+  activeAccount.current = profile?.contractId;
   const { status, items } = useMarketplace();
   const [procesando, setProcesando] = useState(false);
   const [errorCotizacion, setErrorCotizacion] = useState('');
@@ -88,6 +91,10 @@ export function RequestDetailScreen() {
     setProcesando(true);
     setErrorCotizacion('');
     try {
+      const expected = profile?.contractId;
+      if (!expected || expected !== cotizacion.clienteId) throw new Error('HostError: Error(Contract, #5)');
+      await confirmDemoIdentity(expected);
+      if (activeAccount.current !== expected) throw new Error('HostError: Error(Contract, #5)');
       const pendiente = readPendingAcceptance();
       let jobId: string;
       let txHash: string;
@@ -97,7 +104,7 @@ export function RequestDetailScreen() {
         txHash = pendiente.txHash;
       } else {
         const recibo = await escrow.createJob({
-          // F8 sustituye esta identidad local por la dirección de la cuenta con passkey.
+          // Pedido simulado, autorizado con una comprobación nueva de identidad.
           client: clienteId,
           provider: cotizacion.providerAddress,
           amount: BigInt(cotizacion.totalStroops),
@@ -105,7 +112,7 @@ export function RequestDetailScreen() {
           fee_bps: cotizacion.feeBps,
           review_secs: BigInt(cotizacion.reviewSecs),
           description: cotizacion.descripcion,
-        });
+        }, cotizacion.id);
         jobId = String(recibo.jobId);
         txHash = recibo.hash;
         writePendingAcceptance({ cotizacionId: cotizacion.id, jobId, txHash });
@@ -204,7 +211,7 @@ export function RequestDetailScreen() {
           <Fingerprint size={18} aria-hidden="true" />
           {procesando ? 'Confirmando…' : 'Aceptar cotización'}
         </Button>
-        <p className="mt-2 text-center text-xs text-masi-muted">Confirma con tu huella</p>
+        <p className="mt-2 text-center text-xs text-masi-muted">Pedido simulado, sin dinero real. Confirma con tu huella o el bloqueo de tu celular.</p>
         <Button variant="secondary" className="mt-3" disabled={procesando} onClick={rechazar}>Rechazar</Button>
       </section>}
 

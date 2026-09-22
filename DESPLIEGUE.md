@@ -176,6 +176,15 @@ Y `rating_of(juan)` devuelve `completed_jobs: 2, rating_count: 1, stars_sum: 5`:
 
 ## Vercel, Upstash y relayer
 
+Actualización P2 (22/09/2026): el entorno personal autorizado de pruebas es
+`https://masiapp-nine.vercel.app`, proyecto `masiapp` de `jossepv117-5688`.
+Usa la base Upstash **masi-pruebas**. No reemplaza el dominio del equipo descrito
+abajo. `VITE_STORE=api` activa datos y pedidos simulados compartidos; las claves
+adicionales `demo-trabajos/` almacenan únicamente simulaciones. Nunca se debe vaciar
+la base compartida sin aprobación del equipo. La revisión actual está en
+`REVISION_P2_ENTREGA.md`; los relatos históricos de este archivo no prueban la
+integración actual de passkeys y pagos.
+
 El proyecto de Vercel usa `frontend` como **Root Directory** y publica en
 `https://masiapp.vercel.app`. La configuración SPA está en `frontend/vercel.json`;
 las rutas `/api/` y `/passkey-test/` quedan fuera del fallback a `index.html`.

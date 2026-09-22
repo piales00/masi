@@ -1,4 +1,4 @@
-import { MAX_MATERIALS_BPS } from './config';
+import { MAX_MATERIALS_BPS } from './config.js';
 
 /** El token usa 7 decimales. Nada de esto pasa por `number`. */
 const SCALE = 10_000_000n;

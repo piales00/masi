@@ -17,6 +17,7 @@ import {
 } from '../../shared/api.js';
 import { TRADES, type Trade } from '../../shared/trades.js';
 import type { KeyValueStore } from './store.js';
+import { handleDemoJobs } from './demoJobs.js';
 
 const ADDRESS_RE = /^C[A-Z2-7]{55}$/;
 const HEX_64_RE = /^[0-9a-f]{64}$/;
@@ -129,6 +130,7 @@ export async function handleApi(req: Request, store: KeyValueStore): Promise<Res
     const segments = path ? path.split('/').map(decodeURIComponent) : [];
 
     if (req.method === 'GET' && path === 'salud') return response({ ok: true });
+    if (segments[0] === 'demo-trabajos' && segments.length <= 2) return await handleDemoJobs(req, store);
 
     if (req.method === 'GET' && path === 'solicitudes') {
       const servicio = url.searchParams.get('servicio');

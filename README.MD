@@ -1,5 +1,11 @@
 # Masi
 
+> **Entrega P2, 22/09/2026:** [revisión de requisitos, pruebas y límites](./REVISION_P2_ENTREGA.md).
+> La demo personal autorizada usa passkeys reales para confirmar identidad y pagos
+> **simulados**, sin dinero real. Con `VITE_STORE=api`, ambos celulares comparten
+> solicitudes y estados de pedidos mediante Redis. Esto no acredita firma de pagos
+> on-chain ni cumplimiento total de los documentos originales.
+
 > *Tu hogar en buenas manos*
 
 Marketplace de servicios donde todo pago va protegido. El cliente bloquea el dinero en un contrato Soroban, el trabajador recibe un adelanto para materiales al empezar y el saldo al aprobar. Las calificaciones solo las puede dejar quien pagó por el contrato.

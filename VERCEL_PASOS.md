@@ -90,7 +90,11 @@ despliegues futuros; no lo conectes a una rama equivocada.
 
 ## Límites actuales
 
-Las pantallas de marketplace conservan el almacenamiento local y las operaciones
-simuladas que trae `develop`. Publicar la web no convierte automáticamente ese
-flujo en pagos reales ni sincroniza las solicitudes entre celulares. La API
-existente y la integración completa de las pantallas deben verificarse por separado.
+Con `VITE_STORE=api` configurada antes de compilar, solicitudes, cotizaciones,
+reseñas y estados de pedidos simulados se comparten mediante la API y Redis.
+Sin esa variable se conserva el modo local en un navegador. Los pedidos locales
+anteriores no se migran automáticamente; crear una solicitud nueva para probar dos celulares.
+Los pagos siguen siendo simulados y no mueven dinero. La huella vuelve a comprobar
+la identidad antes de cada acción manual, pero no firma una transacción de pago.
+Perfiles, fotos, motivos de disputa e historial de accesos siguen siendo locales.
+Ver `REVISION_P2_ENTREGA.md` para la matriz de requisitos y límites pendientes.

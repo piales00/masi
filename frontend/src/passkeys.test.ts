@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Buffer } from 'buffer';
-import { createAccount, hasPendingAccount, resumeAccountCreation } from './passkeys';
+import { createAccount, hasPendingAccount, resumeAccountCreation, confirmDemoIdentity, signIn } from './passkeys';
 
 // Use the browser polyfill, not Node's built-in Buffer, to catch browser-only bugs.
 vi.mock('buffer', () => vi.importActual('buffer/'));
@@ -31,6 +31,34 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('recuperación del registro con Buffer del navegador', () => {
+  it('exige una comprobación nueva en cada acción simulada', async () => {
+    kit.connectWallet.mockResolvedValue({ contractId: 'C_TEST' });
+    await confirmDemoIdentity('C_TEST');
+    await confirmDemoIdentity('C_TEST');
+    expect(kit.connectWallet).toHaveBeenCalledTimes(2);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('rechaza otra cuenta, ausencia de sesión y cancelación', async () => {
+    await expect(confirmDemoIdentity(undefined)).rejects.toThrow('#5');
+    expect(kit.connectWallet).not.toHaveBeenCalled();
+    kit.connectWallet.mockResolvedValue({ contractId: 'C_OTHER' });
+    await expect(confirmDemoIdentity('C_TEST')).rejects.toThrow('#5');
+    kit.connectWallet.mockRejectedValue(new DOMException('Cancelado', 'NotAllowedError'));
+    await expect(confirmDemoIdentity('C_TEST')).rejects.toThrow('Cancelado');
+  });
+
+  it('guarda solo los diez accesos correctos de cada cuenta, no las confirmaciones de pedidos', async () => {
+    kit.connectWallet.mockResolvedValue({ contractId: 'C_TEST' });
+    for (let i = 0; i < 12; i++) await signIn();
+    expect(JSON.parse(localStorage.getItem('masi.logins.C_TEST')!)).toHaveLength(10);
+    const previous = localStorage.getItem('masi.logins.C_TEST');
+    await confirmDemoIdentity('C_TEST');
+    expect(localStorage.getItem('masi.logins.C_TEST')).toBe(previous);
+    kit.connectWallet.mockRejectedValue(new Error('Cancelado'));
+    await expect(signIn()).rejects.toThrow();
+    expect(localStorage.getItem('masi.logins.C_TEST')).toBe(previous);
+  });
   it('reproduce la incompatibilidad del polyfill con base64url', () => {
     expect(() => Buffer.from('-_8', 'base64url')).toThrow('Unknown encoding: base64url');
   });
