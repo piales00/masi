@@ -1,5 +1,8 @@
 import type { RatingSource } from '../../shared/escrow';
+import { contractRatingSource } from './escrow/contractEscrow';
 import { mockRatingSource } from './marketplace';
 
-/** Único punto a cambiar cuando el contrato esté desplegado: la forma ya es la misma. */
-export const ratingSource: RatingSource = mockRatingSource;
+/** Con el escrow real, las estrellas salen de `rating_of` del contrato. */
+export const ratingSource: RatingSource = import.meta.env.VITE_ESCROW === 'contract'
+  ? contractRatingSource
+  : mockRatingSource;
