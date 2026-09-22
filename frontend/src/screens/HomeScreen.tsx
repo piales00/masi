@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowRight, Bell, MapPin } from 'lucide-react';
+import { ArrowRight, Bell, MapPin, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { fieldBox } from '../components/Field';
@@ -65,6 +65,20 @@ export function HomeScreen() {
           Contar mi problema<ArrowRight size={18} aria-hidden="true" />
         </Button>
       </form>
+
+      <button
+        onClick={() => navigate('/recargar')}
+        className="mt-6 flex w-full items-center gap-3 rounded-masi-card border border-masi-gray bg-white p-4 text-left shadow-masi-sm transition-colors duration-200 ease-out hover:border-masi-blue"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-masi-blue-50 text-masi-blue">
+          <Wallet size={20} aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-masi-navy">Recargar saldo</span>
+          <span className="block text-xs text-masi-muted">Para pagar tu trabajo con dinero protegido</span>
+        </span>
+        <ArrowRight size={18} className="shrink-0 text-masi-blue" aria-hidden="true" />
+      </button>
 
       <section className="mt-8" aria-labelledby="servicios">
         <h2 id="servicios" className="text-sm font-semibold text-masi-navy">O elige un servicio</h2>
