@@ -188,6 +188,20 @@ export const nameOfProvider = (providerId: string): string | null =>
   providers.find(item => item.id === providerId)?.name ?? null;
 
 /**
+ * Dirección con la que el profesional va a firmar. Manda la cuenta creada con huella,
+ * que trae su propio `contractId`; el catálogo solo respalda a los profesionales de
+ * muestra, que no tienen cuenta. Sin ninguna de las dos se devuelve null a propósito:
+ * la postulación queda sin dirección y la cotización sigue bloqueada, como hasta ahora.
+ *
+ * Se exige que la cuenta sea la de ese mismo profesional para que una sesión guardada
+ * no preste su dirección a la postulación de otro.
+ */
+export function providerAddressOf(cuenta: ProviderProfile | null, providerId: string): string | null {
+  const propia = cuenta?.id === providerId ? cuenta.contractId?.trim() : undefined;
+  return propia || addressOfProvider(providerId);
+}
+
+/**
  * createJob no se puede repetir: crearía un segundo trabajo. Si la aceptación se
  * interrumpe después de la firma, el recibo queda aquí y solo se reintenta el guardado.
  */
@@ -351,7 +365,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       id: crypto.randomUUID(),
       // El nombre de la cuenta manda; el catálogo lo respalda. El genérico es el último recurso.
       providerNombre: providerAccount?.fullName?.trim() || nameOfProvider(input.providerId) || PROVIDER_FALLBACK_NAME,
-      providerAddress: addressOfProvider(input.providerId),
+      providerAddress: providerAddressOf(providerAccount, input.providerId),
       providerPerfil: providerAccount
         ? {
           servicios: providerAccount.services,
