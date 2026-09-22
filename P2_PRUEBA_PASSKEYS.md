@@ -30,7 +30,7 @@ No uses `smart-account-kit`: usa otro modelo de autorización on-chain y cambiar
 1. **El repo `kalepail/passkey-kit` está archivado.** Es el que tiene las 499 estrellas y al que apuntan casi todos los tutoriales y respuestas de foros. El bueno es **`stellar/passkey-kit`**. El paquete de npm ya sale del repo nuevo, así que instalar está bien; el peligro es copiar código o issues del viejo.
 2. **Launchtube está deprecado.** Si un ejemplo lo menciona, es viejo. Lo reemplazó el relayer de OpenZeppelin.
 3. **Ninguna variable `VITE_` puede llevar un secreto.** Todo lo que empieza por `VITE_` se empaqueta en el bundle y queda público. La clave del relayer vive solo en el servidor.
-4. **Las URLs de preview de Vercel (`masiapp-git-…vercel.app`) son otro origen.** Una passkey creada ahí no sirve en el dominio principal. Prueba siempre en la URL principal.
+4. **Las URLs de preview de Vercel (`masiapp-git-…vercel.app`, `masiapp-abc123-…vercel.app`) son otro origen.** Una passkey creada ahí no sirve en el dominio principal. Prueba siempre en la URL principal.
 
 ---
 
@@ -41,7 +41,7 @@ No uses `smart-account-kit`: usa otro modelo de autorización on-chain y cambiar
 ```
 http://localhost:5173              ← origen A
 https://masiapp.vercel.app        ← origen B
-https://masiapp-git-rama-….vercel.app ← origen C
+https://masiapp-git-rama-….vercel.app ← origen C (preview)
 ```
 
 Una cuenta creada en A **no existe** en B. Consecuencias prácticas:

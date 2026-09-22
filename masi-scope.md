@@ -201,6 +201,8 @@ Se intentan con una prueba de 3 horas el 20 de septiembre; si el 22 en la noche 
 
 **Condiciones:** HTTPS y dominio definitivo desde el día 1 (la passkey queda atada al dominio exacto). Se hostea en Vercel, que da HTTPS automático: `https://masiapp.vercel.app` no se renombra nunca, porque al cambiarlo las cuentas creadas antes dejan de entrar. Se prueba siempre en la URL principal, nunca en un deploy preview (`masiapp-git-…vercel.app`), que es otro origen. El dominio tiene que estar fijo **antes** de sembrar los trabajos del 24. En `localhost` las passkeys funcionan sin HTTPS, así que el riesgo aparece recién al pasar al celular.
 
+> **21/09:** el hosting se migró a Vercel por falta de créditos en Netlify, antes de crear ninguna wallet definitiva. El dominio congelado es ahora **`https://masiapp.vercel.app`**.
+
 **Pendiente de verificar hoy:** cuál de las dos librerías hermanas usar — [`passkey-kit`](https://github.com/stellar/passkey-kit) (modelo de firmantes plano) o [`smart-account-kit`](https://github.com/stellar/smart-account-kit) (context rules de OpenZeppelin sobre la cuenta auditada de `stellar-contracts`). **No son intercambiables:** usan modelos de autorización on-chain distintos, así que cambiar de una a otra después obliga a rehacer el contrato de cuenta. Para Masi basta el modelo plano; `smart-account-kit` solo se justifica si hiciera falta límites de gasto o umbrales. Verificar además que el ejemplo corra en testnet y que el relayer esté operativo: el [OpenZeppelin Relayer](https://docs.openzeppelin.com/relayer/stellar) reemplazó al Launchtube deprecado y tiene instancia hosteada de testnet en `https://channels.openzeppelin.com/testnet` (API keys en `/gen`).
 
 **Fallback, en orden:**
