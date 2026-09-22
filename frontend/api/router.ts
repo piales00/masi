@@ -5,6 +5,9 @@ import { redisStore } from '../server/redisStore';
  * Vercel enruta aquí todo `/api/*` menos el relayer, con la ruta en el parámetro
  * `ruta` (ver `vercel.json`). Antes había un archivo comodín, pero solo atendía
  * rutas de un nivel: `/api/solicitudes` funcionaba y `/api/solicitudes/:id` daba 404.
+ *
+ * No se llama `index` a propósito: la regla de reescritura excluye `router`, para que
+ * su propio destino no vuelva a entrar por la misma regla.
  */
 function ruta(req: Request): string {
   return new URL(req.url).searchParams.get('ruta') ?? '';
