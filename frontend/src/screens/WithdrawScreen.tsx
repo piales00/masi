@@ -5,6 +5,7 @@ import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useDemo } from '../demo/DemoContext';
 import { ANCHOR_DOMINIO, abrirRetiro, seguirRetiro, textoEstado } from '../anchor/retiro';
+import { RETIRO_NO_DISPONIBLE } from '../anchor/sep45';
 import type { SesionRetiro } from '../anchor/retiro';
 import { signAuthEntry } from '../passkeys';
 
@@ -77,7 +78,15 @@ export function WithdrawScreen() {
         {!cuenta && <p className="mt-3 text-sm text-masi-muted">Primero entra con tu cuenta de profesional.</p>}
       </div>
 
-      {error && <p role="alert" className="mt-4 rounded-masi-input bg-masi-blue-50 p-3 text-sm text-masi-error">{error}</p>}
+      {/*
+        * Que el proveedor de pagos no admita todavía las cuentas con huella no es una avería:
+        * se avisa en tono informativo, no en rojo, y sin prometer un envío que no va a ocurrir.
+        */}
+      {error && (error === RETIRO_NO_DISPONIBLE
+        ? <p role="status" className="mt-4 flex gap-2 rounded-masi-card bg-masi-cream p-3 text-sm text-masi-navy">
+          <Info size={18} className="shrink-0" aria-hidden="true" />{error}
+        </p>
+        : <p role="alert" className="mt-4 rounded-masi-input bg-masi-blue-50 p-3 text-sm text-masi-error">{error}</p>)}
 
       {sesion && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         <h3 className="text-sm font-semibold text-masi-navy">Tu retiro</h3>

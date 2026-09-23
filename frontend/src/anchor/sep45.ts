@@ -145,10 +145,11 @@ export async function obtenerToken(opciones: OpcionesToken, firmar: FirmarEntrad
  * firma correcta. Con un anchor que admita V2 —o con SEP-10 y una cuenta clásica— el
  * mismo código funciona.
  */
+export const RETIRO_NO_DISPONIBLE = 'Verificamos tu identidad con tu huella. Nuestro proveedor de '
+  + 'pagos todavía no admite cuentas con huella, así que aún no podemos enviar el dinero. Tu saldo '
+  + 'está intacto.';
+
 export function explicarFallo(error: string | undefined): string {
-  if (error && /unknown enum value/i.test(error)) {
-    return 'Este anchor todavía no reconoce la forma en que firman las cuentas con huella. '
-      + 'No es un problema de tu cuenta: el servicio de pruebas aún no admite el formato nuevo.';
-  }
+  if (error && /unknown enum value/i.test(error)) return RETIRO_NO_DISPONIBLE;
   return error || 'El anchor no aceptó tu identificación.';
 }
