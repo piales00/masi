@@ -40,8 +40,13 @@ export const PROVIDER_NAV: readonly NavItem[] = [
 ];
 
 /**
- * Una sola navegación con dos presentaciones: barra inferior en móvil y barra lateral
- * desde 768px. AppShell la coloca con flex-direction; aquí solo cambia la forma.
+ * Una sola navegación con dos presentaciones: cápsula flotante abajo en móvil y barra
+ * lateral desde 768px. AppShell la coloca con flex-direction; aquí solo cambia la forma.
+ *
+ * En móvil no va pegada al borde: lleva margen a los lados y abajo (más el inset del
+ * dispositivo, para no meterse bajo la barra de gestos), esquinas muy redondeadas y una
+ * sombra tenue. Sigue en el flujo, no flotando por encima: así nunca tapa el final del
+ * contenido ni el pie de una pantalla.
  */
 export function MainNav({ items }: { items: readonly NavItem[] }) {
   const { clienteId, providerProfile, solicitudes, postulaciones, cotizaciones } = useDemo();
@@ -56,8 +61,9 @@ export function MainNav({ items }: { items: readonly NavItem[] }) {
   return <nav
     aria-label="Secciones de Masi"
     className={cn(
-      'order-last flex shrink-0 border-t border-masi-gray bg-white px-2 pt-1.5 pb-[calc(0.375rem+var(--masi-safe-bottom))]',
-      'md:order-first md:w-56 md:flex-col md:gap-1 md:border-t-0 md:border-r md:px-3 md:py-4',
+      'order-last flex shrink-0 gap-1 rounded-full border border-masi-gray bg-white px-1.5 py-1.5 shadow-masi-md',
+      'mx-3 mb-[calc(0.5rem+var(--masi-safe-bottom))]',
+      'md:order-first md:mx-0 md:mb-0 md:w-56 md:flex-col md:rounded-none md:border-0 md:border-r md:px-3 md:py-4 md:shadow-none',
     )}
   >
     {items.map(({ to, label, icon: Icon, end, badge }) => {
@@ -68,22 +74,21 @@ export function MainNav({ items }: { items: readonly NavItem[] }) {
         to={to}
         end={end}
         className={({ isActive }) => cn(
-          'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-[11px] leading-tight font-semibold',
-          'transition-colors duration-200 ease-out md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:py-2.5 md:text-sm',
-          isActive ? 'text-masi-blue md:bg-masi-blue-50' : 'text-masi-muted hover:text-masi-navy md:hover:bg-masi-bg',
+          'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-2 text-[11px] leading-tight font-semibold',
+          'transition-colors duration-200 ease-out md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-2xl md:px-3 md:py-2.5 md:text-sm',
+          // Dentro de una cápsula, la marca del activo va dentro: un relleno suave, no
+          // una barra pegada al borde, que ahora quedaría cortada por el redondeo.
+          isActive ? 'bg-masi-blue-50 text-masi-blue md:bg-masi-blue-50' : 'text-masi-muted hover:text-masi-navy md:hover:bg-masi-bg',
         )}
       >
-        {({ isActive }) => <>
-          {isActive && <span aria-hidden="true" className="absolute top-0 left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-full bg-masi-orange md:hidden" />}
-          <span className="relative">
-            <Icon size={22} aria-hidden="true" className="md:size-5" />
-            {badgeLabel && <span className="absolute -top-1.5 -right-2 grid min-w-4 place-items-center rounded-full bg-masi-blue px-1 text-[10px] font-bold text-white ring-2 ring-white">
-              <span aria-hidden="true">{count}</span>
-              <span className="sr-only">{badgeLabel}</span>
-            </span>}
-          </span>
-          <span>{label}</span>
-        </>}
+        <span className="relative">
+          <Icon size={22} aria-hidden="true" className="md:size-5" />
+          {badgeLabel && <span className="absolute -top-1.5 -right-2 grid min-w-4 place-items-center rounded-full bg-masi-blue px-1 text-[10px] font-bold text-white ring-2 ring-white">
+            <span aria-hidden="true">{count}</span>
+            <span className="sr-only">{badgeLabel}</span>
+          </span>}
+        </span>
+        <span>{label}</span>
       </NavLink>;
     })}
   </nav>;

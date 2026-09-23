@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { BadgeCheck, Briefcase, CheckCircle2, Clock3, MapPin, Star } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Avatar } from '../components/Avatar';
+import { AvatarProfesional } from '../components/AvatarProfesional';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { ScreenFooter } from '../components/ScreenFooter';
@@ -64,7 +64,7 @@ export function ProposalDetailScreen() {
     <div className="px-4 py-6">
       <section className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         <div className="flex items-start gap-3">
-          <Avatar name={propuesta.providerNombre} tint={service.tint} size="lg" />
+          <AvatarProfesional providerId={propuesta.providerId} nombre={propuesta.providerNombre} tint={service.tint} size="lg" />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-bold text-masi-navy">{propuesta.providerNombre}</h2>
             {ficha && <p className="mt-0.5 truncate text-sm text-masi-blue">{ficha.profession}</p>}

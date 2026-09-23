@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { CalendarClock, CheckCircle2, Clock3, Fingerprint, MapPin, Search, ShieldCheck, Star } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Avatar } from '../components/Avatar';
+import { AvatarProfesional } from '../components/AvatarProfesional';
 import { Button } from '../components/Button';
 import { FotosDeSolicitud } from '../components/FotosDeSolicitud';
 import { Screen } from '../components/Screen';
@@ -264,7 +264,7 @@ export function RequestDetailScreen() {
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <Avatar name={propuesta.providerNombre} tint={service.tint} />
+                  <AvatarProfesional providerId={propuesta.providerId} nombre={propuesta.providerNombre} tint={service.tint} />
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold text-masi-navy">{propuesta.providerNombre}</h3>
                     {rating && <p className="mt-0.5 flex items-center gap-1.5 text-sm text-masi-muted">

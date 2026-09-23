@@ -29,7 +29,7 @@ export interface ProviderProfile {
   district: string;
   yearsExperience: number;
   bio: string;
-  /** Vista previa local: no se guarda, así que tras recargar el avatar vuelve a las iniciales. */
+  /** Data URL de su foto, acotada por `toStoredImage`. El cliente la ve desde el servidor. */
   photoUrl?: string;
 }
 
@@ -375,10 +375,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const saveProviderProfile = useCallback((next: ProviderProfile) => {
     setProviderAccount(next);
-    // photoUrl queda fuera: es una URL de objeto que no sobrevive a la recarga.
-    const { photoUrl: _photoUrl, ...persisted } = next;
-    write(PROVIDER_KEY, persisted);
-    if (next.contractId) write(`masi.provider.${next.contractId}`, persisted);
+    /*
+     * `photoUrl` ya es una data URL acotada por `toStoredImage`, no una URL de objeto:
+     * sobrevive a la recarga y cabe de sobra en el almacenamiento del navegador. La copia
+     * que ve el cliente vive en el servidor, en el recurso del profesional.
+     */
+    write(PROVIDER_KEY, next);
+    if (next.contractId) write(`masi.provider.${next.contractId}`, next);
     openSession('provider');
   }, [openSession]);
 

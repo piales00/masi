@@ -134,6 +134,16 @@ export interface FotosDescargo {
   fotos: string[];
 }
 
+/**
+ * Foto de perfil de un profesional. Vive en su propio recurso, no dentro de la
+ * postulación: esa lista se relee cada pocos segundos y no debe arrastrar imágenes.
+ *
+ * `GET /api/profesionales/:id/foto` · `PUT` con `{ foto }` para ponerla o cambiarla.
+ */
+export interface FotoProfesional {
+  foto: string | null;
+}
+
 export interface ApiError {
   error: {
     code: 'INVALID' | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'RELAYER' | 'INTERNAL';
