@@ -5,13 +5,28 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { DemoProvider } from '../demo/DemoContext';
 import { escrow } from '../escrow';
 import { solesToStroops } from '../money';
-import { leerIncidencia } from '../demo/incidencias';
 import { store } from '../demo/store';
 import { JobScreen } from './JobScreen';
 import type { JobRole } from '../escrow/jobs';
 import { confirmDemoIdentity } from '../passkeys';
 
 vi.mock('../passkeys', () => ({ confirmDemoIdentity: vi.fn() }));
+
+/**
+ * Las versiones de una disputa viven en el almacén compartido. Aquí se simula para
+ * comprobar qué se envía sin depender de la red.
+ */
+const putDescargo = vi.fn(async (_jobId: string, _input: { parte: string; motivo: string; fotos: string[] }) =>
+  ({ jobId: '1', descargos: [], creadaEn: '', actualizadaEn: '' }));
+const getDisputa = vi.fn(async () => null);
+vi.mock('../api/client', () => ({
+  api: {
+    putDescargo: (jobId: string, input: { parte: string; motivo: string; fotos: string[] }) => putDescargo(jobId, input),
+    getDisputa: () => getDisputa(),
+    fotosDescargo: async () => [],
+  },
+  ApiCallError: class extends Error { code = 'INVALID'; },
+}));
 
 const CLIENTE = 'cliente-1';
 const PROFESIONAL = 'profesional-1';
@@ -245,7 +260,9 @@ describe('reportar un problema', () => {
       expect((await escrow.getJob(jobId)).state.tag).toBe('Disputed');
     });
     expect(await screen.findByRole('heading', { name: 'Problema reportado' })).toBeTruthy();
-    expect(leerIncidencia(jobId.toString())?.motivo).toBe('El cliente no me dejó entrar.');
+    expect(putDescargo).toHaveBeenCalledWith(jobId.toString(), expect.objectContaining({
+      parte: 'provider', motivo: 'El cliente no me dejó entrar.', fotos: [],
+    }));
   });
 
   it('desde Submitted, el cliente también puede reportar', async () => {
@@ -259,7 +276,7 @@ describe('reportar un problema', () => {
     await waitFor(async () => {
       expect((await escrow.getJob(jobId)).state.tag).toBe('Disputed');
     });
-    expect(leerIncidencia(jobId.toString())?.reportadaPor).toBe('client');
+    expect(putDescargo.mock.calls.at(-1)?.[1]).toMatchObject({ parte: 'client' });
   });
 
   it('no se envía sin motivo y se puede cancelar', async () => {

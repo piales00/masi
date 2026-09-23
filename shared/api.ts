@@ -18,6 +18,7 @@ export interface Solicitud {
   clienteId: string;
   servicio: Trade;
   descripcion: string;
+  /** Cuántas fotos tiene la solicitud. Las imágenes se piden aparte. */
   fotos: number;
   ubicacion: string;
   distrito: string;
@@ -28,7 +29,20 @@ export interface Solicitud {
   actualizadaEn: string;
 }
 export type SolicitudInput = Pick<Solicitud,
-  'clienteId' | 'servicio' | 'descripcion' | 'fotos' | 'ubicacion' | 'distrito' | 'cliente'>;
+  'clienteId' | 'servicio' | 'descripcion' | 'ubicacion' | 'distrito' | 'cliente'> & {
+  /** Data URLs de las imágenes, al crear. El servidor guarda el recuento en `Solicitud.fotos`. */
+  fotos: string[];
+};
+
+/** Topes de las fotos de una solicitud. Se miden en caracteres de la data URL. */
+export const MAX_FOTOS = 5;
+export const MAX_BYTES_FOTO = 200_000;
+export const MAX_BYTES_FOTOS = 800_000;
+
+/** `GET /api/solicitudes/:id/fotos`. Una solicitud sin fotos devuelve `{ fotos: [] }`. */
+export interface FotosSolicitud {
+  fotos: string[];
+}
 
 export interface Postulacion {
   id: string;
@@ -81,6 +95,44 @@ export interface Resena {
   creadaEn: string;
 }
 export type ResenaInput = Omit<Resena, 'jobId' | 'creadaEn'>;
+
+/**
+ * Disputas. El contrato congela el saldo, pero no tiene dónde guardar por qué: eso vive
+ * aquí, compartido, para que el árbitro pueda leer las dos versiones antes de repartir.
+ *
+ * Cada parte deja **un** descargo, que puede reescribir. Las imágenes van aparte del
+ * registro, igual que las de una solicitud: el listado del panel no debe arrastrarlas.
+ */
+export type ParteEnDisputa = 'client' | 'provider';
+
+export interface Descargo {
+  parte: ParteEnDisputa;
+  motivo: string;
+  /** Cuántas fotos aportó. Las imágenes se piden aparte. */
+  fotos: number;
+  creadaEn: string;
+}
+
+export interface Disputa {
+  jobId: string;
+  descargos: Descargo[];
+  creadaEn: string;
+  actualizadaEn: string;
+}
+
+/** `PUT /api/disputas/:jobId`. Reemplaza el descargo de esa parte. */
+export interface DescargoInput {
+  parte: ParteEnDisputa;
+  motivo: string;
+  fotos: string[];
+}
+
+export const MAX_MOTIVO = 600;
+
+/** `GET /api/disputas/:jobId/fotos/:parte`. Sin fotos devuelve `{ fotos: [] }`. */
+export interface FotosDescargo {
+  fotos: string[];
+}
 
 export interface ApiError {
   error: {

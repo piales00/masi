@@ -8,6 +8,7 @@ import { friendlyError } from '../contractErrors';
 import { escrow } from '../escrow';
 import { formatSoles } from '../money';
 import { direccionCorta, enDisputa, repartoDe } from '../arbitraje/reparto';
+import { useDisputa } from '../useDisputa';
 import type { Job } from '../../../shared/escrow';
 
 /**
@@ -39,6 +40,44 @@ function Dato({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fu
     <dt className="text-sm text-masi-muted">{etiqueta}</dt>
     <dd className={fuerte ? 'text-base font-bold text-masi-navy' : 'text-sm font-semibold text-masi-navy'}>{valor}</dd>
   </div>;
+}
+
+/**
+ * Las dos versiones, con sus pruebas. Es lo que separa arbitrar de repartir a ciegas:
+ * el contrato congela el saldo pero no guarda por qué, así que esto viene del almacén
+ * compartido. Si solo ha hablado una parte, se dice — no se rellena el hueco.
+ */
+function Versiones({ jobId }: { jobId: string }) {
+  const { disputa, fotos, cargando } = useDisputa(jobId);
+  const descargos = disputa?.descargos ?? [];
+
+  if (cargando) return <p className="mt-4 text-sm text-masi-muted">Cargando las versiones…</p>;
+
+  return <section className="mt-4 border-t border-masi-gray pt-3">
+    <h4 className="text-sm font-semibold text-masi-navy">Lo que dice cada parte</h4>
+
+    {descargos.length === 0 && <p className="mt-2 text-sm text-masi-muted">
+      Ninguna de las partes dejó su versión.
+    </p>}
+
+    {descargos.map(descargo => <article key={descargo.parte} className="mt-3">
+      <p className="text-xs font-semibold text-masi-blue">
+        {descargo.parte === 'client' ? 'Cliente' : 'Profesional'}
+      </p>
+      <p className="mt-1 text-sm leading-relaxed text-masi-text">{descargo.motivo}</p>
+      {fotos[descargo.parte].length > 0 && <ul className="mt-2 flex flex-wrap gap-2">
+        {fotos[descargo.parte].map((foto, indice) => <li key={indice}>
+          <a href={foto} target="_blank" rel="noreferrer">
+            <img src={foto} alt={`Prueba ${indice + 1}`} className="size-20 rounded-masi-input border border-masi-gray object-cover" />
+          </a>
+        </li>)}
+      </ul>}
+    </article>)}
+
+    {descargos.length === 1 && <p className="mt-3 text-xs text-masi-muted">
+      Solo ha respondido una parte. La otra todavía puede explicarse desde la app.
+    </p>}
+  </section>;
 }
 
 function TarjetaDisputa({ trabajo, clave, alResolver }: {
@@ -93,6 +132,8 @@ function TarjetaDisputa({ trabajo, clave, alResolver }: {
     <p className="mt-2 text-xs text-masi-muted">
       Cliente {direccionCorta(trabajo.client)} · Profesional {direccionCorta(trabajo.provider)}
     </p>
+
+    <Versiones jobId={trabajo.id.toString()} />
 
     <dl className="mt-4 space-y-2 border-t border-masi-gray pt-3">
       <Dato etiqueta="Total del trabajo" valor={formatSoles(trabajo.amount)} />

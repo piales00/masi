@@ -2,11 +2,20 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   DEFAULT_REVIEW_SECS,
   FEE_BPS,
+  MAX_BYTES_FOTO,
+  MAX_BYTES_FOTOS,
+  MAX_FOTOS,
   MAX_MATERIALS_BPS,
+  MAX_MOTIVO,
   type ApiError,
   type Cotizacion,
   type CotizacionInput,
   type CotizacionPatch,
+  type Descargo,
+  type DescargoInput,
+  type Disputa,
+  type FotosDescargo,
+  type FotosSolicitud,
   type Postulacion,
   type PostulacionInput,
   type Resena,
@@ -25,6 +34,18 @@ const UINT_RE = /^(0|[1-9][0-9]*)$/;
 const SOLICITUD_ESTADOS: readonly SolicitudEstado[] = [
   'buscando_profesionales', 'profesional_elegido', 'cotizada', 'contratada',
 ];
+/** Solo formatos de mapa de bits: un SVG o un HTML pueden llevar script dentro. */
+const FOTO_PREFIJOS = ['data:image/jpeg;base64,', 'data:image/png;base64,', 'data:image/webp;base64,'];
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/**
+ * Las imágenes viven fuera de `solicitudes/`: el listado recorre ese prefijo cada
+ * pocos segundos y no debe arrastrarlas.
+ */
+const fotosKey = (solicitudId: string) => `fotos/${solicitudId}`;
+
+/** Igual que las de una solicitud: fuera del prefijo que recorre el listado. */
+const fotosDescargoKey = (jobId: string, parte: string) => `fotos-disputa/${jobId}/${parte}`;
 
 function response(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -69,10 +90,40 @@ function solicitudInput(value: Record<string, unknown>): SolicitudInput | null {
   const keys = ['clienteId', 'servicio', 'descripcion', 'fotos', 'ubicacion', 'distrito', 'cliente'] as const;
   if (!exactKeys(value, keys) || !nonEmpty(value.clienteId) ||
       typeof value.servicio !== 'string' || !TRADES.includes(value.servicio as Trade) ||
-      !nonEmpty(value.descripcion) || typeof value.fotos !== 'number' ||
-      !Number.isInteger(value.fotos) || value.fotos < 0 ||
+      !nonEmpty(value.descripcion) || !Array.isArray(value.fotos) ||
       !nonEmpty(value.ubicacion) || !nonEmpty(value.distrito) || !nonEmpty(value.cliente)) return null;
   return value as unknown as SolicitudInput;
+}
+
+/** Devuelve por qué se rechazan las fotos, o `null` si todas pasan. Vienen del navegador: hostiles. */
+function motivoFotosInvalidas(fotos: unknown[]): string | null {
+  if (fotos.length > MAX_FOTOS) return `Se admiten como mucho ${MAX_FOTOS} fotos.`;
+  let total = 0;
+  for (const [index, foto] of fotos.entries()) {
+    const n = index + 1;
+    if (typeof foto !== 'string') return `La foto ${n} no es una imagen.`;
+    const prefijo = FOTO_PREFIJOS.find(item => foto.startsWith(item));
+    if (!prefijo) {
+      return /^data:image\/svg/i.test(foto)
+        ? `La foto ${n} es un SVG, y no se admite.`
+        : `La foto ${n} no es una imagen JPEG, PNG ni WebP.`;
+    }
+    if (foto.length > MAX_BYTES_FOTO) return `La foto ${n} pesa más de ${MAX_BYTES_FOTO / 1000} KB.`;
+    if (!BASE64_RE.test(foto.slice(prefijo.length))) return `La foto ${n} tiene caracteres no válidos.`;
+    total += foto.length;
+  }
+  if (total > MAX_BYTES_FOTOS) return `Entre todas, las fotos pesan más de ${MAX_BYTES_FOTOS / 1000} KB.`;
+  return null;
+}
+
+function descargoInput(value: Record<string, unknown>): DescargoInput | null {
+  if (!exactKeys(value, ['parte', 'motivo', 'fotos'])) return null;
+  if (value.parte !== 'client' && value.parte !== 'provider') return null;
+  if (typeof value.motivo !== 'string') return null;
+  const motivo = value.motivo.trim();
+  if (!motivo || motivo.length > MAX_MOTIVO) return null;
+  if (!Array.isArray(value.fotos)) return null;
+  return { parte: value.parte, motivo, fotos: value.fotos as string[] };
 }
 
 function postulacionInput(value: Record<string, unknown>): PostulacionInput | null {
@@ -137,6 +188,49 @@ export async function handleApi(req: Request, store: KeyValueStore, rutaExplicit
     if (req.method === 'GET' && path === 'salud') return response({ ok: true });
     if (segments[0] === 'demo-trabajos' && segments.length <= 2) return await handleDemoJobs(req, store);
 
+    if (req.method === 'GET' && path === 'disputas') {
+      return response({ items: await records<Disputa>(store, 'disputas/') });
+    }
+
+    if (segments[0] === 'disputas' && segments.length === 2 && req.method === 'GET') {
+      const item = await store.get(`disputas/${segments[1]}`);
+      return item ? response(item) : error(404, 'NOT_FOUND', 'Disputa no encontrada.');
+    }
+
+    if (segments[0] === 'disputas' && segments.length === 2 && req.method === 'PUT') {
+      const body = await readBody(req);
+      const input = body && descargoInput(body);
+      if (!input) return error(400, 'INVALID', 'Descargo inválido.');
+      const malas = motivoFotosInvalidas(input.fotos);
+      if (malas) return error(400, 'INVALID', malas);
+
+      const jobId = segments[1];
+      const now = new Date().toISOString();
+      const previa = await store.get(`disputas/${jobId}`) as Disputa | null;
+      const descargo: Descargo = {
+        parte: input.parte, motivo: input.motivo, fotos: input.fotos.length, creadaEn: now,
+      };
+      // Primero las fotos: nunca un descargo visible cuyas imágenes aún no existan.
+      await store.set(fotosDescargoKey(jobId, input.parte), input.fotos);
+      const item: Disputa = {
+        jobId,
+        // Cada parte deja uno: el suyo se reemplaza, el de la otra se respeta.
+        descargos: [...(previa?.descargos ?? []).filter(d => d.parte !== input.parte), descargo],
+        creadaEn: previa?.creadaEn ?? now,
+        actualizadaEn: now,
+      };
+      await store.set(`disputas/${jobId}`, item);
+      return response(item, previa ? 200 : 201);
+    }
+
+    if (segments[0] === 'disputas' && segments[2] === 'fotos' && segments.length === 4 && req.method === 'GET') {
+      if (segments[3] !== 'client' && segments[3] !== 'provider') {
+        return error(400, 'INVALID', 'Parte inválida.');
+      }
+      const fotos = await store.get(fotosDescargoKey(segments[1], segments[3]));
+      return response({ fotos: Array.isArray(fotos) ? fotos : [] } satisfies FotosDescargo);
+    }
+
     if (req.method === 'GET' && path === 'solicitudes') {
       const servicio = url.searchParams.get('servicio');
       const clienteId = url.searchParams.get('clienteId');
@@ -151,8 +245,15 @@ export async function handleApi(req: Request, store: KeyValueStore, rutaExplicit
       const body = await readBody(req);
       const input = body && solicitudInput(body);
       if (!input) return error(400, 'INVALID', 'Solicitud inválida.');
+      const motivo = motivoFotosInvalidas(input.fotos);
+      if (motivo) return error(400, 'INVALID', motivo);
       const now = new Date().toISOString();
-      const item: Solicitud = { ...input, id: randomUUID(), estado: 'buscando_profesionales', postulacionElegidaId: null, creadaEn: now, actualizadaEn: now };
+      const item: Solicitud = {
+        ...input, fotos: input.fotos.length, id: randomUUID(), estado: 'buscando_profesionales',
+        postulacionElegidaId: null, creadaEn: now, actualizadaEn: now,
+      };
+      // Primero las fotos: así nunca hay una solicitud visible cuyas fotos aún no existan.
+      if (input.fotos.length > 0) await store.set(fotosKey(item.id), input.fotos);
       await store.set(`solicitudes/${item.id}`, item);
       return response(item, 201);
     }
@@ -160,6 +261,12 @@ export async function handleApi(req: Request, store: KeyValueStore, rutaExplicit
     if (segments[0] === 'solicitudes' && segments.length === 2 && req.method === 'GET') {
       const item = await store.get(`solicitudes/${segments[1]}`);
       return item ? response(item) : error(404, 'NOT_FOUND', 'Solicitud no encontrada.');
+    }
+
+    if (segments[0] === 'solicitudes' && segments[2] === 'fotos' && segments.length === 3 && req.method === 'GET') {
+      if (!await store.get(`solicitudes/${segments[1]}`)) return error(404, 'NOT_FOUND', 'Solicitud no encontrada.');
+      const fotos = await store.get(fotosKey(segments[1]));
+      return response({ fotos: Array.isArray(fotos) ? fotos : [] } satisfies FotosSolicitud);
     }
 
     if (segments[0] === 'solicitudes' && segments[2] === 'elegir' && segments.length === 3 && req.method === 'POST') {

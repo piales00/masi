@@ -154,7 +154,8 @@ const apiStore: DemoStore = {
       clienteId: solicitud.clienteId,
       servicio: solicitud.servicio,
       descripcion: solicitud.descripcion,
-      fotos: solicitud.fotos.length,
+      // Las imágenes siguen en local hasta la tarea B.2, que las manda aquí.
+      fotos: [],
       ubicacion: solicitud.ubicacion,
       distrito: solicitud.distrito,
       cliente: solicitud.cliente,
