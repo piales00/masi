@@ -285,6 +285,8 @@ interface DemoValue {
   saveReview: (jobId: string, input: ResenaInput) => Promise<Resena>;
   readReview: (jobId: string) => Promise<Resena | null>;
   /** Vacío cuando el almacén responde; con texto cuando la última lectura falló. */
+  /** La primera lectura del almacen compartido sigue en curso. */
+  cargando: boolean;
   syncError: string;
   retrySync: () => void;
   setAvailable: (next: boolean) => void;
@@ -298,9 +300,23 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(() => read(SESSION_KEY, parseSession) ?? { client: false, provider: false });
   const [legacyClientId] = useState(readOrCreateClientId);
   const clienteId = clientAccount?.contractId ?? legacyClientId;
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], legacyClientId));
-  const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? []));
-  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => read(QUOTES_KEY, parseList<Cotizacion>) ?? []);
+  /*
+   * En modo API el localStorage no es fuente de nada: `persistir` ni siquiera escribe.
+   * Leerlo aquí pintaba restos de sesiones locales durante el primer render, y al llegar
+   * la respuesta del almacén compartido desaparecían. Eso es el parpadeo de "aparece y
+   * luego se va". En modo local sí es la fuente y se lee como siempre.
+   */
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => (store.remoto
+    ? []
+    : migrateSolicitudes(read(REQUESTS_KEY, parseList<Solicitud>) ?? [], legacyClientId)));
+  const [postulaciones, setPostulaciones] = useState<Postulacion[]>(() => (store.remoto
+    ? []
+    : migratePostulaciones(read(PROPOSALS_KEY, parseList<Postulacion>) ?? [])));
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>(() => (store.remoto
+    ? []
+    : read(QUOTES_KEY, parseList<Cotizacion>) ?? []));
+  /** Primera lectura del almacén compartido en curso: aún no se sabe si hay algo. */
+  const [cargando, setCargando] = useState(store.remoto);
   const [available, setAvailableState] = useState<boolean>(() => read<boolean>(AVAILABLE_KEY, v => (typeof v === 'boolean' ? v : null)) ?? true);
 
   /** En modo API la fuente es el almacén compartido: no se duplica en localStorage. */
@@ -310,11 +326,16 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   /** Relee lo compartido. En local devuelve null y no toca el estado. */
   const cargar = useCallback(async () => {
-    const datos = await store.cargar();
-    if (!datos) return;
-    setSolicitudes(datos.solicitudes);
-    setPostulaciones(datos.postulaciones);
-    setCotizaciones(datos.cotizaciones);
+    try {
+      const datos = await store.cargar();
+      if (!datos) return;
+      setSolicitudes(datos.solicitudes);
+      setPostulaciones(datos.postulaciones);
+      setCotizaciones(datos.cotizaciones);
+    } finally {
+      // Tambien al fallar: una lista vacia por un error no debe quedarse en "cargando".
+      setCargando(false);
+    }
   }, []);
 
   const { error: syncError, recargar: retrySync } = usePolling(cargar, { activo: store.remoto, intervalo: 3000 });
@@ -493,8 +514,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const providerProfile = session.provider ? providerAccount : null;
 
   const value = useMemo(
-    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable }),
-    [profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable],
+    () => ({ profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, cargando, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable }),
+    [profile, clienteId, providerProfile, solicitudes, postulaciones, cotizaciones, available, cargando, saveProfile, saveProviderProfile, signInClient, signInProvider, signOut, publishRequest, sendProposal, chooseProposal, sendQuote, acceptQuote, rejectQuote, saveReview, readReview, syncError, retrySync, setAvailable],
   );
   return <DemoContext value={value}>{children}</DemoContext>;
 }
