@@ -4,6 +4,7 @@ import { Info, MapPin, Send } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
+import { FotosDeSolicitud } from '../components/FotosDeSolicitud';
 import { Screen } from '../components/Screen';
 import { ScreenFooter } from '../components/ScreenFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -77,16 +78,8 @@ export function ProviderAlertScreen() {
 
       <section className="mt-6">
         <h2 className="text-sm font-semibold text-masi-navy">Fotos del cliente</h2>
-        {solicitud.fotos.length > 0
-          ? <ul className="mt-3 grid grid-cols-3 gap-2">
-            {solicitud.fotos.map((foto, index) => <li key={index}>
-              <img
-                src={foto}
-                alt={`Foto ${index + 1} del cliente`}
-                className="aspect-square w-full rounded-masi-input border border-masi-gray object-cover"
-              />
-            </li>)}
-          </ul>
+        {solicitud.fotos > 0
+          ? <FotosDeSolicitud solicitudId={solicitud.id} cantidad={solicitud.fotos} etiqueta="del cliente" />
           : <p className="mt-2 text-sm text-masi-muted">El cliente no adjuntó fotos.</p>}
       </section>
 

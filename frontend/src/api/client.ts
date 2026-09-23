@@ -6,6 +6,7 @@ import type {
   DescargoInput,
   Disputa,
   FotosDescargo,
+  FotosSolicitud,
   ParteEnDisputa,
   Postulacion,
   PostulacionInput,
@@ -89,6 +90,12 @@ export const api = {
 
   getSolicitud(id: string): Promise<Solicitud> {
     return pedir<Solicitud>(`/solicitudes/${encodeURIComponent(id)}`);
+  },
+
+  /** Las imágenes, aparte del listado: pesan demasiado para releerlas cada pocos segundos. */
+  async getFotos(id: string): Promise<string[]> {
+    const { fotos } = await pedir<FotosSolicitud>(`/solicitudes/${encodeURIComponent(id)}/fotos`);
+    return fotos;
   },
 
   elegir(solicitudId: string, postulacionId: string): Promise<Solicitud> {

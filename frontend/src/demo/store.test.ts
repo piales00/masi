@@ -10,6 +10,17 @@ const RESENA: ResenaInput = {
   hash: 'b'.repeat(64),
 };
 
+const FOTO = 'data:image/jpeg;base64,aaaa';
+const OTRA = 'data:image/jpeg;base64,bbbb';
+
+const iso = new Date().toISOString();
+
+const solicitud = (fotos: number, id = 's1') => ({
+  id, servicio: 'Pintura' as const, descripcion: 'Pintar', fotos,
+  ubicacion: 'Av. 1', distrito: 'Chorrillos', cuando: 'Hoy', cliente: 'Samuel',
+  clienteId: 'c1', estado: 'buscando_profesionales' as const, creadaEn: iso,
+});
+
 beforeEach(() => { localStorage.clear(); });
 
 describe('almacén por defecto', () => {
@@ -23,12 +34,35 @@ describe('almacén por defecto', () => {
   });
 
   it('devuelve tal cual lo que se le da, sin transformar', async () => {
-    const solicitud = {
-      id: 's1', servicio: 'Pintura' as const, descripcion: 'Pintar', fotos: ['data:image/jpeg;base64,xx'],
-      ubicacion: 'Av. 1', distrito: 'Chorrillos', cuando: 'Hoy', cliente: 'Samuel',
-      clienteId: 'c1', estado: 'buscando_profesionales' as const, creadaEn: new Date().toISOString(),
-    };
-    await expect(store.crearSolicitud(solicitud)).resolves.toEqual(solicitud);
+    await expect(store.crearSolicitud(solicitud(0), [])).resolves.toEqual(solicitud(0));
+  });
+});
+
+describe('fotos en el almacén local', () => {
+  it('guarda las imágenes al crear y las devuelve al abrir la solicitud', async () => {
+    await store.crearSolicitud(solicitud(2), [FOTO, OTRA]);
+
+    await expect(store.leerFotos('s1')).resolves.toEqual([FOTO, OTRA]);
+  });
+
+  it('no las mete en el registro de la solicitud, que se relee entero', async () => {
+    const creada = await store.crearSolicitud(solicitud(1), [FOTO]);
+
+    // En la solicitud solo viaja el recuento: las data URL van por su propio cajón.
+    expect(creada.fotos).toBe(1);
+    expect(JSON.stringify(creada)).not.toContain('data:image');
+  });
+
+  it('las fotos de una solicitud no se cuelan en otra', async () => {
+    await store.crearSolicitud(solicitud(1), [FOTO]);
+    await store.crearSolicitud({ ...solicitud(1), id: 's2' }, [OTRA]);
+
+    await expect(store.leerFotos('s1')).resolves.toEqual([FOTO]);
+    await expect(store.leerFotos('s2')).resolves.toEqual([OTRA]);
+  });
+
+  it('una solicitud sin fotos devuelve una lista vacía, no un error', async () => {
+    await expect(store.leerFotos('sin-fotos')).resolves.toEqual([]);
   });
 });
 

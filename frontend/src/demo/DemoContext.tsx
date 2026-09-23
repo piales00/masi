@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type { ReactNode } from 'react';
 import type { Cotizacion, CotizacionInput, SolicitudEstado } from '../../../shared/api';
 import type { Resena, ResenaInput } from '../../../shared/api';
+import { guardarFotosLocales } from './fotosLocales';
 import { providers } from '../marketplace';
 import { usePolling } from '../usePolling';
 import { store } from './store';
@@ -39,8 +40,8 @@ export interface Solicitud {
   id: string;
   servicio: Trade;
   descripcion: string;
-  /** Fotos del cliente como data URL, para que sobrevivan a la recarga. Ver images.ts. */
-  fotos: string[];
+  /** Cuántas fotos adjuntó el cliente. Las imágenes se piden al abrir la solicitud. */
+  fotos: number;
   ubicacion: string;
   distrito: string;
   /** Urgencia elegida en el formulario; vacío en registros anteriores a este campo. */
@@ -80,6 +81,10 @@ export interface Postulacion {
 }
 
 export const PROVIDER_FALLBACK_NAME = 'Profesional de Masi';
+
+/** Lo que el formulario manda al publicar: las imágenes todavía enteras. */
+export type NuevaSolicitud = Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId' | 'fotos'>
+  & { fotos: string[] };
 
 export type Role = 'client' | 'provider';
 
@@ -238,14 +243,26 @@ function readOrCreateClientId(): string {
   return created;
 }
 
+/**
+ * Las solicitudes guardadas antes de que las fotos viajaran por el almacén llevaban las
+ * data URL dentro del propio registro. Se mudan al álbum local, que es de donde se leen
+ * ahora, y en la solicitud queda solo el recuento.
+ */
+function contarFotos({ id, fotos }: { id: string; fotos?: unknown }): number {
+  if (typeof fotos === 'number') return fotos;
+  if (!Array.isArray(fotos)) return 0;
+  const imagenes = fotos.filter((foto): foto is string => typeof foto === 'string');
+  guardarFotosLocales(id, imagenes);
+  return imagenes.length;
+}
+
 /** Los registros guardados antes de esta versión no traen clienteId ni providerNombre. */
 function migrateSolicitudes(rows: Solicitud[], clienteId: string): Solicitud[] {
   return rows.map(row => ({
     ...row,
     clienteId: typeof row.clienteId === 'string' && row.clienteId ? row.clienteId : clienteId,
     cuando: typeof row.cuando === 'string' ? row.cuando : '',
-    // Antes solo se guardaba el conteo, así que de esas solicitudes no hay imagen que recuperar.
-    fotos: Array.isArray(row.fotos) ? row.fotos.filter(foto => typeof foto === 'string') : [],
+    fotos: contarFotos(row),
     estado: ESTADOS.includes(row.estado) ? row.estado : 'buscando_profesionales',
   }));
 }
@@ -275,7 +292,8 @@ interface DemoValue {
   signInProvider: (fallback: ProviderProfile) => void;
   signOut: (role: Role) => void;
   /** Async desde ya: en F5 solo cambia la implementación, no las pantallas. */
-  publishRequest: (input: Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId'>) => Promise<Solicitud>;
+  /** `fotos` entra como data URL; lo que se guarda y se lista es cuántas son. */
+  publishRequest: (input: NuevaSolicitud) => Promise<Solicitud>;
   sendProposal: (input: Omit<Postulacion, 'id' | 'fecha' | 'providerNombre' | 'providerAddress' | 'providerPerfil'>) => Promise<Postulacion>;
   chooseProposal: (solicitudId: string, postulacionId: string) => Promise<Solicitud>;
   sendQuote: (input: CotizacionInput) => Promise<Cotizacion>;
@@ -389,15 +407,16 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const publishRequest = useCallback(async (input: Omit<Solicitud, 'id' | 'estado' | 'creadaEn' | 'clienteId'>) => {
+  const publishRequest = useCallback(async ({ fotos, ...input }: NuevaSolicitud) => {
     const solicitud: Solicitud = {
       ...input,
+      fotos: fotos.length,
       id: crypto.randomUUID(),
       clienteId,
       estado: 'buscando_profesionales',
       creadaEn: new Date().toISOString(),
     };
-    const creada = await store.crearSolicitud(solicitud);
+    const creada = await store.crearSolicitud(solicitud, fotos);
     setSolicitudes(current => {
       const next = [creada, ...current];
       persistir(REQUESTS_KEY, next);

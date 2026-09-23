@@ -3,6 +3,7 @@ import { CalendarClock, CheckCircle2, Clock3, Fingerprint, MapPin, Search, Shiel
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { Button } from '../components/Button';
+import { FotosDeSolicitud } from '../components/FotosDeSolicitud';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
@@ -157,15 +158,7 @@ export function RequestDetailScreen() {
         </p>
         <p className="mt-3 text-base leading-relaxed text-masi-text">{solicitud.descripcion}</p>
 
-        {solicitud.fotos.length > 0 && <ul className="mt-4 grid grid-cols-3 gap-2">
-          {solicitud.fotos.map((foto, index) => <li key={index}>
-            <img
-              src={foto}
-              alt={`Foto ${index + 1} de la solicitud`}
-              className="aspect-square w-full rounded-masi-input border border-masi-gray object-cover"
-            />
-          </li>)}
-        </ul>}
+        <FotosDeSolicitud solicitudId={solicitud.id} cantidad={solicitud.fotos} etiqueta="de la solicitud" />
 
         <dl className="mt-4 space-y-2 border-t border-masi-gray pt-3 text-sm text-masi-muted">
           <div className="flex items-center gap-1.5">
