@@ -14,6 +14,7 @@ import { ProviderActivityScreen } from './screens/ProviderActivityScreen';
 import { ProviderAlertScreen } from './screens/ProviderAlertScreen';
 import { ProviderHomeScreen } from './screens/ProviderHomeScreen';
 import { ProviderProfileScreen } from './screens/ProviderProfileScreen';
+import { WithdrawScreen } from './screens/WithdrawScreen';
 import { ProviderQuoteScreen } from './screens/ProviderQuoteScreen';
 import { ProviderSetupScreen } from './screens/ProviderSetupScreen';
 import { ProposalDetailScreen } from './screens/ProposalDetailScreen';
@@ -70,6 +71,7 @@ export function App() {
       <Route path="profesional/trabajos/:jobId" element={<JobScreen role="provider" />} />
       <Route path="profesional/actividad" element={<ActivityScreen role="provider" />} />
       <Route path="profesional/perfil" element={<ProviderProfileScreen />} />
+      <Route path="profesional/retirar" element={<WithdrawScreen />} />
     </Route>
 
     <Route element={<RequireProfile><AppShell /></RequireProfile>}>

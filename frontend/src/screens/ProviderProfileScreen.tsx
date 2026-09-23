@@ -1,4 +1,4 @@
-import { Briefcase, LogOut, MapPin } from 'lucide-react';
+import { Banknote, Briefcase, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { AccountDetails } from '../components/AccountDetails';
@@ -51,7 +51,10 @@ export function ProviderProfileScreen() {
       </div>
 
       <AccountDetails contractId={providerProfile?.contractId} deploymentHash={providerProfile?.deploymentHash} />
-      <Button variant="secondary" onClick={leave} className="mt-6">
+      <Button onClick={() => navigate('/profesional/retirar')} className="mt-6">
+        <Banknote size={18} aria-hidden="true" />Retirar tu dinero
+      </Button>
+      <Button variant="secondary" onClick={leave} className="mt-3">
         <LogOut size={18} aria-hidden="true" />Cerrar sesión
       </Button>
     </div>
