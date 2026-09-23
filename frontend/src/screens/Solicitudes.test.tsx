@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DemoProvider } from '../demo/DemoContext';
@@ -47,6 +47,20 @@ async function trabajoEn(pasos: ('accept' | 'fund' | 'start' | 'submit' | 'appro
   });
   for (const paso of pasos) await escrow[paso](jobId);
   return jobId.toString();
+}
+
+/**
+ * Deja la lectura de la cadena en el aire para poder mirar lo que se pinta mientras
+ * tanto: es el instante en el que la pantalla entra, que es cuando aparecía el estado
+ * inventado. `responder` la resuelve con los trabajos de verdad.
+ */
+function cadenaEnSuspenso() {
+  const real = escrow.jobsOf.bind(escrow);
+  let soltar = () => {};
+  vi.spyOn(escrow, 'jobsOf').mockImplementation(address => new Promise(resolve => {
+    soltar = () => { resolve(real(address)); };
+  }));
+  return () => { soltar(); };
 }
 
 const montarCliente = () => render(<DemoProvider><MemoryRouter><RequestsScreen /></MemoryRouter></DemoProvider>);
@@ -126,6 +140,51 @@ describe('Solicitudes del profesional', () => {
     expect(screen.queryByRole('heading', { name: 'Trabajos en proceso' })).toBeNull();
     // Y no reaparece como si fuera una oportunidad.
     expect(screen.queryByRole('heading', { name: 'Solicitudes de clientes' })).toBeNull();
+  });
+
+  it('una solicitud nueva nunca se pinta como trabajo activo, ni antes de leer la cadena', async () => {
+    const responder = cadenaEnSuspenso();
+    sembrar([solicitud('s1', 'buscando_profesionales')], [], []);
+    montarProfesional();
+
+    // Primer render, con los trabajos todavía sin leer: es donde aparecía el falso estado.
+    expect(screen.getByRole('heading', { name: 'Solicitudes de clientes' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Trabajos en proceso' })).toBeNull();
+    expect(screen.queryByText('Trabajo en curso')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar trabajo' })).toBeNull();
+
+    responder();
+
+    // Y con la cadena ya leída sigue siendo una oportunidad, no un trabajo.
+    await waitFor(() => expect(screen.getByText('Nueva solicitud')).toBeTruthy());
+    expect(screen.queryByRole('heading', { name: 'Trabajos en proceso' })).toBeNull();
+    expect(screen.queryByText('Trabajo en curso')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar trabajo' })).toBeNull();
+  });
+
+  it('mientras la cadena no contesta reserva el sitio, no inventa el estado', async () => {
+    const jobId = await trabajoEn(['accept', 'fund']);
+    const responder = cadenaEnSuspenso();
+    sembrar([solicitud('s1', 'contratada', { postulacionElegidaId: 'p1' })], [postulacion('p1', 's1')], [cotizacion('s1', 'p1', jobId)]);
+    montarProfesional();
+
+    expect(screen.getByRole('heading', { name: 'Trabajos en proceso' })).toBeTruthy();
+    expect(screen.queryByText('Trabajo en curso')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar trabajo' })).toBeNull();
+
+    responder();
+
+    // Ya con el trabajo en la mano, el estado es el suyo de verdad.
+    expect(await screen.findByRole('button', { name: 'Continuar trabajo' })).toBeTruthy();
+  });
+
+  it('un trabajo que la cadena no conoce no se dibuja como en curso', async () => {
+    sembrar([solicitud('s1', 'contratada', { postulacionElegidaId: 'p1' })], [postulacion('p1', 's1')], [cotizacion('s1', 'p1', '99999')]);
+    montarProfesional();
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Trabajos en proceso' })).toBeNull());
+    expect(screen.queryByText('Trabajo en curso')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar trabajo' })).toBeNull();
   });
 
   it('un servicio activo sí sigue en Trabajos en proceso', async () => {

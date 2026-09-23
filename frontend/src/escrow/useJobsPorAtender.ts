@@ -37,32 +37,48 @@ export function useRevisionDeTrabajos(): number {
 }
 
 /**
- * Los trabajos de una dirección, para pintarlos. Devuelve una lista vacía mientras carga:
- * quien la use debe poder mostrar la tarjeta sin el estado todavía resuelto.
+ * Los trabajos de una dirección, con la señal de si ya se leyeron.
+ *
+ * `listos` importa tanto como la lista: mientras es `false` no se sabe nada de los
+ * trabajos de esa dirección, y una pantalla no puede dar por hecho el estado de ninguno.
+ * La lectura queda marcada con la dirección a la que pertenece, así que al cambiar de
+ * profesional vuelve a ser `false` en vez de enseñar lo del anterior.
  */
-export function useJobsDe(address: string | null): Job[] {
+export function useTrabajosDe(address: string | null): { jobs: Job[]; listos: boolean } {
   const { cotizaciones } = useDemo();
   const revision = useRevisionDeTrabajos();
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [lectura, setLectura] = useState<{ address: string | null; jobs: Job[] }>({ address: null, jobs: [] });
 
   useEffect(() => {
     let vigente = true;
     if (!address) {
-      setJobs([]);
+      setLectura({ address: null, jobs: [] });
       return;
     }
     (async () => {
       try {
         const encontrados = await escrow.jobsOf(address);
-        if (vigente) setJobs(encontrados);
+        if (vigente) setLectura({ address, jobs: encontrados });
       } catch {
-        // Sin trabajos legibles la pantalla sigue mostrando lo que viene de la demo.
+        // Un fallo al releer conserva lo último leído de esta misma dirección; de otra
+        // no se hereda nada, que sería enseñar los trabajos de quien ya no está.
+        if (vigente) setLectura(actual => ({ address, jobs: actual.address === address ? actual.jobs : [] }));
       }
     })();
     return () => { vigente = false; };
   }, [address, cotizaciones, revision]);
 
-  return jobs;
+  const listos = lectura.address === address;
+  return { jobs: listos ? lectura.jobs : [], listos };
+}
+
+/**
+ * Los trabajos de una dirección, para pintarlos. Devuelve una lista vacía mientras carga,
+ * así que solo vale para quien pueda mostrar su pantalla sin el estado todavía resuelto;
+ * si de eso depende lo que se afirma en pantalla, se usa `useTrabajosDe`.
+ */
+export function useJobsDe(address: string | null): Job[] {
+  return useTrabajosDe(address).jobs;
 }
 
 /**
