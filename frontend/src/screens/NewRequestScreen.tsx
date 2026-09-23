@@ -9,6 +9,7 @@ import { ScreenFooter } from '../components/ScreenFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { TradeChips } from '../components/TradeChips';
 import { cn } from '../cn';
+import { MAX_BYTES_FOTOS, MAX_FOTOS } from '../config';
 import { useDemo } from '../demo/DemoContext';
 import { toStoredImage } from '../images';
 import { TRADES } from '../marketplace';
@@ -17,7 +18,6 @@ import { serviceOf } from '../trades';
 import type { Service } from '../trades';
 
 const MAX_CHARS = 300;
-const MAX_PHOTOS = 5;
 const TIMINGS = ['Lo antes posible', 'Hoy', 'Elegir fecha'] as const;
 
 /**
@@ -49,8 +49,13 @@ function suggestService(description: string): Service | null {
   return best ? serviceOf(best.id) : null;
 }
 
-/** `url` ya es el data URL definitivo: la vista previa y lo que se guarda son lo mismo. */
+/** `url` ya es el data URL definitivo: la vista previa y lo que se manda son lo mismo. */
 interface Photo { id: string; url: string; name: string }
+
+/** Ni la foto se pudo comprimir lo suficiente, o no queda sitio en el conjunto. */
+type Intento = { foto: Photo } | { fallo: string };
+
+const SIN_SITIO = 'Juntas, las fotos pesan demasiado. Quita alguna para agregar esta.';
 
 function Options({ legend, options, value, onChange }: {
   legend: string;
@@ -94,6 +99,8 @@ export function NewRequestScreen() {
   const [picking, setPicking] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState('');
+  /** Lo que salió mal al agregar fotos; se muestra junto a la rejilla, no al publicar. */
+  const [avisoFotos, setAvisoFotos] = useState('');
 
   const suggestion = !trade && !picking ? suggestService(description) : null;
   const showPicker = picking || (!trade && !suggestion);
@@ -103,20 +110,37 @@ export function NewRequestScreen() {
   const addPhotos = async (event: ChangeEvent<HTMLInputElement>) => {
     const elegidas = [...(event.target.files ?? [])].filter(file => file.type.startsWith('image/'));
     event.target.value = '';
-    const hueco = MAX_PHOTOS - photos.length;
-    const listas = await Promise.all(elegidas.slice(0, hueco).map(async (file): Promise<Photo | null> => {
+    setAvisoFotos('');
+    const hueco = MAX_FOTOS - photos.length;
+    const intentos = await Promise.all(elegidas.slice(0, hueco).map(async (file): Promise<Intento> => {
       try {
-        return { id: crypto.randomUUID(), url: await toStoredImage(file), name: file.name };
-      } catch {
-        // Una imagen ilegible se descarta en silencio; las demás siguen su curso.
-        return null;
+        return { foto: { id: crypto.randomUUID(), url: await toStoredImage(file), name: file.name } };
+      } catch (cause) {
+        // El motivo se le cuenta a la persona: de otro modo la foto desaparecía sin explicación.
+        return { fallo: cause instanceof Error ? cause.message : 'No pudimos usar esa foto.' };
       }
     }));
-    const validas = listas.filter((photo): photo is Photo => photo !== null);
-    if (validas.length > 0) setPhotos(current => [...current, ...validas].slice(0, MAX_PHOTOS));
+
+    // El servidor mide también el conjunto, así que aquí no se acepta lo que él rechazaría.
+    let peso = photos.reduce((total, photo) => total + photo.url.length, 0);
+    const validas: Photo[] = [];
+    let aviso = '';
+    for (const intento of intentos) {
+      if ('fallo' in intento) aviso ||= intento.fallo;
+      else if (peso + intento.foto.url.length > MAX_BYTES_FOTOS) aviso ||= SIN_SITIO;
+      else {
+        peso += intento.foto.url.length;
+        validas.push(intento.foto);
+      }
+    }
+    if (validas.length > 0) setPhotos(current => [...current, ...validas].slice(0, MAX_FOTOS));
+    if (aviso) setAvisoFotos(aviso);
   };
 
-  const removePhoto = (id: string) => setPhotos(current => current.filter(photo => photo.id !== id));
+  const removePhoto = (id: string) => {
+    setPhotos(current => current.filter(photo => photo.id !== id));
+    setAvisoFotos('');
+  };
 
   const ready = Boolean(trade && description.trim());
 
@@ -207,7 +231,8 @@ export function NewRequestScreen() {
 
       <section>
         <h2 className="text-sm font-semibold text-masi-navy">Agregar fotos <span className="font-normal text-masi-muted">(opcional)</span></h2>
-        <p className="mt-1 text-xs text-masi-muted">Ayudan al profesional a entender el problema. Máximo {MAX_PHOTOS}.</p>
+        <p className="mt-1 text-xs text-masi-muted">Ayudan al profesional a entender el problema. Máximo {MAX_FOTOS}.</p>
+        {avisoFotos && <p role="alert" className="mt-2 text-sm text-masi-error">{avisoFotos}</p>}
 
         {photos.length > 0 && <ul className="mt-3 grid grid-cols-3 gap-2">
           {photos.map(photo => <li key={photo.id} className="relative">
@@ -221,9 +246,9 @@ export function NewRequestScreen() {
           </li>)}
         </ul>}
 
-        {photos.length < MAX_PHOTOS && <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-masi-input border border-dashed border-masi-gray bg-white px-4 text-sm font-semibold text-masi-blue transition-colors duration-200 ease-out hover:border-masi-blue">
+        {photos.length < MAX_FOTOS && <label className="mt-3 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-masi-input border border-dashed border-masi-gray bg-white px-4 text-sm font-semibold text-masi-blue transition-colors duration-200 ease-out hover:border-masi-blue">
           <Camera size={18} aria-hidden="true" />
-          {photos.length === 0 ? 'Agregar fotos' : `Agregar otra (${photos.length}/${MAX_PHOTOS})`}
+          {photos.length === 0 ? 'Agregar fotos' : `Agregar otra (${photos.length}/${MAX_FOTOS})`}
           <input type="file" accept="image/*" multiple onChange={event => { void addPhotos(event); }} className="sr-only" />
         </label>}
       </section>

@@ -23,7 +23,7 @@ const { ProviderHomeScreen } = await import('./ProviderHomeScreen');
 
 const iso = new Date().toISOString();
 const solicitud = (id: string, servicio: string) => ({
-  id, servicio, descripcion: `Trabajo ${id}`, fotos: [], ubicacion: 'Av. 1',
+  id, servicio, descripcion: `Trabajo ${id}`, fotos: 0, ubicacion: 'Av. 1',
   distrito: 'Surco', cuando: 'Hoy', cliente: 'Piero', clienteId: 'cliente-1',
   estado: 'buscando_profesionales', creadaEn: iso,
 });

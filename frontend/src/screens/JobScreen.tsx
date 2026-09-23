@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarClock, MapPin, ShieldCheck, Star, TriangleAlert } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
+import { FotosDeSolicitud } from '../components/FotosDeSolicitud';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
@@ -355,11 +356,7 @@ export function JobScreen({ role }: { role: JobRole }) {
         <h2 className="text-sm font-semibold text-masi-navy">El trabajo</h2>
         <p className="mt-2 text-sm leading-relaxed text-masi-text">{job.description}</p>
 
-        {solicitud && solicitud.fotos.length > 0 && <ul className="mt-3 grid grid-cols-3 gap-2">
-          {solicitud.fotos.map((foto, index) => <li key={index}>
-            <img src={foto} alt={`Foto ${index + 1} del trabajo`} className="aspect-square w-full rounded-masi-input border border-masi-gray object-cover" />
-          </li>)}
-        </ul>}
+        {solicitud && <FotosDeSolicitud solicitudId={solicitud.id} cantidad={solicitud.fotos} etiqueta="del trabajo" />}
 
         {/* El profesional ya fue elegido y ya visitó: aquí la dirección exacta le corresponde. */}
         {ubicacion && <p className="mt-3 flex items-start gap-1.5 border-t border-masi-gray pt-3 text-sm text-masi-muted">

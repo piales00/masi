@@ -1,6 +1,7 @@
 import type { Cotizacion, CotizacionInput, CotizacionPatch, Resena, ResenaInput } from '../../../shared/api';
 import { api } from '../api/client';
 import type { Postulacion, Solicitud } from './DemoContext';
+import { guardarFotosLocales, leerFotosLocales } from './fotosLocales';
 
 /**
  * De dónde salen y a dónde van solicitudes, postulaciones, cotizaciones y reseñas.
@@ -26,7 +27,10 @@ export interface DemoStore {
   readonly remoto: boolean;
   /** Relee todo lo compartido. En local no hay nada que traer: devuelve null. */
   cargar(): Promise<Datos | null>;
-  crearSolicitud(solicitud: Solicitud): Promise<Solicitud>;
+  /** `fotos` son las data URL; en la `Solicitud` solo viaja cuántas son. */
+  crearSolicitud(solicitud: Solicitud, fotos: string[]): Promise<Solicitud>;
+  /** Las imágenes de una solicitud. Se piden al abrirla, nunca en el listado. */
+  leerFotos(solicitudId: string): Promise<string[]>;
   crearPostulacion(postulacion: Postulacion): Promise<Postulacion>;
   elegir(solicitudId: string, postulacionId: string): Promise<void>;
   crearCotizacion(cotizacion: Cotizacion): Promise<Cotizacion>;
@@ -57,7 +61,11 @@ function leerResenasLocales(): Resena[] {
 const localStore: DemoStore = {
   remoto: false,
   async cargar() { return null; },
-  async crearSolicitud(solicitud) { return solicitud; },
+  async crearSolicitud(solicitud, fotos) {
+    guardarFotosLocales(solicitud.id, fotos);
+    return solicitud;
+  },
+  async leerFotos(solicitudId) { return leerFotosLocales(solicitudId); },
   async crearPostulacion(postulacion) { return postulacion; },
   async elegir() { /* El estado lo escribe DemoContext. */ },
   async crearCotizacion(cotizacion) { return cotizacion; },
@@ -87,29 +95,33 @@ const localStore: DemoStore = {
 };
 
 /**
- * El contrato del almacén no tiene dónde poner las fotos ni la urgencia: `fotos` es un
- * número y `cuando` no existe. Se envía lo que el contrato admite y lo demás se queda
- * en este dispositivo; está explicado en el reporte de F5.
+ * La urgencia no existe en el contrato compartido, así que `cuando` se queda en este
+ * dispositivo. Las fotos sí viajan desde B.2: el servidor las guarda y las devuelve por
+ * su endpoint, y por eso ya no se copian aquí.
  */
-const FOTOS_KEY = 'masi.demo.fotosLocales.v1';
+const EXTRAS_KEY = 'masi.demo.fotosLocales.v1';
 
-type Extra = { fotos: string[]; cuando: string };
+type Extra = { cuando: string };
 
 function leerExtras(): Record<string, Extra> {
   try {
-    const raw = localStorage.getItem(FOTOS_KEY);
+    const raw = localStorage.getItem(EXTRAS_KEY);
     const value = raw ? JSON.parse(raw) : null;
-    return value && typeof value === 'object' ? value as Record<string, Extra> : {};
+    if (!value || typeof value !== 'object') return {};
+    // Las entradas viejas traían las imágenes dentro; se quedan por el camino.
+    return Object.fromEntries(Object.entries(value as Record<string, Partial<Extra>>)
+      .map(([id, extra]) => [id, { cuando: typeof extra?.cuando === 'string' ? extra.cuando : '' }]));
   } catch {
     return {};
   }
 }
 
+/** Reescribe el cajón entero: así las fotos viejas dejan de ocupar cuota. */
 function guardarExtra(id: string, extra: Extra): void {
   try {
-    localStorage.setItem(FOTOS_KEY, JSON.stringify({ ...leerExtras(), [id]: extra }));
+    localStorage.setItem(EXTRAS_KEY, JSON.stringify({ ...leerExtras(), [id]: extra }));
   } catch {
-    // Sin almacenamiento se pierden las fotos al recargar; la solicitud sigue viva.
+    // Sin almacenamiento se pierde la urgencia al recargar; la solicitud sigue viva.
   }
 }
 
@@ -120,7 +132,7 @@ function aSolicitudLocal(remota: Awaited<ReturnType<typeof api.getSolicitud>>): 
     id: remota.id,
     servicio: remota.servicio,
     descripcion: remota.descripcion,
-    fotos: extra?.fotos ?? [],
+    fotos: remota.fotos,
     ubicacion: remota.ubicacion,
     distrito: remota.distrito,
     cuando: extra?.cuando ?? '',
@@ -149,19 +161,22 @@ const apiStore: DemoStore = {
     };
   },
 
-  async crearSolicitud(solicitud) {
+  async crearSolicitud(solicitud, fotos) {
     const creada = await api.createSolicitud({
       clienteId: solicitud.clienteId,
       servicio: solicitud.servicio,
       descripcion: solicitud.descripcion,
-      // Las imágenes siguen en local hasta la tarea B.2, que las manda aquí.
-      fotos: [],
+      fotos,
       ubicacion: solicitud.ubicacion,
       distrito: solicitud.distrito,
       cliente: solicitud.cliente,
     });
-    guardarExtra(creada.id, { fotos: solicitud.fotos, cuando: solicitud.cuando });
+    guardarExtra(creada.id, { cuando: solicitud.cuando });
     return aSolicitudLocal(creada);
+  },
+
+  leerFotos(solicitudId) {
+    return api.getFotos(solicitudId);
   },
 
   async crearPostulacion(postulacion) {

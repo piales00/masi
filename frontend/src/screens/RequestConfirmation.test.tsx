@@ -14,7 +14,7 @@ vi.mock('../demo/DemoContext', () => ({
   writePendingAcceptance: (value: typeof state.pending) => { state.pending = value; },
   useDemo: () => ({
     clienteId: 'C_CLIENT', profile: { contractId: 'C_CLIENT' },
-    solicitudes: [{ id: 's1', clienteId: 'C_CLIENT', servicio: 'Pintura', estado: 'cotizada', fotos: [], descripcion: 'Pintar', distrito: 'Surco', creadaEn: new Date().toISOString() }],
+    solicitudes: [{ id: 's1', clienteId: 'C_CLIENT', servicio: 'Pintura', estado: 'cotizada', fotos: 0, descripcion: 'Pintar', distrito: 'Surco', creadaEn: new Date().toISOString() }],
     postulaciones: [],
     cotizaciones: [{ id: 'q1', solicitudId: 's1', estado: 'enviada', clienteId: 'C_CLIENT', providerAddress: 'C_PROVIDER', totalStroops: '12000000000', materialesStroops: '3600000000', materialsBps: 3000, feeBps: 500, reviewSecs: 86400, descripcion: 'Pintar' }],
     chooseProposal: vi.fn(), rejectQuote: vi.fn(), acceptQuote: state.acceptQuote,

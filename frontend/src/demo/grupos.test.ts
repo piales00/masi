@@ -9,7 +9,7 @@ const solicitud = (estado: Solicitud['estado'], id = 's1'): Solicitud => ({
   id,
   servicio: 'Pintura',
   descripcion: 'Pintar la sala',
-  fotos: [],
+  fotos: 0,
   ubicacion: 'Av. 1',
   distrito: 'Chorrillos',
   cuando: 'Hoy',
