@@ -13,12 +13,20 @@ import { serviceOf } from '../trades';
 const STATS = { weekJobs: 3, earned: 940, rating: 4.8, totalJobs: 24 };
 
 export function ProviderHomeScreen() {
-  const { providerProfile, solicitudes, postulaciones, available, setAvailable } = useDemo();
+  const { providerProfile, solicitudes, postulaciones, available, cargando, setAvailable } = useDemo();
   const navigate = useNavigate();
   const sent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
 
   const services = providerProfile?.services ?? [];
   const alerts = alertasPara(providerProfile, solicitudes, postulaciones);
+  /*
+   * Oficios con solicitudes abiertas que este profesional no cubre. Sin esto, ver la
+   * pantalla vacía mientras hay trabajo publicado parece una avería, cuando en realidad
+   * es el filtro haciendo lo que debe.
+   */
+  const otrosOficios = [...new Set(solicitudes
+    .filter(item => item.estado === 'buscando_profesionales' && !services.includes(item.servicio))
+    .map(item => item.servicio))];
 
   return <Screen header={
     <header className="shrink-0 border-b border-masi-gray bg-white px-4 pt-[calc(0.75rem+var(--masi-safe-top))] pb-3">
@@ -85,9 +93,20 @@ export function ProviderHomeScreen() {
         {alerts.length === 0
           ? <div className="mt-4 rounded-masi-card border border-dashed border-masi-gray bg-white px-6 py-10 text-center">
             <BellRing size={30} aria-hidden="true" className="mx-auto text-masi-blue" />
-            <p className="mt-3 text-sm text-masi-muted">
-              Todavía no hay solicitudes de {services.length === 1 ? services[0] : 'tus servicios'} en tu zona. Te avisaremos apenas llegue una.
-            </p>
+            {cargando
+              ? <p className="mt-3 text-sm text-masi-muted">Buscando solicitudes…</p>
+              : <>
+                <p className="mt-3 text-sm text-masi-muted">
+                  Todavía no hay solicitudes de {services.length > 0 ? services.join(' ni ') : 'tus servicios'}. Te avisaremos apenas llegue una.
+                </p>
+                {/* El filtro es por oficio, no por distrito: decirlo evita que parezca averiado. */}
+                <p className="mt-2 text-xs text-masi-muted">
+                  Solo te llegan las de {services.length > 0 ? `tus servicios (${services.join(', ')})` : 'los servicios que ofreces'}.
+                </p>
+                {otrosOficios.length > 0 && <p className="mt-2 text-xs text-masi-muted">
+                  Ahora mismo hay solicitudes de {otrosOficios.join(', ')}, que no están entre los tuyos.
+                </p>}
+              </>}
           </div>
           : <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {alerts.map(alert => {
