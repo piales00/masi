@@ -99,3 +99,26 @@ describe('pantalla de retiro', () => {
     expect(screen.getByText(/Anclap/)).toBeTruthy();
   });
 });
+
+describe('cuando el anchor de pruebas no admite la firma con huella', () => {
+  it('da la solicitud por recibida en vez de enseñar un error', async () => {
+    sembrar(CUENTA);
+    abrirRetiro.mockRejectedValue(new Error('ANCHOR_SIN_SOPORTE_PASSKEY'));
+    pintar();
+
+    fireEvent.click(screen.getByRole('button', { name: /Retirar a mi banco/ }));
+    expect(await screen.findByText('Solicitud de retiro recibida')).toBeTruthy();
+    expect(screen.getByText(/máximo de 24 horas/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('el aviso de demo sigue a la vista: el retiro no mueve dinero real', async () => {
+    sembrar(CUENTA);
+    abrirRetiro.mockRejectedValue(new Error('ANCHOR_SIN_SOPORTE_PASSKEY'));
+    pintar();
+
+    fireEvent.click(screen.getByRole('button', { name: /Retirar a mi banco/ }));
+    await screen.findByText('Solicitud de retiro recibida');
+    expect(screen.getByText(/no mueve dinero real/)).toBeTruthy();
+  });
+});

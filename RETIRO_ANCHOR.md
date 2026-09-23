@@ -69,6 +69,39 @@ mirar sería firmar un cheque en blanco.
 
 ---
 
+## El tope que encontramos al probarlo
+
+**El anchor de referencia rechaza la firma de una cuenta con huella.** Responde
+`{"error":"Unknown enum value: 2"}` y no entrega el token.
+
+La causa no está en Masi. `passkey-kit` convierte las credenciales de la entrada de
+`sorobanCredentialsAddress` (V1) a **`sorobanCredentialsAddressV2`** (CAP-0071-02) antes de
+firmar, y lo hace a propósito: la preimagen de V2 incluye la dirección de la wallet, así que una
+firma hecha con la misma llave en dos smart wallets distintas deja de ser intercambiable. Es una
+mejora de seguridad deliberada — el propio código dice que **no existe ruta de firma V1**.
+
+El SEP-45 del anchor de referencia todavía solo entiende V1, así que rechaza una firma correcta.
+
+Comprobado el 23/09/2026 contra `testanchor.stellar.org`: el reto llega en V1, el navegador
+codifica V2 sin problema, y el servidor devuelve `Unknown enum value: 2`.
+
+**No tiene arreglo por nuestro lado.** Devolver las credenciales a V1 después de firmar
+invalidaría la firma, porque se calculó sobre la preimagen de V2. Reimplementar la firma V1 sería
+deshacer a mano la protección que `passkey-kit` puso a propósito.
+
+Qué queda: que el anchor admita V2. Es exactamente la pregunta que hay que hacerle a Anclap antes
+de integrarlos —**si su implementación soporta SEP-45 con credenciales address-bound**—, porque de
+eso depende que los usuarios con passkey puedan retirar.
+
+**Qué hace la pantalla.** Da la solicitud por recibida —"El dinero llega a tu cuenta bancaria en
+un máximo de 24 horas"— en lugar de enseñar el error del servidor. Es el mismo trato que la
+recarga da a su pago: un flujo simulado dentro de una pantalla que **declara que lo es**, con el
+aviso "Demo: el retiro no mueve dinero real" siempre a la vista.
+
+Ese aviso no se quita. Es lo que separa una demo de una promesa falsa.
+
+---
+
 ## Qué es real y qué no
 
 **Real:** los estándares, la verificación del reto, la firma con huella, la sesión con el

@@ -130,7 +130,36 @@ export async function obtenerToken(opciones: OpcionesToken, firmar: FirmarEntrad
   });
   const resultado = await canje.json() as { token?: string; error?: string };
   if (!canje.ok || !resultado.token) {
-    throw new Error(resultado.error || 'El anchor no aceptó tu identificación.');
+    throw new Error(explicarFallo(resultado.error));
   }
   return resultado.token;
+}
+
+/**
+ * El anchor de referencia responde "Unknown enum value: 2" cuando recibe credenciales
+ * address-bound (CAP-0071-02).
+ *
+ * No es un fallo de la cuenta ni de esta app: `passkey-kit` convierte las credenciales
+ * de V1 a V2 antes de firmar, a propósito, para que una firma hecha en una smart wallet
+ * no sirva en otra. El servidor de pruebas todavía solo entiende V1, así que rechaza una
+ * firma correcta. Con un anchor que admita V2 —o con SEP-10 y una cuenta clásica— el
+ * mismo código funciona.
+ */
+/**
+ * Señal interna, no un texto para la persona.
+ *
+ * El anchor de referencia responde "Unknown enum value: 2" ante credenciales
+ * address-bound (CAP-0071-02), que son las que `passkey-kit` usa a propósito para que una
+ * firma no valga en dos wallets distintas. El servidor solo entiende el formato viejo, así
+ * que rechaza una firma correcta y no hay arreglo por nuestro lado: el que tiene que
+ * admitir V2 es el anchor. Detalle completo en `RETIRO_ANCHOR.md`.
+ *
+ * La pantalla lo trata como solicitud registrada, igual que la recarga trata su pago: es un
+ * flujo simulado y lo dice en su propio aviso.
+ */
+export const ANCHOR_SIN_SOPORTE_PASSKEY = 'ANCHOR_SIN_SOPORTE_PASSKEY';
+
+export function explicarFallo(error: string | undefined): string {
+  if (error && /unknown enum value/i.test(error)) return ANCHOR_SIN_SOPORTE_PASSKEY;
+  return error || 'El anchor no aceptó tu identificación.';
 }

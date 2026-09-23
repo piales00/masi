@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Address, xdr } from '@stellar/stellar-sdk';
 import { codificarEntradas, decodificarEntradas } from './entradas';
 import { parsearToml } from './sep1';
-import { obtenerToken, verificarReto, type FirmarEntrada } from './sep45';
+import { ANCHOR_SIN_SOPORTE_PASSKEY, explicarFallo, obtenerToken, verificarReto, type FirmarEntrada } from './sep45';
 import { activosDeRetiro, consultarRetiro, iniciarRetiro } from './sep24';
 import reto from './fixtures/reto.json';
 import TOML from './fixtures/stellar.toml.txt?raw';
@@ -192,5 +192,20 @@ describe('SEP-24', () => {
   it('no se traga una respuesta que no es JSON', async () => {
     const fetchImpl = vi.fn(async () => new Response('<html>502</html>', { status: 502 })) as unknown as typeof fetch;
     await expect(consultarRetiro(SERVIDOR, 'jwt', 'tx-1', fetchImpl)).rejects.toThrow(/no es JSON/);
+  });
+});
+
+describe('fallos del anchor, en cristiano', () => {
+  it('reconoce el rechazo de las credenciales con huella y lo marca como tal', () => {
+    // El anchor de referencia responde esto ante credenciales address-bound (CAP-0071-02).
+    expect(explicarFallo('Unknown enum value: 2')).toBe(ANCHOR_SIN_SOPORTE_PASSKEY);
+  });
+
+  it('deja pasar cualquier otro error tal cual', () => {
+    expect(explicarFallo('Failed to simulate transaction')).toBe('Failed to simulate transaction');
+  });
+
+  it('tiene algo que decir aunque el anchor no explique nada', () => {
+    expect(explicarFallo(undefined)).toMatch(/no aceptó tu identificación/);
   });
 });

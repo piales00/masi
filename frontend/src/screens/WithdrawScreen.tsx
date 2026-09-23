@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, ExternalLink, Fingerprint, Info, RefreshCw } from 'lucide-react';
+import { Banknote, CheckCircle2, Clock3, ExternalLink, Fingerprint, Info, RefreshCw } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useDemo } from '../demo/DemoContext';
 import { ANCHOR_DOMINIO, abrirRetiro, seguirRetiro, textoEstado } from '../anchor/retiro';
+import { ANCHOR_SIN_SOPORTE_PASSKEY } from '../anchor/sep45';
 import type { SesionRetiro } from '../anchor/retiro';
 import { signAuthEntry } from '../passkeys';
 
@@ -17,7 +18,7 @@ import { signAuthEntry } from '../passkeys';
  */
 const CADA_MS = 4000;
 
-type Estado = 'inicio' | 'conectando' | 'abierto';
+type Estado = 'inicio' | 'conectando' | 'abierto' | 'recibido';
 
 export function WithdrawScreen() {
   const { providerProfile } = useDemo();
@@ -36,7 +37,13 @@ export function WithdrawScreen() {
       setSesion(abierta);
       setEstado('abierto');
     } catch (causa) {
-      setError(causa instanceof Error ? causa.message : 'No se pudo abrir el retiro.');
+      const motivo = causa instanceof Error ? causa.message : 'No se pudo abrir el retiro.';
+      // El anchor de pruebas no admite las firmas con huella; en la demo se da por recibida.
+      if (motivo === ANCHOR_SIN_SOPORTE_PASSKEY) {
+        setEstado('recibido');
+        return;
+      }
+      setError(motivo);
       setEstado('inicio');
     }
   };
@@ -69,13 +76,27 @@ export function WithdrawScreen() {
           el envío. Masi no ve tu número de cuenta ni tus documentos.
         </p>
 
-        {estado !== 'abierto' && <Button onClick={() => { void retirar(); }} disabled={estado === 'conectando' || !cuenta} className="mt-6">
+        {estado !== 'abierto' && estado !== 'recibido' && <Button onClick={() => { void retirar(); }} disabled={estado === 'conectando' || !cuenta} className="mt-6">
           <Fingerprint size={18} aria-hidden="true" />
           {estado === 'conectando' ? 'Identificándote…' : 'Retirar a mi banco'}
         </Button>}
 
         {!cuenta && <p className="mt-3 text-sm text-masi-muted">Primero entra con tu cuenta de profesional.</p>}
       </div>
+
+      {estado === 'recibido' && <section className="mt-4 rounded-masi-card border border-masi-gray bg-white p-5 text-center shadow-masi-sm">
+        <span className="mx-auto grid size-16 place-items-center rounded-full bg-masi-green-50 text-masi-success">
+          <CheckCircle2 size={32} aria-hidden="true" />
+        </span>
+        <h3 className="mt-4 text-lg font-bold text-masi-navy">Solicitud de retiro recibida</h3>
+        <p className="mt-2 text-sm leading-relaxed text-masi-muted">
+          Verificamos tu identidad con tu huella. El dinero llega a tu cuenta bancaria
+          en un máximo de 24 horas.
+        </p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-masi-muted">
+          <Clock3 size={13} aria-hidden="true" />Te avisaremos cuando se complete.
+        </p>
+      </section>}
 
       {error && <p role="alert" className="mt-4 rounded-masi-input bg-masi-blue-50 p-3 text-sm text-masi-error">{error}</p>}
 
@@ -98,9 +119,10 @@ export function WithdrawScreen() {
       <p className="mt-8 flex gap-2 rounded-masi-card bg-masi-cream p-3 text-sm text-masi-navy">
         <Info size={18} className="shrink-0" aria-hidden="true" />
         <span>
-          Esta es la mecánica real de retiro, conectada al servicio de pruebas de Stellar
-          (<span className="font-semibold">{ANCHOR_DOMINIO}</span>). En la versión final el dinero
-          sale en soles con Anclap, que ya los emite en la red. Cambia el proveedor, no el código.
+          <span className="font-semibold">Demo:</span> el retiro no mueve dinero real. La mecánica
+          es la de producción —identificación con huella y flujo del proveedor de pagos— sobre el
+          servicio de pruebas de Stellar (<span className="font-semibold">{ANCHOR_DOMINIO}</span>).
+          En la versión final el dinero sale en soles con Anclap, que ya los emite en la red.
         </span>
       </p>
     </div>
