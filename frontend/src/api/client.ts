@@ -5,6 +5,7 @@ import type {
   CotizacionPatch,
   DescargoInput,
   Disputa,
+  FotoProfesional,
   FotosDescargo,
   FotosSolicitud,
   ParteEnDisputa,
@@ -166,5 +167,16 @@ export const api = {
   async fotosDescargo(jobId: string, parte: ParteEnDisputa): Promise<string[]> {
     const { fotos } = await pedir<FotosDescargo>(`/disputas/${encodeURIComponent(jobId)}/fotos/${parte}`);
     return fotos;
+  },
+
+  async getFotoProfesional(providerId: string): Promise<string | null> {
+    const { foto } = await pedir<FotoProfesional>(`/profesionales/${encodeURIComponent(providerId)}/foto`);
+    return foto;
+  },
+
+  /** `null` la quita y devuelve al avatar de iniciales. */
+  async putFotoProfesional(providerId: string, foto: string | null): Promise<string | null> {
+    const guardada = await pedir<FotoProfesional>(`/profesionales/${encodeURIComponent(providerId)}/foto`, enviar('PUT', { foto }));
+    return guardada.foto;
   },
 };

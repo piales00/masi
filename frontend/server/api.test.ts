@@ -326,3 +326,56 @@ describe('disputas', () => {
     expect((await call(store, 'GET', 'disputas/4/fotos/arbitro')).status).toBe(400);
   });
 });
+
+/** La foto del profesional va en su propio recurso: la lista de postulaciones no la arrastra. */
+describe('foto de perfil del profesional', () => {
+  const FOTO = `data:image/jpeg;base64,${'A'.repeat(60)}`;
+  const PROVEEDOR = 'CDFL7HNESV2Y4BGOD3VIDCTWLATJLBR5IEBDSUY2QZUZKK5CE2QFFFDQ';
+
+  test('sin foto devuelve null, no un 404', async () => {
+    const store = new MemoryStore();
+    const r = await call(store, 'GET', `profesionales/${PROVEEDOR}/foto`);
+    expect(r.status).toBe(200);
+    expect((await r.json()).foto).toBeNull();
+  });
+
+  test('la guarda y la devuelve', async () => {
+    const store = new MemoryStore();
+    expect((await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: FOTO })).status).toBe(200);
+    expect((await (await call(store, 'GET', `profesionales/${PROVEEDOR}/foto`)).json()).foto).toBe(FOTO);
+  });
+
+  test('se puede cambiar por otra', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: FOTO });
+    const otra = `data:image/png;base64,${'B'.repeat(60)}`;
+    await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: otra });
+    expect((await (await call(store, 'GET', `profesionales/${PROVEEDOR}/foto`)).json()).foto).toBe(otra);
+  });
+
+  test('con null se quita y se vuelve a las iniciales', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: FOTO });
+    expect((await (await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: null })).json()).foto).toBeNull();
+    expect((await (await call(store, 'GET', `profesionales/${PROVEEDOR}/foto`)).json()).foto).toBeNull();
+  });
+
+  test('aplica los mismos topes que cualquier otra imagen', async () => {
+    const store = new MemoryStore();
+    const svg = 'data:image/svg+xml;base64,AAAA';
+    const r = await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: svg });
+    expect(r.status).toBe(400);
+    expect((await r.json()).error.message).toMatch(/SVG/);
+  });
+
+  test('rechaza un cuerpo con campos de más', async () => {
+    const store = new MemoryStore();
+    expect((await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: FOTO, extra: 1 })).status).toBe(400);
+  });
+
+  test('cada profesional tiene la suya', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', `profesionales/${PROVEEDOR}/foto`, { foto: FOTO });
+    expect((await (await call(store, 'GET', 'profesionales/otro/foto')).json()).foto).toBeNull();
+  });
+});

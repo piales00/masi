@@ -14,6 +14,7 @@ import {
   type Descargo,
   type DescargoInput,
   type Disputa,
+  type FotoProfesional,
   type FotosDescargo,
   type FotosSolicitud,
   type Postulacion,
@@ -46,6 +47,8 @@ const fotosKey = (solicitudId: string) => `fotos/${solicitudId}`;
 
 /** Igual que las de una solicitud: fuera del prefijo que recorre el listado. */
 const fotosDescargoKey = (jobId: string, parte: string) => `fotos-disputa/${jobId}/${parte}`;
+
+const fotoProfesionalKey = (providerId: string) => `foto-profesional/${providerId}`;
 
 function response(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -187,6 +190,28 @@ export async function handleApi(req: Request, store: KeyValueStore, rutaExplicit
 
     if (req.method === 'GET' && path === 'salud') return response({ ok: true });
     if (segments[0] === 'demo-trabajos' && segments.length <= 2) return await handleDemoJobs(req, store);
+
+    if (segments[0] === 'profesionales' && segments[2] === 'foto' && segments.length === 3) {
+      const clave = fotoProfesionalKey(segments[1]);
+      if (req.method === 'GET') {
+        const foto = await store.get(clave);
+        // Una cadena vacía es una foto quitada, no una foto.
+        return response({ foto: typeof foto === 'string' && foto ? foto : null } satisfies FotoProfesional);
+      }
+      if (req.method === 'PUT') {
+        const body = await readBody(req);
+        if (!body || !exactKeys(body, ['foto'])) return error(400, 'INVALID', 'Foto inválida.');
+        // `null` la quita: es la forma de volver a las iniciales sin otra ruta.
+        if (body.foto === null) {
+          await store.set(clave, '');
+          return response({ foto: null } satisfies FotoProfesional);
+        }
+        const malas = motivoFotosInvalidas([body.foto]);
+        if (malas) return error(400, 'INVALID', malas);
+        await store.set(clave, body.foto);
+        return response({ foto: body.foto as string } satisfies FotoProfesional);
+      }
+    }
 
     if (req.method === 'GET' && path === 'disputas') {
       return response({ items: await records<Disputa>(store, 'disputas/') });

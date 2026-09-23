@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { ArrowRight, Camera } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
 import { createAccount, hasPendingAccount, pendingAccountName, resumeAccountCreation } from '../passkeys';
+import { api } from '../api/client';
+import { toStoredImage } from '../images';
 import { useDemo } from '../demo/DemoContext';
 import type { Trade } from '../marketplace';
 import { SERVICES, TINT_CLASSES } from '../trades';
@@ -49,18 +51,21 @@ export function ProviderSetupScreen() {
   const [photoUrl, setPhotoUrl] = useState('');
 
   // La vista previa es una URL de objeto: hay que liberarla al reemplazarla o al salir.
-  const photoRef = useRef(photoUrl);
-  photoRef.current = photoUrl;
-  useEffect(() => () => { if (photoRef.current) URL.revokeObjectURL(photoRef.current); }, []);
 
-  const pickPhoto = (event: ChangeEvent<HTMLInputElement>) => {
+  /**
+   * Se guarda como data URL, no como URL de objeto: la de objeto muere con la pestaña y
+   * el avatar volvía a las iniciales. `toStoredImage` además la acota al tope del servidor,
+   * que es el mismo al que se sube después de crear la cuenta.
+   */
+  const pickPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !file.type.startsWith('image/')) return;
-    setPhotoUrl(current => {
-      if (current) URL.revokeObjectURL(current);
-      return URL.createObjectURL(file);
-    });
+    try {
+      setPhotoUrl(await toStoredImage(file));
+    } catch {
+      // Una imagen que no se puede procesar se descarta: el registro sigue su curso.
+    }
   };
 
   const toggleService = (id: Trade) => setServices(current => (
@@ -112,6 +117,12 @@ export function ProviderSetupScreen() {
         bio: bio.trim(),
         photoUrl: photoUrl || undefined,
       });
+      // Al servidor para que el cliente la vea; si falla, el registro no se pierde.
+      if (photoUrl) {
+        try {
+          await api.putFotoProfesional(receipt.contractId, photoUrl);
+        } catch { /* La foto se puede volver a poner desde el perfil. */ }
+      }
       try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* Sin almacenamiento. */ }
       navigate('/profesional', { replace: true });
     } catch (cause) {
@@ -132,7 +143,7 @@ export function ProviderSetupScreen() {
         <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-masi-gray bg-white px-4 text-sm font-semibold text-masi-blue transition-colors duration-200 ease-out hover:border-masi-blue">
           <Camera size={17} aria-hidden="true" />
           {photoUrl ? 'Cambiar foto' : 'Agregar foto'}
-          <input type="file" accept="image/*" onChange={pickPhoto} className="sr-only" />
+          <input type="file" accept="image/*" onChange={event => { void pickPhoto(event); }} className="sr-only" />
         </label>
       </div>
 
