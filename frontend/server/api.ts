@@ -6,10 +6,15 @@ import {
   MAX_BYTES_FOTOS,
   MAX_FOTOS,
   MAX_MATERIALS_BPS,
+  MAX_MOTIVO,
   type ApiError,
   type Cotizacion,
   type CotizacionInput,
   type CotizacionPatch,
+  type Descargo,
+  type DescargoInput,
+  type Disputa,
+  type FotosDescargo,
   type FotosSolicitud,
   type Postulacion,
   type PostulacionInput,
@@ -38,6 +43,9 @@ const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
  * pocos segundos y no debe arrastrarlas.
  */
 const fotosKey = (solicitudId: string) => `fotos/${solicitudId}`;
+
+/** Igual que las de una solicitud: fuera del prefijo que recorre el listado. */
+const fotosDescargoKey = (jobId: string, parte: string) => `fotos-disputa/${jobId}/${parte}`;
 
 function response(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
@@ -108,6 +116,16 @@ function motivoFotosInvalidas(fotos: unknown[]): string | null {
   return null;
 }
 
+function descargoInput(value: Record<string, unknown>): DescargoInput | null {
+  if (!exactKeys(value, ['parte', 'motivo', 'fotos'])) return null;
+  if (value.parte !== 'client' && value.parte !== 'provider') return null;
+  if (typeof value.motivo !== 'string') return null;
+  const motivo = value.motivo.trim();
+  if (!motivo || motivo.length > MAX_MOTIVO) return null;
+  if (!Array.isArray(value.fotos)) return null;
+  return { parte: value.parte, motivo, fotos: value.fotos as string[] };
+}
+
 function postulacionInput(value: Record<string, unknown>): PostulacionInput | null {
   const keys = ['solicitudId', 'providerId', 'providerNombre', 'providerAddress', 'precio', 'minutos'] as const;
   if (!exactKeys(value, keys) || !nonEmpty(value.solicitudId) || !nonEmpty(value.providerId) ||
@@ -169,6 +187,49 @@ export async function handleApi(req: Request, store: KeyValueStore, rutaExplicit
 
     if (req.method === 'GET' && path === 'salud') return response({ ok: true });
     if (segments[0] === 'demo-trabajos' && segments.length <= 2) return await handleDemoJobs(req, store);
+
+    if (req.method === 'GET' && path === 'disputas') {
+      return response({ items: await records<Disputa>(store, 'disputas/') });
+    }
+
+    if (segments[0] === 'disputas' && segments.length === 2 && req.method === 'GET') {
+      const item = await store.get(`disputas/${segments[1]}`);
+      return item ? response(item) : error(404, 'NOT_FOUND', 'Disputa no encontrada.');
+    }
+
+    if (segments[0] === 'disputas' && segments.length === 2 && req.method === 'PUT') {
+      const body = await readBody(req);
+      const input = body && descargoInput(body);
+      if (!input) return error(400, 'INVALID', 'Descargo inválido.');
+      const malas = motivoFotosInvalidas(input.fotos);
+      if (malas) return error(400, 'INVALID', malas);
+
+      const jobId = segments[1];
+      const now = new Date().toISOString();
+      const previa = await store.get(`disputas/${jobId}`) as Disputa | null;
+      const descargo: Descargo = {
+        parte: input.parte, motivo: input.motivo, fotos: input.fotos.length, creadaEn: now,
+      };
+      // Primero las fotos: nunca un descargo visible cuyas imágenes aún no existan.
+      await store.set(fotosDescargoKey(jobId, input.parte), input.fotos);
+      const item: Disputa = {
+        jobId,
+        // Cada parte deja uno: el suyo se reemplaza, el de la otra se respeta.
+        descargos: [...(previa?.descargos ?? []).filter(d => d.parte !== input.parte), descargo],
+        creadaEn: previa?.creadaEn ?? now,
+        actualizadaEn: now,
+      };
+      await store.set(`disputas/${jobId}`, item);
+      return response(item, previa ? 200 : 201);
+    }
+
+    if (segments[0] === 'disputas' && segments[2] === 'fotos' && segments.length === 4 && req.method === 'GET') {
+      if (segments[3] !== 'client' && segments[3] !== 'provider') {
+        return error(400, 'INVALID', 'Parte inválida.');
+      }
+      const fotos = await store.get(fotosDescargoKey(segments[1], segments[3]));
+      return response({ fotos: Array.isArray(fotos) ? fotos : [] } satisfies FotosDescargo);
+    }
 
     if (req.method === 'GET' && path === 'solicitudes') {
       const servicio = url.searchParams.get('servicio');

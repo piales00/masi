@@ -215,3 +215,114 @@ describe('fotos de una solicitud', () => {
     expect(await store.list('')).toEqual([]);
   });
 });
+
+/**
+ * Disputas. El contrato congela el saldo pero no guarda el porqué: si las versiones de
+ * las partes no llegan al árbitro, reparte a ciegas.
+ */
+const UNA_FOTO = `data:image/jpeg;base64,${'A'.repeat(40)}`;
+const descargo = (parte: 'client' | 'provider', motivo = 'No terminó el trabajo.', fotos: string[] = []) =>
+  ({ parte, motivo, fotos });
+
+describe('disputas', () => {
+  test('guarda el descargo de una parte y lo devuelve', async () => {
+    const store = new MemoryStore();
+    const creada = await call(store, 'PUT', 'disputas/4', descargo('client'));
+    expect(creada.status).toBe(201);
+    const item = await creada.json();
+    expect(item.jobId).toBe('4');
+    expect(item.descargos).toHaveLength(1);
+    expect(item.descargos[0]).toMatchObject({ parte: 'client', motivo: 'No terminó el trabajo.', fotos: 0 });
+
+    const leida = await call(store, 'GET', 'disputas/4');
+    expect(leida.status).toBe(200);
+    expect((await leida.json()).descargos).toHaveLength(1);
+  });
+
+  test('las dos partes pueden dejar su versión, y se comparan', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', 'disputas/4', descargo('client', 'Dejó la pared a medias.'));
+    const segunda = await call(store, 'PUT', 'disputas/4', descargo('provider', 'El material no llegó.'));
+    expect(segunda.status).toBe(200);
+
+    const item = await segunda.json();
+    expect(item.descargos).toHaveLength(2);
+    expect(item.descargos.map((d: { parte: string }) => d.parte).sort()).toEqual(['client', 'provider']);
+  });
+
+  test('reescribir el propio descargo no borra el de la otra parte', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', 'disputas/4', descargo('client', 'Primera versión.'));
+    await call(store, 'PUT', 'disputas/4', descargo('provider', 'La suya.'));
+    const item = await (await call(store, 'PUT', 'disputas/4', descargo('client', 'Lo explico mejor.'))).json();
+
+    expect(item.descargos).toHaveLength(2);
+    expect(item.descargos.find((d: { parte: string }) => d.parte === 'client').motivo).toBe('Lo explico mejor.');
+    expect(item.descargos.find((d: { parte: string }) => d.parte === 'provider').motivo).toBe('La suya.');
+  });
+
+  test('las fotos van aparte: el registro solo lleva el recuento', async () => {
+    const store = new MemoryStore();
+    const item = await (await call(store, 'PUT', 'disputas/4', descargo('client', 'Mira la foto.', [UNA_FOTO, UNA_FOTO]))).json();
+    expect(item.descargos[0].fotos).toBe(2);
+    expect(JSON.stringify(item)).not.toContain('data:image');
+
+    const fotos = await (await call(store, 'GET', 'disputas/4/fotos/client')).json();
+    expect(fotos.fotos).toEqual([UNA_FOTO, UNA_FOTO]);
+  });
+
+  test('el listado del panel no arrastra ninguna imagen', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', 'disputas/4', descargo('client', 'Con pruebas.', [UNA_FOTO]));
+    const lista = await (await call(store, 'GET', 'disputas')).json();
+    expect(lista.items).toHaveLength(1);
+    expect(JSON.stringify(lista)).not.toContain('data:image');
+  });
+
+  test('cada parte ve solo sus propias fotos', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', 'disputas/4', descargo('client', 'La mía.', [UNA_FOTO]));
+    await call(store, 'PUT', 'disputas/4', descargo('provider', 'La suya.', []));
+    expect((await (await call(store, 'GET', 'disputas/4/fotos/client')).json()).fotos).toHaveLength(1);
+    expect((await (await call(store, 'GET', 'disputas/4/fotos/provider')).json()).fotos).toHaveLength(0);
+  });
+
+  test('una disputa sin descargos no existe', async () => {
+    const store = new MemoryStore();
+    expect((await call(store, 'GET', 'disputas/99')).status).toBe(404);
+  });
+
+  test('sin fotos devuelve una lista vacía, no un 404', async () => {
+    const store = new MemoryStore();
+    await call(store, 'PUT', 'disputas/4', descargo('client'));
+    const r = await call(store, 'GET', 'disputas/4/fotos/provider');
+    expect(r.status).toBe(200);
+    expect((await r.json()).fotos).toEqual([]);
+  });
+
+  test('rechaza un descargo sin motivo, con parte inventada o con campos de más', async () => {
+    const store = new MemoryStore();
+    expect((await call(store, 'PUT', 'disputas/4', descargo('client', '   '))).status).toBe(400);
+    expect((await call(store, 'PUT', 'disputas/4', { parte: 'arbitro', motivo: 'x', fotos: [] })).status).toBe(400);
+    expect((await call(store, 'PUT', 'disputas/4', { ...descargo('client'), extra: 1 })).status).toBe(400);
+  });
+
+  test('rechaza un motivo larguísimo', async () => {
+    const store = new MemoryStore();
+    const r = await call(store, 'PUT', 'disputas/4', descargo('client', 'x'.repeat(601)));
+    expect(r.status).toBe(400);
+  });
+
+  test('aplica a las pruebas los mismos topes que a las fotos de una solicitud', async () => {
+    const store = new MemoryStore();
+    const svg = 'data:image/svg+xml;base64,AAAA';
+    const r = await call(store, 'PUT', 'disputas/4', descargo('client', 'Truco.', [svg]));
+    expect(r.status).toBe(400);
+    expect((await r.json()).error.message).toMatch(/SVG/);
+  });
+
+  test('una parte inventada al pedir fotos se rechaza', async () => {
+    const store = new MemoryStore();
+    expect((await call(store, 'GET', 'disputas/4/fotos/arbitro')).status).toBe(400);
+  });
+});

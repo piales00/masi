@@ -3,6 +3,10 @@ import type {
   Cotizacion,
   CotizacionInput,
   CotizacionPatch,
+  DescargoInput,
+  Disputa,
+  FotosDescargo,
+  ParteEnDisputa,
   Postulacion,
   PostulacionInput,
   Resena,
@@ -131,5 +135,29 @@ export const api = {
 
   putResena(jobId: string, input: ResenaInput): Promise<Resena> {
     return pedir<Resena>(`/resenas/${encodeURIComponent(jobId)}`, enviar('PUT', input));
+  },
+
+  async listDisputas(): Promise<Disputa[]> {
+    const { items } = await pedir<{ items: Disputa[] }>('/disputas');
+    return items;
+  },
+
+  /** Null cuando nadie ha dejado su versión todavía, que no es un error. */
+  async getDisputa(jobId: string): Promise<Disputa | null> {
+    try {
+      return await pedir<Disputa>(`/disputas/${encodeURIComponent(jobId)}`);
+    } catch (cause) {
+      if (cause instanceof ApiCallError && cause.code === 'NOT_FOUND') return null;
+      throw cause;
+    }
+  },
+
+  putDescargo(jobId: string, input: DescargoInput): Promise<Disputa> {
+    return pedir<Disputa>(`/disputas/${encodeURIComponent(jobId)}`, enviar('PUT', input));
+  },
+
+  async fotosDescargo(jobId: string, parte: ParteEnDisputa): Promise<string[]> {
+    const { fotos } = await pedir<FotosDescargo>(`/disputas/${encodeURIComponent(jobId)}/fotos/${parte}`);
+    return fotos;
   },
 };

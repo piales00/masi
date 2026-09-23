@@ -152,7 +152,8 @@ describe('resolver', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resolver' }));
     expect(screen.getByText(/Vas a repartir/)).toBeTruthy();
-    expect(fetchImpl).not.toHaveBeenCalled();
+    // Leer las versiones de las partes es inofensivo; lo que no puede ocurrir es firmar.
+    expect(fetchImpl.mock.calls.some(([ruta]) => ruta === '/api/arbitraje')).toBe(false);
   });
 
   it('firma con la clave en la cabecera y el reparto elegido', async () => {
@@ -168,9 +169,9 @@ describe('resolver', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Resolver' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
 
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled());
-    const [ruta, init] = fetchImpl.mock.calls[0];
-    expect(ruta).toBe('/api/arbitraje');
+    // La pantalla también pide las versiones de las partes: se busca la llamada que firma.
+    await waitFor(() => expect(fetchImpl.mock.calls.some(([ruta]) => ruta === '/api/arbitraje')).toBe(true));
+    const [, init] = fetchImpl.mock.calls.find(([ruta]) => ruta === '/api/arbitraje')!;
     expect((init?.headers as Record<string, string>)['x-masi-arbitraje']).toBe('mi-clave');
     expect(JSON.parse(String(init?.body))).toEqual({ jobId: '4', providerBps: 7000 });
   });
@@ -201,5 +202,69 @@ describe('resolver', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('No autorizado.');
     expect(screen.getByRole('button', { name: 'Resolver' })).toBeTruthy();
+  });
+});
+
+/**
+ * Sin las versiones de las partes, el árbitro reparte a ciegas: el contrato congela el
+ * saldo pero no guarda por qué. Estas pruebas fijan que lleguen a su pantalla.
+ */
+describe('las versiones de las partes', () => {
+  const FOTO = `data:image/jpeg;base64,${'A'.repeat(40)}`;
+
+  const conDisputa = (descargos: Array<{ parte: string; motivo: string; fotos: number }>, fotos: string[] = []) =>
+    vi.fn(async (ruta: string) => {
+      if (ruta === '/api/disputas/4') {
+        return new Response(JSON.stringify({ jobId: '4', descargos, creadaEn: '', actualizadaEn: '' }), { status: 200 });
+      }
+      if (ruta.startsWith('/api/disputas/4/fotos/')) {
+        return new Response(JSON.stringify({ fotos }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ hash: 'abc123' }), { status: 200 });
+    });
+
+  it('muestra lo que dice cada parte, para poder compararlas', async () => {
+    sembrarCadena();
+    vi.stubGlobal('fetch', conDisputa([
+      { parte: 'client', motivo: 'Dejó la pared a medias.', fotos: 0 },
+      { parte: 'provider', motivo: 'El material nunca llegó.', fotos: 0 },
+    ]));
+    pintar();
+    await entrar();
+
+    expect(await screen.findByText('Dejó la pared a medias.')).toBeTruthy();
+    expect(screen.getByText('El material nunca llegó.')).toBeTruthy();
+    expect(screen.getByText('Cliente')).toBeTruthy();
+    expect(screen.getByText('Profesional')).toBeTruthy();
+  });
+
+  it('enseña las fotos que se aportaron como prueba', async () => {
+    sembrarCadena();
+    vi.stubGlobal('fetch', conDisputa([{ parte: 'client', motivo: 'Mira la foto.', fotos: 1 }], [FOTO]));
+    pintar();
+    await entrar();
+
+    await screen.findByText('Mira la foto.');
+    await waitFor(() => expect(screen.getByAltText('Prueba 1').getAttribute('src')).toBe(FOTO));
+  });
+
+  it('avisa cuando solo ha respondido una parte', async () => {
+    sembrarCadena();
+    vi.stubGlobal('fetch', conDisputa([{ parte: 'client', motivo: 'Solo la mía.', fotos: 0 }]));
+    pintar();
+    await entrar();
+
+    expect(await screen.findByText(/Solo ha respondido una parte/)).toBeTruthy();
+  });
+
+  it('no inventa nada si nadie dejó su versión', async () => {
+    sembrarCadena();
+    vi.stubGlobal('fetch', vi.fn(async (ruta: string) => (ruta === '/api/disputas/4'
+      ? new Response(JSON.stringify({ error: { code: 'NOT_FOUND', message: 'x' } }), { status: 404 })
+      : new Response(JSON.stringify({ hash: 'abc' }), { status: 200 }))));
+    pintar();
+    await entrar();
+
+    expect(await screen.findByText('Ninguna de las partes dejó su versión.')).toBeTruthy();
   });
 });

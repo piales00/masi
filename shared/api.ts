@@ -96,6 +96,44 @@ export interface Resena {
 }
 export type ResenaInput = Omit<Resena, 'jobId' | 'creadaEn'>;
 
+/**
+ * Disputas. El contrato congela el saldo, pero no tiene dónde guardar por qué: eso vive
+ * aquí, compartido, para que el árbitro pueda leer las dos versiones antes de repartir.
+ *
+ * Cada parte deja **un** descargo, que puede reescribir. Las imágenes van aparte del
+ * registro, igual que las de una solicitud: el listado del panel no debe arrastrarlas.
+ */
+export type ParteEnDisputa = 'client' | 'provider';
+
+export interface Descargo {
+  parte: ParteEnDisputa;
+  motivo: string;
+  /** Cuántas fotos aportó. Las imágenes se piden aparte. */
+  fotos: number;
+  creadaEn: string;
+}
+
+export interface Disputa {
+  jobId: string;
+  descargos: Descargo[];
+  creadaEn: string;
+  actualizadaEn: string;
+}
+
+/** `PUT /api/disputas/:jobId`. Reemplaza el descargo de esa parte. */
+export interface DescargoInput {
+  parte: ParteEnDisputa;
+  motivo: string;
+  fotos: string[];
+}
+
+export const MAX_MOTIVO = 600;
+
+/** `GET /api/disputas/:jobId/fotos/:parte`. Sin fotos devuelve `{ fotos: [] }`. */
+export interface FotosDescargo {
+  fotos: string[];
+}
+
 export interface ApiError {
   error: {
     code: 'INVALID' | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'RELAYER' | 'INTERNAL';
