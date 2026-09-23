@@ -6,6 +6,7 @@ import { PROVIDER_NAV } from './components/MainNav';
 import { useDemo } from './demo/DemoContext';
 import { AccessScreen } from './screens/AccessScreen';
 import { ActivityScreen } from './screens/ActivityScreen';
+import { ArbitrationScreen } from './screens/ArbitrationScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { JobScreen } from './screens/JobScreen';
 import { NewRequestScreen } from './screens/NewRequestScreen';
@@ -86,6 +87,14 @@ export function App() {
       <Route path="recargar" element={<RechargeScreen />} />
       <Route path="perfil" element={<ProfileScreen />} />
       <Route path="trabajos/:jobId" element={<JobScreen role="client" />} />
+    </Route>
+
+    {/*
+      * Panel interno del árbitro: sin navegación y sin enlace desde ninguna pantalla.
+      * No pide perfil porque no es un rol de la app; su puerta es la clave del panel.
+      */}
+    <Route element={<AuthLayout />}>
+      <Route path="arbitraje" element={<ArbitrationScreen />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/splash" replace />} />
