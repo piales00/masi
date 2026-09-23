@@ -100,7 +100,12 @@ export function ActivityScreen({ role }: { role: JobRole }) {
                   {monto.etiqueta} <strong className="font-bold text-masi-navy">{monto.valor}</strong>
                 </p>}
 
-                {job.rated && <p className="mt-2 flex items-center gap-1 text-sm text-masi-muted">
+                {/*
+                  * La calificación es lo que el cliente opinó, así que se le muestra a él.
+                  * El profesional no la ve aquí: su reputación vive en su Inicio, agregada,
+                  * no repetida trabajo por trabajo.
+                  */}
+                {job.rated && role === 'client' && <p className="mt-2 flex items-center gap-1 text-sm text-masi-muted">
                   <Star size={14} aria-hidden="true" className="fill-masi-orange text-masi-orange" />
                   <span>{job.stars} de 5</span>
                 </p>}

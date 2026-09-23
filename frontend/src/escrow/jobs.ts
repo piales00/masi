@@ -242,6 +242,22 @@ export function puedeCalificar(job: Job, role: JobRole): boolean {
   return job.state.tag === 'Released' || job.state.tag === 'Resolved';
 }
 
+/**
+ * Lo que el profesional lleva hecho, contado desde los trabajos reales.
+ *
+ * Solo cuentan los `Released`: son los únicos donde se sabe con certeza cuánto cobró
+ * (`amount`, que es el adelanto de materiales más el saldo; la comisión la paga el
+ * cliente aparte). Un `Resolved` terminó, pero el reparto del árbitro no está en el
+ * `Job` del contrato, así que sumarlo sería inventar. Un `Cancelled` no movió dinero.
+ */
+export function resumenDelProfesional(jobs: readonly Job[]): { completados: number; ganado: bigint } {
+  const cobrados = jobs.filter(job => job.state.tag === 'Released');
+  return {
+    completados: cobrados.length,
+    ganado: cobrados.reduce((total, job) => total + job.amount, 0n),
+  };
+}
+
 /** Un trabajo cuenta para el badge solo si está activo y la acción es de este rol. */
 export function requiereAccionDe(job: Job, role: JobRole, ahora?: bigint): boolean {
   return vistaDelTrabajo(job, role, { contraparte: '', ahora }).requiereAccion;

@@ -6,16 +6,28 @@ import { cn } from '../cn';
 import { mockDistanceKm } from '../demo/distance';
 import { useDemo } from '../demo/DemoContext';
 import { alertasPara } from '../demo/selectors';
-import { formatPrice } from '../marketplace';
+import { resumenDelProfesional } from '../escrow/jobs';
+import { direccionDelProfesional, useJobsDe } from '../escrow/useJobsPorAtender';
+import { formatRating } from '../marketplace';
+import { formatSoles } from '../money';
 import { serviceOf } from '../trades';
-
-/** Cifras de ejemplo: todavía no hay historial real del profesional. */
-const STATS = { weekJobs: 3, earned: 940, rating: 4.8, totalJobs: 24 };
+import { useProviderRating } from '../useProviderRatings';
 
 export function ProviderHomeScreen() {
   const { providerProfile, solicitudes, postulaciones, available, cargando, setAvailable } = useDemo();
   const navigate = useNavigate();
   const sent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
+
+  /*
+   * Todo lo que se muestra aquí sale de datos reales: los trabajos del propio profesional
+   * y su reputación en la cadena. Un profesional recién registrado ve ceros, que es la
+   * verdad, en vez de las cifras de ejemplo que había antes.
+   */
+  const direccion = direccionDelProfesional(providerProfile);
+  const { completados, ganado } = resumenDelProfesional(useJobsDe(direccion));
+  const reputacion = useProviderRating(direccion);
+  const conValoraciones = Boolean(reputacion && reputacion.rating_count > 0);
+  const calificacion = conValoraciones && reputacion ? formatRating(reputacion) : 'Nuevo en Masi';
 
   const services = providerProfile?.services ?? [];
   const alerts = alertasPara(providerProfile, solicitudes, postulaciones);
@@ -46,10 +58,10 @@ export function ProviderHomeScreen() {
             : <Avatar name={providerProfile?.fullName ?? ''} />}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-semibold text-masi-navy">{providerProfile?.fullName}</h2>
-            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-masi-muted">
-              <Star size={14} aria-hidden="true" className="text-masi-navy" />
-              <strong className="font-bold text-masi-navy">{STATS.rating}</strong>
-              <span>· {STATS.totalJobs} trabajos</span>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-masi-muted">
+              {conValoraciones && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
+              <strong className="font-bold text-masi-navy">{calificacion}</strong>
+              <span>· {completados} {completados === 1 ? 'trabajo' : 'trabajos'}</span>
             </p>
           </div>
         </div>
@@ -77,9 +89,9 @@ export function ProviderHomeScreen() {
 
       <div className="mt-4 grid grid-cols-3 gap-3">
         {[
-          { icon: Briefcase, label: 'Esta semana', value: String(STATS.weekJobs) },
-          { icon: TrendingUp, label: 'Ganado', value: formatPrice(STATS.earned) },
-          { icon: Star, label: 'Calificación', value: String(STATS.rating) },
+          { icon: Briefcase, label: 'Trabajos', value: String(completados) },
+          { icon: TrendingUp, label: 'Ganado', value: formatSoles(ganado) },
+          { icon: Star, label: 'Calificación', value: calificacion },
         ].map(({ icon: Icon, label, value }) => <div key={label} className="rounded-masi-card border border-masi-gray bg-white p-3 text-center shadow-masi-sm">
           <Icon size={18} aria-hidden="true" className="mx-auto text-masi-blue" />
           <p className="mt-2 text-base leading-tight font-bold text-masi-navy">{value}</p>

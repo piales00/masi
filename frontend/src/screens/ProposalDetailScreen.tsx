@@ -12,6 +12,7 @@ import { formatPrice, formatRating } from '../marketplace';
 import { serviceOf } from '../trades';
 import { useMarketplace } from '../useMarketplace';
 import { useProviderRating } from '../useProviderRatings';
+import { useResenasDeProfesional } from '../useResenasDeProfesional';
 
 function Dato({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return <p className="flex items-center gap-1.5 text-sm text-masi-muted">
@@ -27,6 +28,10 @@ export function ProposalDetailScreen() {
   const propuestaDe = postulaciones.find(item => item.id === postulacionId && item.solicitudId === id);
   /** Antes del `return` temprano: los hooks no pueden ir detrás de una condición. */
   const deLaCadena = useProviderRating(propuestaDe?.providerAddress);
+  const opiniones = useResenasDeProfesional({
+    providerId: propuestaDe?.providerId,
+    providerAddress: propuestaDe?.providerAddress,
+  });
 
   const solicitud = solicitudes.find(item => item.id === id && item.clienteId === clienteId);
   const propuesta = propuestaDe;
@@ -97,6 +102,30 @@ export function ProposalDetailScreen() {
           {ficha?.description || perfil?.bio}
         </p>}
       </section>
+
+      {/*
+        * El texto de las reseñas acompaña a la nota de arriba; la nota sigue saliendo del
+        * contrato. Sin comentarios no se dibuja nada: una sección vacía no informa.
+        */}
+      {opiniones.resenas.length > 0 && <section className="mt-6" aria-labelledby="opiniones">
+        <h3 id="opiniones" className="text-lg font-bold text-masi-navy">Lo que dicen sus clientes</h3>
+        <ul className="mt-3 grid gap-3">
+          {opiniones.resenas.map(resena => <li
+            key={resena.jobId}
+            className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm"
+          >
+            <p className="flex items-center gap-1" aria-label={`${resena.estrellas} de 5 estrellas`}>
+              {[1, 2, 3, 4, 5].map(n => <Star
+                key={n}
+                size={14}
+                aria-hidden="true"
+                className={n <= resena.estrellas ? 'fill-masi-orange text-masi-orange' : 'text-masi-gray'}
+              />)}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed break-words text-masi-text">{resena.texto}</p>
+          </li>)}
+        </ul>
+      </section>}
 
       <section className="mt-6 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         <h3 className="text-sm font-semibold text-masi-navy">Su propuesta</h3>

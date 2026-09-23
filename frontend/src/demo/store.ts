@@ -32,6 +32,8 @@ export interface DemoStore {
   crearCotizacion(cotizacion: Cotizacion): Promise<Cotizacion>;
   patchCotizacion(id: string, patch: CotizacionPatch): Promise<Cotizacion>;
   leerResena(jobId: string): Promise<Resena | null>;
+  /** Las reseñas que ha recibido un profesional, de la más reciente a la más antigua. */
+  leerResenasDe(profesional: { providerId?: string; providerAddress?: string | null }): Promise<Resena[]>;
   guardarResena(jobId: string, input: ResenaInput): Promise<Resena>;
 }
 
@@ -64,6 +66,13 @@ const localStore: DemoStore = {
   },
   async leerResena(jobId) {
     return leerResenasLocales().find(item => item.jobId === jobId) ?? null;
+  },
+  async leerResenasDe({ providerId, providerAddress }) {
+    // Sin ningún criterio no se devuelve todo: sería la reseña de cualquiera.
+    if (!providerId && !providerAddress) return [];
+    return leerResenasLocales().filter(item =>
+      (providerId ? item.providerId === providerId : false)
+      || (providerAddress ? item.providerAddress === providerAddress : false));
   },
   async guardarResena(jobId, input) {
     const item: Resena = { ...input, jobId, creadaEn: new Date().toISOString() };
@@ -193,6 +202,17 @@ const apiStore: DemoStore = {
 
   leerResena(jobId: string) {
     return api.getResena(jobId);
+  },
+
+  async leerResenasDe({ providerId, providerAddress }) {
+    if (!providerId && !providerAddress) return [];
+    // Una sola consulta por criterio: el endpoint los combina con Y, no con O.
+    const listas = await Promise.all([
+      providerId ? api.listResenas({ providerId }) : Promise.resolve([]),
+      providerAddress ? api.listResenas({ providerAddress }) : Promise.resolve([]),
+    ]);
+    const porTrabajo = new Map(listas.flat().map(item => [item.jobId, item]));
+    return [...porTrabajo.values()];
   },
 
   guardarResena(jobId: string, input: ResenaInput) {

@@ -126,7 +126,7 @@ vencimiento: el contrato no ejecuta tareas programadas.
 
 - **La recarga de saldo es simulada.** En producción la haría un anchor vía SEP-24, autenticando nuestras cuentas de contrato con SEP-45. Masi nunca toca soles, y por eso no necesita licencia.
 - Las calificaciones se pueden falsear, pero cada reseña falsa cuesta la comisión de un trabajo real.
-- El árbitro de las disputas es Masi. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales.
+- El árbitro de las disputas es Masi. Sus decisiones son públicas y solo afectan el saldo, nunca el adelanto de materiales. Se resuelven desde un **panel interno** en `/arbitraje`, que no se enlaza desde la app y exige una clave (`ARBITER_PANEL_KEY`); la llave del árbitro vive solo en el servidor.
 - Recuperación de cuenta: depende de la sincronización de passkeys con Google o iCloud.
 - La API compartida de la demo no tiene autenticación. El dinero y el estado de los trabajos siguen protegidos por el contrato; solicitudes, postulaciones, cotizaciones y texto de reseñas viven temporalmente en Upstash Redis.
 
