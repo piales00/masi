@@ -13,7 +13,7 @@ import { serviceOf } from '../trades';
 const STATS = { weekJobs: 3, earned: 940, rating: 4.8, totalJobs: 24 };
 
 export function ProviderHomeScreen() {
-  const { providerProfile, solicitudes, postulaciones, available, setAvailable } = useDemo();
+  const { providerProfile, solicitudes, postulaciones, available, cargando, setAvailable } = useDemo();
   const navigate = useNavigate();
   const sent = (useLocation().state as { sent?: boolean } | null)?.sent === true;
 
@@ -85,9 +85,15 @@ export function ProviderHomeScreen() {
         {alerts.length === 0
           ? <div className="mt-4 rounded-masi-card border border-dashed border-masi-gray bg-white px-6 py-10 text-center">
             <BellRing size={30} aria-hidden="true" className="mx-auto text-masi-blue" />
-            <p className="mt-3 text-sm text-masi-muted">
-              Todavía no hay solicitudes de {services.length === 1 ? services[0] : 'tus servicios'} en tu zona. Te avisaremos apenas llegue una.
-            </p>
+            {cargando
+              ? <p className="mt-3 text-sm text-masi-muted">Buscando solicitudes…</p>
+              : <>
+                <p className="mt-3 text-sm text-masi-muted">
+                  Todavía no hay solicitudes de {services.length > 0 ? services.join(' ni ') : 'tus servicios'}. Te avisaremos apenas llegue una.
+                </p>
+                {/* El filtro es por oficio, no por distrito: decirlo evita que parezca averiado. */}
+                <p className="mt-2 text-xs text-masi-muted">Solo te llegan las de los servicios que ofreces.</p>
+              </>}
           </div>
           : <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {alerts.map(alert => {
