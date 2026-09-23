@@ -93,7 +93,12 @@ Qué queda: que el anchor admita V2. Es exactamente la pregunta que hay que hace
 de integrarlos —**si su implementación soporta SEP-45 con credenciales address-bound**—, porque de
 eso depende que los usuarios con passkey puedan retirar.
 
-La pantalla lo dice en cristiano en vez de enseñar el error del servidor.
+**Qué hace la pantalla.** Da la solicitud por recibida —"El dinero llega a tu cuenta bancaria en
+un máximo de 24 horas"— en lugar de enseñar el error del servidor. Es el mismo trato que la
+recarga da a su pago: un flujo simulado dentro de una pantalla que **declara que lo es**, con el
+aviso "Demo: el retiro no mueve dinero real" siempre a la vista.
+
+Ese aviso no se quita. Es lo que separa una demo de una promesa falsa.
 
 ---
 

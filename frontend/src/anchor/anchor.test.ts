@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Address, xdr } from '@stellar/stellar-sdk';
 import { codificarEntradas, decodificarEntradas } from './entradas';
 import { parsearToml } from './sep1';
-import { RETIRO_NO_DISPONIBLE, explicarFallo, obtenerToken, verificarReto, type FirmarEntrada } from './sep45';
+import { ANCHOR_SIN_SOPORTE_PASSKEY, explicarFallo, obtenerToken, verificarReto, type FirmarEntrada } from './sep45';
 import { activosDeRetiro, consultarRetiro, iniciarRetiro } from './sep24';
 import reto from './fixtures/reto.json';
 import TOML from './fixtures/stellar.toml.txt?raw';
@@ -196,15 +196,9 @@ describe('SEP-24', () => {
 });
 
 describe('fallos del anchor, en cristiano', () => {
-  it('traduce el rechazo de las credenciales con huella', () => {
+  it('reconoce el rechazo de las credenciales con huella y lo marca como tal', () => {
     // El anchor de referencia responde esto ante credenciales address-bound (CAP-0071-02).
-    expect(explicarFallo('Unknown enum value: 2')).toBe(RETIRO_NO_DISPONIBLE);
-    expect(explicarFallo('Unknown enum value: 2')).not.toMatch(/enum/i);
-  });
-
-  it('no promete un envío que no va a ocurrir, y dice que el saldo sigue ahí', () => {
-    expect(RETIRO_NO_DISPONIBLE).not.toMatch(/en breve|en camino|enviaremos/i);
-    expect(RETIRO_NO_DISPONIBLE).toMatch(/saldo está intacto/);
+    expect(explicarFallo('Unknown enum value: 2')).toBe(ANCHOR_SIN_SOPORTE_PASSKEY);
   });
 
   it('deja pasar cualquier otro error tal cual', () => {
