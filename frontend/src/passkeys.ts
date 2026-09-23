@@ -2,6 +2,7 @@ import { Buffer } from 'buffer';
 import { MercuryIndexer, PasskeyKit, SignerKey } from 'passkey-kit';
 import type { CreateWalletResult } from 'passkey-kit';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
+import type { xdr } from '@stellar/stellar-sdk';
 import { IndexedDBStorage } from 'passkey-kit/storage';
 import { requirePasskeyOrigin } from './passkeyOrigin';
 import { verifiedWebAuthn } from './verifiedWebAuthn';
@@ -181,4 +182,20 @@ export async function signAndSend<T>(tx: AssembledTransaction<T>, expectedAddres
     throw new Error(result.error?.message || 'No se pudo enviar la transacción. Inténtalo de nuevo.');
   }
   return result.hash;
+}
+
+/**
+ * Firma una entrada de autorización suelta, sin transacción alrededor. Es lo que pide
+ * SEP-45 para identificarse ante un anchor: la huella prueba que la smart wallet es tuya.
+ *
+ * `expiracion` viene del propio reto, para que la firma caduque a la vez que la del anchor.
+ */
+export async function signAuthEntry(
+  entrada: xdr.SorobanAuthorizationEntry,
+  expectedAddress: string,
+  expiracion: number,
+): Promise<xdr.SorobanAuthorizationEntry> {
+  requireFinalDomain();
+  if (kit.contractId !== expectedAddress) await confirmDemoIdentity(expectedAddress);
+  return kit.signAuthEntry(entrada, undefined, { expiration: expiracion });
 }

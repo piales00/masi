@@ -207,6 +207,7 @@ sembrado. A tres días de la entrega no compensa.
 | [`INTEGRACION.md`](./INTEGRACION.md) | Cómo conectar el frontend al contrato |
 | [`DESPLIEGUE.md`](./DESPLIEGUE.md) | Contract ID, hashes, reproducción |
 | [`PRUEBA_E2E.md`](./PRUEBA_E2E.md) | Prueba de punta a punta con dos teléfonos |
+| [`RETIRO_ANCHOR.md`](./RETIRO_ANCHOR.md) | Cómo sale el dinero: retiro por anchor y ruta a Anclap |
 | [`P2_PRUEBA_PASSKEYS.md`](./P2_PRUEBA_PASSKEYS.md) | Cómo probar las passkeys |
 | [`masi-scope.md`](./masi-scope.md) | Alcance y cronograma originales |
 | [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) | Obligatorio antes de tocar interfaz |
