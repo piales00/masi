@@ -130,7 +130,25 @@ export async function obtenerToken(opciones: OpcionesToken, firmar: FirmarEntrad
   });
   const resultado = await canje.json() as { token?: string; error?: string };
   if (!canje.ok || !resultado.token) {
-    throw new Error(resultado.error || 'El anchor no aceptó tu identificación.');
+    throw new Error(explicarFallo(resultado.error));
   }
   return resultado.token;
+}
+
+/**
+ * El anchor de referencia responde "Unknown enum value: 2" cuando recibe credenciales
+ * address-bound (CAP-0071-02).
+ *
+ * No es un fallo de la cuenta ni de esta app: `passkey-kit` convierte las credenciales
+ * de V1 a V2 antes de firmar, a propósito, para que una firma hecha en una smart wallet
+ * no sirva en otra. El servidor de pruebas todavía solo entiende V1, así que rechaza una
+ * firma correcta. Con un anchor que admita V2 —o con SEP-10 y una cuenta clásica— el
+ * mismo código funciona.
+ */
+export function explicarFallo(error: string | undefined): string {
+  if (error && /unknown enum value/i.test(error)) {
+    return 'Este anchor todavía no reconoce la forma en que firman las cuentas con huella. '
+      + 'No es un problema de tu cuenta: el servicio de pruebas aún no admite el formato nuevo.';
+  }
+  return error || 'El anchor no aceptó tu identificación.';
 }
