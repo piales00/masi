@@ -14,7 +14,7 @@ function call(store: MemoryStore, method: string, path: string, body?: unknown) 
 }
 
 const solicitud = {
-  clienteId: 'cliente-local', servicio: 'Pintura', descripcion: 'Pintar sala', fotos: 2,
+  clienteId: 'cliente-local', servicio: 'Pintura', descripcion: 'Pintar sala', fotos: [] as string[],
   ubicacion: 'Av. Demo 123', distrito: 'Surco', cliente: 'María',
 };
 
@@ -126,5 +126,92 @@ describe('ruta explícita: el enrutado de Vercel', () => {
   test('sin ruta explícita sigue deduciéndola de la URL', async () => {
     const respuesta = await handleApi(new Request('https://masiapp.vercel.app/api/salud'), new MemoryStore());
     expect(await respuesta.json()).toEqual({ ok: true });
+  });
+});
+
+describe('fotos de una solicitud', () => {
+  /** Data URL válida de `longitud` caracteres en total. */
+  const foto = (longitud = 1_000, tipo = 'jpeg') => {
+    const prefijo = `data:image/${tipo};base64,`;
+    return prefijo + 'A'.repeat(longitud - prefijo.length);
+  };
+  const conFotos = (fotos: unknown[]) => ({ ...solicitud, fotos });
+
+  async function mensajeDeRechazo(fotos: unknown[]): Promise<string> {
+    const respuesta = await call(new MemoryStore(), 'POST', 'solicitudes', conFotos(fotos));
+    expect(respuesta.status).toBe(400);
+    const body = await respuesta.json();
+    expect(body.error.code).toBe('INVALID');
+    return body.error.message;
+  }
+
+  test('guarda las fotos aparte y el registro solo lleva el recuento', async () => {
+    const store = new MemoryStore();
+    const fotos = [foto(1_000, 'jpeg'), foto(2_000, 'png')];
+    const creada = await call(store, 'POST', 'solicitudes', conFotos(fotos));
+    expect(creada.status).toBe(201);
+    const { id, fotos: recuento } = await creada.json();
+    expect(recuento).toBe(2);
+    expect(await store.get(`solicitudes/${id}`)).toMatchObject({ fotos: 2 });
+
+    const leidas = await call(store, 'GET', `solicitudes/${id}/fotos`);
+    expect(leidas.status).toBe(200);
+    expect(await leidas.json()).toEqual({ fotos });
+  });
+
+  test('el listado y el detalle no llevan ninguna imagen', async () => {
+    const store = new MemoryStore();
+    const { id } = await (await call(store, 'POST', 'solicitudes', conFotos([foto(150_000), foto(150_000)]))).json();
+    const listado = await (await call(store, 'GET', 'solicitudes')).text();
+    const detalle = await (await call(store, 'GET', `solicitudes/${id}`)).text();
+    for (const texto of [listado, detalle]) {
+      expect(texto).not.toContain('data:image');
+      expect(texto.length).toBeLessThan(1_000);
+    }
+    expect(JSON.parse(listado).items).toHaveLength(1);
+  });
+
+  test('una solicitud sin fotos devuelve una lista vacía, no un 404', async () => {
+    const store = new MemoryStore();
+    const { id } = await (await call(store, 'POST', 'solicitudes', solicitud)).json();
+    const respuesta = await call(store, 'GET', `solicitudes/${id}/fotos`);
+    expect(respuesta.status).toBe(200);
+    expect(await respuesta.json()).toEqual({ fotos: [] });
+  });
+
+  test('una solicitud que no existe da 404', async () => {
+    const respuesta = await call(new MemoryStore(), 'GET', 'solicitudes/no-existe/fotos');
+    expect(respuesta.status).toBe(404);
+    expect((await respuesta.json()).error.code).toBe('NOT_FOUND');
+  });
+
+  test('los cuatro rechazos dan 400 con mensajes distintos', async () => {
+    const mensajes = await Promise.all([
+      mensajeDeRechazo(Array.from({ length: 6 }, () => foto())),
+      mensajeDeRechazo([foto(300_000)]),
+      mensajeDeRechazo(['data:text/html,<script>alert(1)</script>']),
+      mensajeDeRechazo(['data:image/svg+xml;base64,' + btoa('<svg onload="alert(1)"/>')]),
+    ]);
+    expect(new Set(mensajes).size).toBe(4);
+    expect(mensajes[0]).toMatch(/como mucho 5/);
+    expect(mensajes[1]).toMatch(/pesa más de 200 KB/);
+    expect(mensajes[2]).toMatch(/JPEG, PNG ni WebP/);
+    expect(mensajes[3]).toMatch(/SVG/);
+  });
+
+  test('rechaza base64 corrupto, entradas que no son texto y el total excedido', async () => {
+    expect(await mensajeDeRechazo(['data:image/png;base64,AAAA"><script>'])).toMatch(/caracteres no válidos/);
+    expect(await mensajeDeRechazo([42])).toMatch(/no es una imagen/);
+    expect(await mensajeDeRechazo(Array.from({ length: 5 }, () => foto(170_000)))).toMatch(/Entre todas/);
+  });
+
+  test('el recuento no se puede mandar como número', async () => {
+    expect((await call(new MemoryStore(), 'POST', 'solicitudes', { ...solicitud, fotos: 2 })).status).toBe(400);
+  });
+
+  test('una solicitud rechazada no deja fotos huérfanas', async () => {
+    const store = new MemoryStore();
+    await call(store, 'POST', 'solicitudes', conFotos([foto(), 'data:text/html,x']));
+    expect(await store.list('')).toEqual([]);
   });
 });

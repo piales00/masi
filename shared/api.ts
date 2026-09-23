@@ -18,6 +18,7 @@ export interface Solicitud {
   clienteId: string;
   servicio: Trade;
   descripcion: string;
+  /** Cuántas fotos tiene la solicitud. Las imágenes se piden aparte. */
   fotos: number;
   ubicacion: string;
   distrito: string;
@@ -28,7 +29,20 @@ export interface Solicitud {
   actualizadaEn: string;
 }
 export type SolicitudInput = Pick<Solicitud,
-  'clienteId' | 'servicio' | 'descripcion' | 'fotos' | 'ubicacion' | 'distrito' | 'cliente'>;
+  'clienteId' | 'servicio' | 'descripcion' | 'ubicacion' | 'distrito' | 'cliente'> & {
+  /** Data URLs de las imágenes, al crear. El servidor guarda el recuento en `Solicitud.fotos`. */
+  fotos: string[];
+};
+
+/** Topes de las fotos de una solicitud. Se miden en caracteres de la data URL. */
+export const MAX_FOTOS = 5;
+export const MAX_BYTES_FOTO = 200_000;
+export const MAX_BYTES_FOTOS = 800_000;
+
+/** `GET /api/solicitudes/:id/fotos`. Una solicitud sin fotos devuelve `{ fotos: [] }`. */
+export interface FotosSolicitud {
+  fotos: string[];
+}
 
 export interface Postulacion {
   id: string;
