@@ -79,6 +79,22 @@ beforeEach(() => {
 });
 
 describe('Actividad como historial', () => {
+  it('el profesional no ve la calificación en su historial', async () => {
+    const jobId = await llevarA('Released');
+    await escrow.rate(jobId, 5, new Uint8Array(32));
+    sembrarDemo(jobId.toString());
+    montar(<ActivityScreen role="provider" />);
+
+    // La nota es lo que opinó el cliente: se le muestra a él, no al profesional.
+    expect(await screen.findByText('Servicio completado')).toBeTruthy();
+    expect(screen.queryByText('5 de 5')).toBeNull();
+    cleanup();
+
+    // Y al cliente sí, en la misma pantalla y con el mismo trabajo.
+    montar(<ActivityScreen role="client" />);
+    expect(await screen.findByText('5 de 5')).toBeTruthy();
+  });
+
   it('muestra un servicio completado con su monto y su calificación', async () => {
     const jobId = await llevarA('Released');
     await escrow.rate(jobId, 5, new Uint8Array(32));

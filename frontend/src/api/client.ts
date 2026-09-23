@@ -113,6 +113,12 @@ export const api = {
     return pedir<Cotizacion>(`/cotizaciones/${encodeURIComponent(id)}`, enviar('PATCH', patch));
   },
 
+  /** Reseñas de un profesional. El endpoint filtra por id, por dirección o por ambos. */
+  async listResenas(filtros: { providerId?: string; providerAddress?: string } = {}): Promise<Resena[]> {
+    const { items } = await pedir<{ items: Resena[] }>(`/resenas${query(filtros)}`);
+    return items;
+  },
+
   /** Devuelve null cuando todavía no hay reseña, que no es un error. */
   async getResena(jobId: string): Promise<Resena | null> {
     try {

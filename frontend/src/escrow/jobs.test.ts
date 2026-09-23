@@ -9,6 +9,7 @@ import {
   puedeLiberarseSolo,
   puedeCalificar,
   requiereAccionDe,
+  resumenDelProfesional,
   trabajosPorAtender,
   vistaDelTrabajo,
 } from './jobs';
@@ -190,5 +191,31 @@ describe('calificar', () => {
     for (const tag of ['Requested', 'Accepted', 'Funded', 'Started', 'Submitted', 'Disputed', 'Cancelled'] as Tag[]) {
       expect(puedeCalificar(job(tag), 'client')).toBe(false);
     }
+  });
+});
+
+describe('resumen del profesional', () => {
+  it('sin trabajos, todo en cero', () => {
+    expect(resumenDelProfesional([])).toEqual({ completados: 0, ganado: 0n });
+  });
+
+  it('cuenta los completados y suma lo que cobró en cada uno', () => {
+    const jobs = [
+      job('Released', { id: 1n, amount: solesToStroops('1200') }),
+      job('Released', { id: 2n, amount: solesToStroops('800') }),
+    ];
+    expect(resumenDelProfesional(jobs)).toEqual({ completados: 2, ganado: solesToStroops('2000') });
+  });
+
+  it('lo que sigue vivo no cuenta todavía', () => {
+    const jobs = ['Requested', 'Accepted', 'Funded', 'Started', 'Submitted', 'Disputed']
+      .map((tag, indice) => job(tag as Tag, { id: BigInt(indice + 1) }));
+    expect(resumenDelProfesional(jobs)).toEqual({ completados: 0, ganado: 0n });
+  });
+
+  it('un resuelto o un cancelado no inventan ingresos', () => {
+    // El reparto del árbitro no está en el Job, y un cancelado no movió dinero.
+    expect(resumenDelProfesional([job('Resolved'), job('Cancelled')]))
+      .toEqual({ completados: 0, ganado: 0n });
   });
 });
