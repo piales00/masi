@@ -52,6 +52,51 @@ export const ETIQUETA: Record<Tag, string> = {
   Cancelled: 'Servicio cancelado',
 };
 
+/**
+ * Las etapas que una persona reconoce, que son menos que los estados del contrato.
+ *
+ * Nueve estados en una barra no se leen en un teléfono, así que varios comparten etapa y
+ * el matiz lo pone la etiqueta: `Funded` y `Started` están los dos en «En servicio», pero
+ * uno dice «Pago protegido» y el otro «Servicio en curso», y solo el segundo la marca
+ * como empezada. Ninguna etapa se da por cumplida antes de tiempo: con `Requested` no hay
+ * ni una, porque el profesional todavía tiene que confirmar.
+ */
+export const ETAPAS_DEL_SERVICIO = ['Confirmación', 'Pago protegido', 'En servicio', 'Revisión', 'Completado'] as const;
+
+export interface ProgresoDelServicio {
+  /** Etapas ya cumplidas, de izquierda a derecha. */
+  hechas: number;
+  /** Cuál es el momento actual; -1 cuando no hay línea que recorrer. */
+  actual: number;
+  /** La etapa actual ya arrancó, no solo es la siguiente que toca. */
+  enMarcha: boolean;
+  /** Estado en lenguaje de persona: el mismo chip de siempre, nunca el del contrato. */
+  etiqueta: string;
+  /**
+   * Lo que se sale de la línea. Una disputa o una cancelación no son un paso más del
+   * camino feliz, y pintarlas dentro sería engañoso: se muestran aparte.
+   */
+  incidencia: 'revision' | 'cerrado' | null;
+}
+
+const PROGRESO: Record<Tag, Omit<ProgresoDelServicio, 'etiqueta'>> = {
+  Requested: { hechas: 0, actual: 0, enMarcha: false, incidencia: null },
+  Accepted: { hechas: 1, actual: 1, enMarcha: false, incidencia: null },
+  Funded: { hechas: 2, actual: 2, enMarcha: false, incidencia: null },
+  Started: { hechas: 2, actual: 2, enMarcha: true, incidencia: null },
+  Submitted: { hechas: 3, actual: 3, enMarcha: true, incidencia: null },
+  Released: { hechas: 5, actual: 4, enMarcha: true, incidencia: null },
+  Disputed: { hechas: 0, actual: -1, enMarcha: false, incidencia: 'revision' },
+  Resolved: { hechas: 0, actual: -1, enMarcha: false, incidencia: 'cerrado' },
+  Cancelled: { hechas: 0, actual: -1, enMarcha: false, incidencia: 'cerrado' },
+};
+
+export function progresoDelServicio(job: Job): ProgresoDelServicio {
+  const tag = job.state.tag;
+  const fila = PROGRESO[tag] ?? { hechas: 0, actual: -1, enMarcha: false, incidencia: null };
+  return { ...fila, etiqueta: ETIQUETA[tag] ?? 'Trabajo' };
+}
+
 export const esActivo = (job: Job): boolean => ESTADOS_ACTIVOS.includes(job.state.tag);
 export const esTerminal = (job: Job): boolean => ESTADOS_TERMINALES.includes(job.state.tag);
 

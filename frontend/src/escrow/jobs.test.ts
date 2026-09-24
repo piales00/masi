@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { Job } from '../../../shared/escrow';
 import { solesToStroops } from '../money';
 import {
+  ETAPAS_DEL_SERVICIO,
   ETIQUETA,
   esActivo,
   esTerminal,
   liberaSolo,
   puedeLiberarseSolo,
+  progresoDelServicio,
   puedeCalificar,
   requiereAccionDe,
   resumenDelProfesional,
@@ -217,5 +219,63 @@ describe('resumen del profesional', () => {
     // El reparto del árbitro no está en el Job, y un cancelado no movió dinero.
     expect(resumenDelProfesional([job('Resolved'), job('Cancelled')]))
       .toEqual({ completados: 0, ganado: 0n });
+  });
+});
+
+describe('etapas del servicio', () => {
+  /** Las cinco etapas se recorren en orden y ninguna se adelanta. */
+  const etapa = (tag: Tag) => progresoDelServicio(job(tag));
+
+  it('con la cotización aceptada todavía no hay ninguna etapa cumplida', () => {
+    // El profesional aún tiene que confirmar: decir «Confirmación» hecha sería mentir.
+    expect(etapa('Requested')).toMatchObject({ hechas: 0, actual: 0, enMarcha: false });
+    expect(ETAPAS_DEL_SERVICIO[0]).toBe('Confirmación');
+    expect(etapa('Requested').etiqueta).toBe('Esperando confirmación');
+  });
+
+  it('confirmado pero sin pagar: la confirmación cuenta, el pago no', () => {
+    expect(etapa('Accepted')).toMatchObject({ hechas: 1, actual: 1, enMarcha: false });
+    expect(etapa('Accepted').etiqueta).toBe('Pago pendiente');
+  });
+
+  it('pagado y sin empezar: el pago cuenta y el servicio está por arrancar', () => {
+    expect(etapa('Funded')).toMatchObject({ hechas: 2, actual: 2, enMarcha: false });
+    expect(etapa('Funded').etiqueta).toBe('Pago protegido');
+  });
+
+  it('en curso: misma etapa que el pago hecho, pero ya arrancada', () => {
+    expect(etapa('Started')).toMatchObject({ hechas: 2, actual: 2, enMarcha: true });
+    expect(etapa('Started').etiqueta).toBe('Servicio en curso');
+  });
+
+  it('entregado: el servicio cuenta y toca la revisión', () => {
+    expect(etapa('Submitted')).toMatchObject({ hechas: 3, actual: 3, enMarcha: true });
+  });
+
+  it('liberado: las cinco etapas cumplidas', () => {
+    expect(etapa('Released')).toMatchObject({ hechas: 5, actual: 4, enMarcha: true });
+    expect(ETAPAS_DEL_SERVICIO[4]).toBe('Completado');
+  });
+
+  it('una disputa se sale de la línea, no avanza por ella', () => {
+    expect(etapa('Disputed')).toMatchObject({ actual: -1, incidencia: 'revision' });
+    expect(etapa('Disputed').etiqueta).toBe('Problema en revisión');
+  });
+
+  it('resuelto y cancelado se muestran como casos cerrados, no como completados', () => {
+    expect(etapa('Resolved')).toMatchObject({ actual: -1, incidencia: 'cerrado' });
+    expect(etapa('Cancelled')).toMatchObject({ actual: -1, incidencia: 'cerrado' });
+    // No son «Completado»: ese es el final del camino normal.
+    expect(etapa('Resolved').etiqueta).toBe('Problema resuelto');
+    expect(etapa('Cancelled').etiqueta).toBe('Servicio cancelado');
+  });
+
+  it('ningún estado se pasa del número de etapas', () => {
+    const estados: Tag[] = ['Requested', 'Accepted', 'Funded', 'Started', 'Submitted', 'Released', 'Disputed', 'Resolved', 'Cancelled'];
+    for (const tag of estados) {
+      const { hechas, actual } = etapa(tag);
+      expect(hechas).toBeLessThanOrEqual(ETAPAS_DEL_SERVICIO.length);
+      expect(actual).toBeLessThan(ETAPAS_DEL_SERVICIO.length);
+    }
   });
 });
