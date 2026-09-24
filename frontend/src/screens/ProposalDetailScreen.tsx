@@ -105,26 +105,30 @@ export function ProposalDetailScreen() {
 
       {/*
         * El texto de las reseñas acompaña a la nota de arriba; la nota sigue saliendo del
-        * contrato. Sin comentarios no se dibuja nada: una sección vacía no informa.
+        * contrato. La sección aparece aunque no haya ninguna opinión —«todavía no tiene»
+        * es una respuesta, y su ausencia parecía una pantalla a medio hacer—, pero solo
+        * cuando se sabe: mientras carga o si la consulta falla no se afirma nada.
         */}
-      {opiniones.resenas.length > 0 && <section className="mt-6" aria-labelledby="opiniones">
+      {!opiniones.cargando && !opiniones.error && <section className="mt-6" aria-labelledby="opiniones">
         <h3 id="opiniones" className="text-lg font-bold text-masi-navy">Lo que dicen sus clientes</h3>
-        <ul className="mt-3 grid gap-3">
-          {opiniones.resenas.map(resena => <li
-            key={resena.jobId}
-            className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm"
-          >
-            <p className="flex items-center gap-1" aria-label={`${resena.estrellas} de 5 estrellas`}>
-              {[1, 2, 3, 4, 5].map(n => <Star
-                key={n}
-                size={14}
-                aria-hidden="true"
-                className={n <= resena.estrellas ? 'fill-masi-orange text-masi-orange' : 'text-masi-gray'}
-              />)}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed break-words text-masi-text">{resena.texto}</p>
-          </li>)}
-        </ul>
+        {opiniones.resenas.length === 0
+          ? <p className="mt-2 text-sm text-masi-muted">Todavía no tiene opiniones.</p>
+          : <ul className="mt-3 grid gap-3">
+            {opiniones.resenas.map(resena => <li
+              key={resena.jobId}
+              className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm"
+            >
+              <p className="flex items-center gap-1" aria-label={`${resena.estrellas} de 5 estrellas`}>
+                {[1, 2, 3, 4, 5].map(n => <Star
+                  key={n}
+                  size={14}
+                  aria-hidden="true"
+                  className={n <= resena.estrellas ? 'fill-masi-orange text-masi-orange' : 'text-masi-gray'}
+                />)}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed break-words text-masi-text">{resena.texto}</p>
+            </li>)}
+          </ul>}
       </section>}
 
       <section className="mt-6 rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">

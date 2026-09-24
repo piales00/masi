@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Info, MapPin, Send } from 'lucide-react';
+import { MapPin, Send } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -10,11 +10,7 @@ import { ScreenFooter } from '../components/ScreenFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { mockDistanceKm } from '../demo/distance';
 import { useDemo } from '../demo/DemoContext';
-import { formatPrice } from '../marketplace';
 import { serviceOf } from '../trades';
-
-/** Referencia informativa de ejemplo: no sale de datos reales de la zona. */
-const AVERAGE_BY_SERVICE = 120;
 
 export function ProviderAlertScreen() {
   const { id } = useParams();
@@ -105,10 +101,6 @@ export function ProviderAlertScreen() {
           placeholder="Ej. 40"
           required
         />
-        <p className="flex items-start gap-2 rounded-masi-input bg-masi-blue-50 p-3 text-xs leading-relaxed text-masi-navy">
-          <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
-          <span>Referencia: en la zona este tipo de trabajo ronda los {formatPrice(AVERAGE_BY_SERVICE)}. El precio final lo defines tú después de revisar el problema.</span>
-        </p>
       </form>
     </div>
   </Screen>;

@@ -221,7 +221,6 @@ export function RechargeScreen() {
               inputMode="numeric"
               autoComplete="cc-number"
               placeholder="0000 0000 0000 0000"
-              hint="Para la demo puedes usar 4111 1111 1111 1111."
               value={tarjeta}
               onChange={evento => setTarjeta(formatearTarjeta(evento.target.value))}
             />
@@ -258,7 +257,7 @@ export function RechargeScreen() {
 
         <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-masi-muted">
           <Lock size={13} aria-hidden="true" className="shrink-0" />
-          Demo: no se realiza ningún cobro y tus datos no se guardan.
+          Tus datos de pago no se guardan.
         </p>
       </section>
 

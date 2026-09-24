@@ -92,11 +92,11 @@ describe('pantalla de retiro', () => {
     expect(screen.getByText(/entra con tu cuenta de profesional/)).toBeTruthy();
   });
 
-  it('dice que el activo es de pruebas y nombra a Anclap como el paso real', () => {
+  it('no nombra el servicio de pruebas ni lo que falta para la versión final', () => {
     sembrar(CUENTA);
     pintar();
-    expect(screen.getByText(/testanchor.stellar.org/)).toBeTruthy();
-    expect(screen.getByText(/Anclap/)).toBeTruthy();
+    expect(screen.queryByText(/testanchor.stellar.org/)).toBeNull();
+    expect(screen.queryByText(/Anclap/)).toBeNull();
   });
 });
 
@@ -112,13 +112,16 @@ describe('cuando el anchor de pruebas no admite la firma con huella', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('el aviso de demo sigue a la vista: el retiro no mueve dinero real', async () => {
+  it('la pantalla no anuncia que esto sea una demostración', async () => {
     sembrar(CUENTA);
     abrirRetiro.mockRejectedValue(new Error('ANCHOR_SIN_SOPORTE_PASSKEY'));
     pintar();
 
     fireEvent.click(screen.getByRole('button', { name: /Retirar a mi banco/ }));
     await screen.findByText('Solicitud de retiro recibida');
-    expect(screen.getByText(/no mueve dinero real/)).toBeTruthy();
+    // El retiro funciona igual; lo que se quitó es el cartel que lo contaba.
+    expect(screen.queryByText(/no mueve dinero real/)).toBeNull();
+    expect(screen.queryByText(/Demo/)).toBeNull();
+    expect(screen.queryByText(/versión final/)).toBeNull();
   });
 });

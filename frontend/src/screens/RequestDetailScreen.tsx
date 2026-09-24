@@ -210,7 +210,7 @@ export function RequestDetailScreen() {
           <Fingerprint size={18} aria-hidden="true" />
           {procesando ? 'Confirmando…' : 'Aceptar cotización'}
         </Button>
-        <p className="mt-2 text-center text-xs text-masi-muted">Pedido simulado, sin dinero real. Confirma con tu huella o el bloqueo de tu celular.</p>
+        <p className="mt-2 text-center text-xs text-masi-muted">Confirma con tu huella o el bloqueo de tu celular.</p>
         <Button variant="secondary" className="mt-3" disabled={procesando} onClick={rechazar}>Rechazar</Button>
       </section>}
 

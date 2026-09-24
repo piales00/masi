@@ -331,7 +331,7 @@ export function JobScreen({ role }: { role: JobRole }) {
 
   return <Screen header={<ScreenHeader title="Tu trabajo" subtitle={solicitud?.servicio} />}>
     <div className="px-4 py-6">
-      <p className="mb-4 rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Modo de prueba: los pagos son simulados, no se mueve dinero. Confirma cada acción con tu huella o el bloqueo de tu celular.</p>
+      <p className="mb-4 rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Confirma cada acción con tu huella o el bloqueo de tu celular.</p>
       <section className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
         {Icon && solicitud && <p className="mb-3 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-masi-blue">
           <Icon size={15} aria-hidden="true" className="shrink-0" />
@@ -484,7 +484,6 @@ export function JobScreen({ role }: { role: JobRole }) {
         <p className="font-mono text-xs">{job.id.toString()}</p>
         <p className="mt-3 text-xs text-masi-muted">Creado</p>
         <p className="text-xs">{job.created_at > 0n ? fecha(job.created_at) : 'Sin fecha'}</p>
-        {cotizacion?.txHash && <p className="mt-3 break-all text-xs">Comprobante simulado (no existe en el explorador): {cotizacion.txHash}</p>}
       </details>
     </div>
   </Screen>;

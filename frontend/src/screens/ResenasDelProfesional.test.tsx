@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import type { Resena } from '../../../shared/api';
 import { DemoProvider } from '../demo/DemoContext';
 import { store } from '../demo/store';
 import { ratingSource } from '../dataSource';
@@ -58,12 +59,42 @@ describe('comentarios de clientes en el perfil del profesional', () => {
     expect(screen.getByLabelText('4 de 5 estrellas')).toBeTruthy();
   });
 
-  it('sin reseñas no dibuja una sección vacía', async () => {
+  it('sin reseñas la sección existe y lo dice, sin inventarse nada', async () => {
     sembrar();
     montar();
 
+    expect(await screen.findByRole('heading', { name: 'Lo que dicen sus clientes' })).toBeTruthy();
+    expect(screen.getByText('Todavía no tiene opiniones.')).toBeTruthy();
+    // Un hueco vacío no puede traer estrellas ni comentarios de ninguna parte.
+    expect(screen.queryByLabelText(/de 5 estrellas/)).toBeNull();
+    expect(document.querySelectorAll('#opiniones ~ ul li')).toHaveLength(0);
+  });
+
+  it('mientras se leen las opiniones no dice que no tenga ninguna', async () => {
+    sembrar();
+    let entregar: (resenas: Resena[]) => void = () => {};
+    vi.spyOn(store, 'leerResenasDe').mockReturnValue(new Promise(resolve => { entregar = resolve; }));
+    montar();
+
+    // Primer pintado: la consulta sigue en vuelo, así que no se afirma nada.
     expect(await screen.findByText('Su propuesta')).toBeTruthy();
+    expect(screen.queryByText('Todavía no tiene opiniones.')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Lo que dicen sus clientes' })).toBeNull();
+
+    await act(async () => { entregar([]); });
+
+    expect(screen.getByText('Todavía no tiene opiniones.')).toBeTruthy();
+  });
+
+  it('el profesional que ya tiene una reseña la enseña al postular a otra solicitud', async () => {
+    // La reseña quedó de un trabajo anterior; esta es una solicitud nueva suya.
+    sembrar();
+    await conResena('7', 5, 'Resolvió la fuga en media hora.');
+    montar();
+
+    expect(await screen.findByRole('heading', { name: 'Lo que dicen sus clientes' })).toBeTruthy();
+    expect(screen.getByText('Resolvió la fuga en media hora.')).toBeTruthy();
+    expect(screen.queryByText('Todavía no tiene opiniones.')).toBeNull();
   });
 
   it('las reseñas de otro profesional no se cuelan', async () => {
@@ -86,7 +117,9 @@ describe('comentarios de clientes en el perfil del profesional', () => {
     // La propuesta y la reputación siguen ahí; solo faltan los comentarios.
     expect(await screen.findByText('Su propuesta')).toBeTruthy();
     expect(screen.getAllByRole('heading', { name: 'Ana Quispe' }).length).toBeGreaterThan(0);
+    // Si la consulta falla no se afirma nada: ni opiniones ni que no las tenga.
     expect(screen.queryByRole('heading', { name: 'Lo que dicen sus clientes' })).toBeNull();
+    expect(screen.queryByText('Todavía no tiene opiniones.')).toBeNull();
     espia.mockRestore();
   });
 

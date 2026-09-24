@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, CheckCircle2, Clock3, ExternalLink, Fingerprint, Info, RefreshCw } from 'lucide-react';
+import { Banknote, CheckCircle2, Clock3, ExternalLink, Fingerprint, RefreshCw } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useDemo } from '../demo/DemoContext';
-import { ANCHOR_DOMINIO, abrirRetiro, seguirRetiro, textoEstado } from '../anchor/retiro';
+import { abrirRetiro, seguirRetiro, textoEstado } from '../anchor/retiro';
 import { ANCHOR_SIN_SOPORTE_PASSKEY } from '../anchor/sep45';
 import type { SesionRetiro } from '../anchor/retiro';
 import { signAuthEntry } from '../passkeys';
@@ -115,16 +115,6 @@ export function WithdrawScreen() {
         </a>
         <p className="mt-2 text-center text-xs text-masi-muted">Se abre en una pestaña nueva.</p>
       </section>}
-
-      <p className="mt-8 flex gap-2 rounded-masi-card bg-masi-cream p-3 text-sm text-masi-navy">
-        <Info size={18} className="shrink-0" aria-hidden="true" />
-        <span>
-          <span className="font-semibold">Demo:</span> el retiro no mueve dinero real. La mecánica
-          es la de producción —identificación con huella y flujo del proveedor de pagos— sobre el
-          servicio de pruebas de Stellar (<span className="font-semibold">{ANCHOR_DOMINIO}</span>).
-          En la versión final el dinero sale en soles con Anclap, que ya los emite en la red.
-        </span>
-      </p>
     </div>
   </Screen>;
 }
