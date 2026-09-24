@@ -14,6 +14,14 @@ import type { Job } from '../../../shared/escrow';
 export function ProgresoDelServicio({ job }: { job: Job }) {
   const { hechas, actual, enMarcha, etiqueta, incidencia } = progresoDelServicio(job);
   const etapa = ETAPAS_DEL_SERVICIO[actual];
+  /*
+   * El tramo que lleva de la última etapa cumplida a la que está en curso, y solo ese:
+   * es lo único que todavía está pasando. Con el servicio terminado no queda ninguno en
+   * marcha, y una incidencia ni siquiera dibuja la línea.
+   */
+  const tramoEnMarcha = incidencia === null && hechas < ETAPAS_DEL_SERVICIO.length && actual > 0
+    ? actual
+    : -1;
 
   if (incidencia) {
     return <p className={cn(
@@ -31,10 +39,17 @@ export function ProgresoDelServicio({ job }: { job: Job }) {
         const cumplida = indice < hechas;
         const esActual = indice === actual;
         return <li key={etapa} className={cn('flex items-center', indice > 0 && 'min-w-0 flex-1 gap-1')}>
-          {indice > 0 && <span className={cn(
-            'h-0.5 min-w-0 flex-1 rounded-full motion-safe:transition-colors motion-safe:duration-300',
-            cumplida ? 'bg-masi-blue' : 'bg-masi-gray',
-          )} />}
+          {indice > 0 && (indice === tramoEnMarcha
+            ? <span
+              data-tramo="en-marcha"
+              className="relative h-0.5 min-w-0 flex-1 overflow-hidden rounded-full bg-masi-blue-50"
+            >
+              <span className="absolute inset-y-0 w-1/3 rounded-full bg-masi-blue animate-masi-avance" />
+            </span>
+            : <span className={cn(
+              'h-0.5 min-w-0 flex-1 rounded-full motion-safe:transition-colors motion-safe:duration-300',
+              cumplida ? 'bg-masi-blue' : 'bg-masi-gray',
+            )} />)}
           <span className={cn(
             'size-2.5 shrink-0 rounded-full border-2 motion-safe:transition-colors motion-safe:duration-300',
             cumplida || (esActual && enMarcha)

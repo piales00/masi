@@ -1,6 +1,65 @@
 import { describe, expect, it } from 'vitest';
 import { sugerirServicio } from './sugerenciaDeServicio';
 
+/** Las frases tal cual se escribieron en las pruebas con el teléfono en la mano. */
+const REALES: readonly [string, string | null][] = [
+  ['Me compré una tele y necesito que alguien la instale', 'Instalaciones'],
+  ['Se malogró mi PC y necesito una reparación', 'Reparaciones'],
+  ['Quisiera pintar la fachada de mi casa', 'Pintura'],
+  ['Se quemo mi foco', 'Electricidad'],
+  ['Se quemó mi foco', 'Electricidad'],
+  ['MI FOCO SE QUEMÓ', 'Electricidad'],
+  ['La puerta se traba', 'Cerrajería'],
+  ['Se rompió la cañería', 'Gasfitería'],
+  ['Hay un cortocircuito', 'Electricidad'],
+];
+
+/** Lo que NO debe pasar: cada frase con el oficio que tendría que quedar descartado. */
+const FALSOS: readonly [string, string][] = [
+  ['Necesito un trabajo de pintura', 'Cerrajería'],
+  ['Necesito trabajar la madera', 'Cerrajería'],
+  ['Es en el parque cercano', 'Gasfitería'],
+  ['El mueble quedó corto', 'Electricidad'],
+];
+
+describe('frases reales de la prueba en el celular', () => {
+  it.each(REALES)('«%s» → %s', (frase, esperado) => {
+    expect(sugerirServicio(frase)).toBe(esperado);
+  });
+
+  it.each(FALSOS)('«%s» no es %s', (frase, descartado) => {
+    expect(sugerirServicio(frase)).not.toBe(descartado);
+  });
+});
+
+describe('una raíz no se cuela dentro de otra palabra', () => {
+  it('preparar la pared no es una reparación', () => {
+    // «repara» vive dentro de «preparar», pero no empieza esa palabra.
+    expect(sugerirServicio('Necesito preparar la pared antes de pintar')).toBe('Pintura');
+    expect(sugerirServicio('Necesito preparación antes de pintar la pared')).toBe('Pintura');
+    expect(sugerirServicio('Hay que preparar la superficie')).toBeNull();
+  });
+
+  it('pero reparar y reparación sí lo son', () => {
+    expect(sugerirServicio('Necesito reparar la puerta')).toBe('Reparaciones');
+    expect(sugerirServicio('Necesito una reparación')).toBe('Reparaciones');
+    expect(sugerirServicio('Ya está reparado, pero quedó mal')).toBe('Reparaciones');
+  });
+
+  it('las demás raíces tampoco se cuelan a mitad de palabra', () => {
+    expect(sugerirServicio('Quiero desinstalar la idea')).toBeNull();
+    expect(sugerirServicio('El precio es desproporcionado')).toBeNull();
+    expect(sugerirServicio('Me cobraron un recargo')).toBeNull();
+  });
+
+  it('límite conocido: una palabra que sí empieza por la raíz sigue contando', () => {
+    // «pintoresco» empieza por `pint`, así que la regla de inicio de palabra no lo filtra.
+    // Se deja documentado: en una descripción de avería no aparece, y la alternativa
+    // sería enumerar seis formas de «pintar» para cubrir lo mismo.
+    expect(sugerirServicio('Es un sitio muy pintoresco')).toBe('Pintura');
+  });
+});
+
 describe('sugerencia de servicio', () => {
   it('un foco quemado es electricidad, se escriba como se escriba', () => {
     // El caso real de la prueba en el celular: sin tilde, con tilde y en mayúsculas.
