@@ -32,6 +32,19 @@
   /* Brillo que recorre el tramo hacia la etapa en curso. Decorativo: el bloque de
      prefers-reduced-motion lo detiene y el tramo se sigue distinguiendo por su color. */
   --animate-masi-avance: masi-avance 1.8s linear infinite;
+  /* Igual que masi-rise pero entrando desde arriba, para los avisos que bajan. */
+  --animate-masi-bajar: masi-bajar 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes masi-bajar {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes masi-avance {

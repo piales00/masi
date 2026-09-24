@@ -7,11 +7,11 @@ import { mockDistanceKm } from '../demo/distance';
 import { useDemo } from '../demo/DemoContext';
 import { alertasPara } from '../demo/selectors';
 import { resumenDelProfesional } from '../escrow/jobs';
-import { direccionDelProfesional, useJobsDe } from '../escrow/useJobsPorAtender';
+import { direccionDelProfesional, useTrabajosDe } from '../escrow/useJobsPorAtender';
 import { formatRating } from '../marketplace';
 import { formatSoles } from '../money';
 import { serviceOf } from '../trades';
-import { useProviderRating } from '../useProviderRatings';
+import { useReputacionDe } from '../useProviderRatings';
 
 export function ProviderHomeScreen() {
   const { providerProfile, solicitudes, postulaciones, available, cargando, setAvailable } = useDemo();
@@ -24,10 +24,18 @@ export function ProviderHomeScreen() {
    * verdad, en vez de las cifras de ejemplo que había antes.
    */
   const direccion = direccionDelProfesional(providerProfile);
-  const { completados, ganado } = resumenDelProfesional(useJobsDe(direccion));
-  const reputacion = useProviderRating(direccion);
+  const { jobs, listos: trabajosListos } = useTrabajosDe(direccion);
+  const { completados, ganado } = resumenDelProfesional(jobs);
+  const { reputacion, listo: reputacionLista } = useReputacionDe(direccion);
   const conValoraciones = Boolean(reputacion && reputacion.rating_count > 0);
   const calificacion = conValoraciones && reputacion ? formatRating(reputacion) : 'Nuevo en Masi';
+  /*
+   * Mientras la cadena no conteste, una lista vacía no significa «no tiene trabajos» ni
+   * «no tiene reputación»: significa que todavía no se sabe. Decirlo antes de tiempo
+   * hacía que un profesional con historial se viera un instante como recién llegado cada
+   * vez que volvía a esta pantalla. Hasta que llega la respuesta se deja el hueco.
+   */
+  const conDatos = trabajosListos && reputacionLista;
 
   const services = providerProfile?.services ?? [];
   const alerts = alertasPara(providerProfile, solicitudes, postulaciones);
@@ -58,11 +66,13 @@ export function ProviderHomeScreen() {
             : <Avatar name={providerProfile?.fullName ?? ''} />}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-semibold text-masi-navy">{providerProfile?.fullName}</h2>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-masi-muted">
-              {conValoraciones && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
-              <strong className="font-bold text-masi-navy">{calificacion}</strong>
-              <span>· {completados} {completados === 1 ? 'trabajo' : 'trabajos'}</span>
-            </p>
+            {conDatos
+              ? <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-masi-muted">
+                {conValoraciones && <Star size={14} aria-hidden="true" className="text-masi-navy" />}
+                <strong className="font-bold text-masi-navy">{calificacion}</strong>
+                <span>· {completados} {completados === 1 ? 'trabajo' : 'trabajos'}</span>
+              </p>
+              : <span aria-hidden="true" className="mt-1.5 block h-4 w-40 max-w-full animate-pulse rounded-full bg-masi-gray" />}
           </div>
         </div>
 
@@ -94,7 +104,9 @@ export function ProviderHomeScreen() {
           { icon: Star, label: 'Calificación', value: calificacion },
         ].map(({ icon: Icon, label, value }) => <div key={label} className="rounded-masi-card border border-masi-gray bg-white p-3 text-center shadow-masi-sm">
           <Icon size={18} aria-hidden="true" className="mx-auto text-masi-blue" />
-          <p className="mt-2 text-base leading-tight font-bold text-masi-navy">{value}</p>
+          {conDatos
+            ? <p className="mt-2 text-base leading-tight font-bold text-masi-navy">{value}</p>
+            : <span aria-hidden="true" className="mx-auto mt-2.5 block h-4 w-12 max-w-full animate-pulse rounded-full bg-masi-gray" />}
           <p className="mt-0.5 text-[11px] leading-tight text-masi-muted">{label}</p>
         </div>)}
       </div>
