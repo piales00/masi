@@ -88,6 +88,9 @@ afterEach(() => {
   cleanup();
   cargar.mockReset();
   localStorage.clear();
+  // Lo ya avisado vive en la pestaña: sin limpiarlo, una prueba le pisaría la línea
+  // base a la siguiente.
+  sessionStorage.clear();
 });
 
 describe('aviso de novedades para el profesional', () => {
@@ -290,6 +293,7 @@ describe('la tarjeta es la misma para los dos roles', () => {
     cleanup();
     cargar.mockReset();
     localStorage.clear();
+    sessionStorage.clear();
 
     const cliente = await tarjetaDe('client');
     expect(cliente).toContain('bg-masi-blue');
