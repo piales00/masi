@@ -249,26 +249,40 @@ Tres canales, con un icono cada uno:
 
 ## 8 · Equipo — 15 s
 
-**Regla del seminario:** una línea por persona: **nombre, rol y un logro concreto**.
+**Regla del seminario:** una línea por persona: nombre, rol y algo concreto.
 
 ### Guion
 
-> «Somos cuatro. [Completar con los logros de cada uno.]»
+> «Somos cuatro. **Alessandro**, CEO, lleva la visión y el alcance del producto. **Jossep**, CTO,
+> hizo los contratos en Stellar y el backend. **Samuel**, diseño y experiencia de usuario: suya es
+> la app en la que se entra con la huella. Y **Valentino**, operaciones y estrategia de negocio.»
 
-### ⚠️ Completar — no lo puedo escribir por ti
+Son quince segundos para cuatro personas: **menos de cuatro cada uno**. Se lee de corrido, sin
+pausas entre nombres, y no se añade nada que no esté en la diapositiva.
 
-Una línea por persona, con un logro **verificable**, no una cualidad:
+### En la diapositiva
 
-- **Piero Pérez** — Product Owner. *[logro: qué construiste o dirigiste antes]*
-- **Jossep** — Backend y contratos. *[logro]*
-- **Samuel Ortega** — Frontend. *[logro]*
-- **[Cuarta persona]** — *[rol]*. *[logro]*
+Cuatro filas, foto o inicial, nombre, cargo y una línea:
 
-Ejemplos del tipo de logro que funciona: «llevó el backend de una app con X usuarios»,
-«ganó Y hackathon», «trabajó en Z». Si alguien no tiene un logro grande, sirve uno del proyecto:
-«desplegó el contrato que hoy retiene el dinero en Stellar».
+| | Cargo | |
+|---|---|---|
+| **Alessandro** | CEO | Visión, alcance y dirección del MVP |
+| **Jossep** | CTO | Smart contracts en Stellar y backend |
+| **Samuel** | Head of Product Design | Diseño, UX y experiencia de usuario |
+| **Valentino** | COO | Estrategia de negocio y operaciones |
 
----
+### Opcional: cambiar la función por el logro
+
+El seminario pide **un logro**, y lo de arriba describe funciones. Si queréis apretar, cada uno
+tiene algo hecho y comprobable en este mismo proyecto:
+
+- **Jossep** — *desplegó el contrato que hoy retiene el dinero en Stellar.*
+- **Samuel** — *diseñó la app donde se paga con la huella, sin frase semilla.*
+- **Alessandro** — *dirigió el MVP que ya completó 5 trabajos reales en la cadena.*
+- **Valentino** — *[lo que tenga: un negocio llevado, un área gestionada].*
+
+Decide tú: la tabla de arriba es más clara y ordenada; ésta pega más fuerte ante un jurado que
+premia tracción. **No mezcles las dos**, elige una.
 
 ## 9 · Financiamiento — 20 s
 
