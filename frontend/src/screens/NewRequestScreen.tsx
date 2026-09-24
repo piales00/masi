@@ -14,40 +14,11 @@ import { useDemo } from '../demo/DemoContext';
 import { toStoredImage } from '../images';
 import { TRADES } from '../marketplace';
 import type { Trade } from '../marketplace';
+import { sugerirServicio } from '../sugerenciaDeServicio';
 import { serviceOf } from '../trades';
-import type { Service } from '../trades';
 
 const MAX_CHARS = 300;
 const TIMINGS = ['Lo antes posible', 'Hoy', 'Elegir fecha'] as const;
-
-/**
- * Simulación local de clasificación: compara palabras clave contra el texto escrito.
- * No hay IA ni servicio detrás. Cuando exista clasificación real, se reemplaza
- * únicamente esta tabla y suggestService; la interfaz no cambia.
- */
-const SERVICE_KEYWORDS: readonly { id: Trade; words: readonly string[] }[] = [
-  { id: 'Cerrajería', words: ['chapa', 'cerradura', 'llave'] },
-  { id: 'Electricidad', words: ['luz', 'electric', 'enchufe'] },
-  { id: 'Gasfitería', words: ['tuberia', 'fuga', 'cano', 'grifo'] },
-  { id: 'Pintura', words: ['pintar', 'pintura', 'pintor'] },
-  { id: 'Carpintería', words: ['mueble', 'madera', 'closet'] },
-  { id: 'Instalaciones', words: ['instalar', 'repisa', 'colgar'] },
-  { id: 'Limpieza', words: ['limpiar', 'limpieza', 'sucio'] },
-  { id: 'Reparaciones', words: ['reparar', 'arreglar', 'roto'] },
-];
-
-const normalize = (text: string): string => text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-function suggestService(description: string): Service | null {
-  const text = normalize(description);
-  if (text.trim().length < 3) return null;
-  let best: { id: Trade; hits: number } | null = null;
-  for (const { id, words } of SERVICE_KEYWORDS) {
-    const hits = words.filter(word => text.includes(word)).length;
-    if (hits > 0 && (!best || hits > best.hits)) best = { id, hits };
-  }
-  return best ? serviceOf(best.id) : null;
-}
 
 /** `url` ya es el data URL definitivo: la vista previa y lo que se manda son lo mismo. */
 interface Photo { id: string; url: string; name: string }
@@ -101,10 +72,23 @@ export function NewRequestScreen() {
   const [error, setError] = useState('');
   /** Lo que salió mal al agregar fotos; se muestra junto a la rejilla, no al publicar. */
   const [avisoFotos, setAvisoFotos] = useState('');
+  /** Combinación oficio→sugerencia que la persona ya decidió mantener. */
+  const [sugerenciaDescartada, setSugerenciaDescartada] = useState('');
 
-  const suggestion = !trade && !picking ? suggestService(description) : null;
+  /*
+   * La descripción se evalúa siempre, haya oficio elegido o no. Antes solo se miraba
+   * cuando el campo estaba vacío, así que quien entraba desde una categoría —el caso
+   * normal— nunca veía una sugerencia aunque describiera otra cosa.
+   */
+  const sugerido = sugerirServicio(description);
+  const suggestion = !trade && !picking && sugerido ? serviceOf(sugerido) : null;
   const showPicker = picking || (!trade && !suggestion);
   const chosen = trade ? serviceOf(trade) : null;
+  /** Con oficio elegido, la sugerencia solo aparece si apunta a otro y no se descartó. */
+  const claveSugerencia = `${trade}→${sugerido}`;
+  const otroServicio = trade && sugerido && sugerido !== trade && sugerenciaDescartada !== claveSugerencia
+    ? serviceOf(sugerido)
+    : null;
   const today = new Date().toLocaleDateString('en-CA');
 
   const addPhotos = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -200,6 +184,21 @@ export function NewRequestScreen() {
             onClick={() => setPicking(true)}
             className="text-sm font-semibold text-masi-blue underline-offset-4 hover:underline"
           >Cambiar servicio</button>
+        </div>}
+
+        {otroServicio && chosen && <div className="mt-3 rounded-masi-card border border-masi-blue bg-masi-blue-50 p-4">
+          <p className="text-sm font-bold text-masi-navy">¿Quizás necesitas {otroServicio.name}?</p>
+          <p className="mt-1 text-sm leading-relaxed text-masi-navy">
+            Por lo que describes, tu solicitud parece estar más relacionada con un servicio de {otroServicio.name}.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="!w-auto" onClick={() => setTrade(otroServicio.id)}>Cambiar a {otroServicio.name}</Button>
+            <Button
+              variant="secondary"
+              className="!w-auto"
+              onClick={() => setSugerenciaDescartada(claveSugerencia)}
+            >Mantener {chosen.name}</Button>
+          </div>
         </div>}
 
         {!showPicker && !chosen && suggestion && <div className="mt-3 rounded-masi-card border border-masi-blue bg-masi-blue-50 p-4">

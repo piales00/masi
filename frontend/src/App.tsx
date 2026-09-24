@@ -63,7 +63,7 @@ export function App() {
       <Route path="profesional/configuracion" element={<SkipIfSignedIn role="provider"><ProviderSetupScreen /></SkipIfSignedIn>} />
     </Route>
 
-    <Route element={<RequireProviderProfile><AppShell items={PROVIDER_NAV} /></RequireProviderProfile>}>
+    <Route element={<RequireProviderProfile><AppShell items={PROVIDER_NAV} role="provider" /></RequireProviderProfile>}>
       <Route path="profesional" element={<ProviderHomeScreen />} />
       <Route path="profesional/alertas/:id" element={<ProviderAlertScreen />} />
       <Route path="profesional/cotizacion/:solicitudId" element={<ProviderQuoteScreen />} />

@@ -3,6 +3,7 @@ import { CalendarClock, MapPin, ShieldCheck, Star, TriangleAlert } from 'lucide-
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { FotosDeSolicitud } from '../components/FotosDeSolicitud';
+import { ProgresoDelServicio } from '../components/ProgresoDelServicio';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
@@ -332,17 +333,16 @@ export function JobScreen({ role }: { role: JobRole }) {
     <div className="px-4 py-6">
       <p className="mb-4 rounded-masi-input bg-masi-cream p-3 text-sm text-masi-navy">Modo de prueba: los pagos son simulados, no se mueve dinero. Confirma cada acción con tu huella o el bloqueo de tu celular.</p>
       <section className="rounded-masi-card border border-masi-gray bg-white p-4 shadow-masi-sm">
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-          {Icon && solicitud
-            ? <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-masi-blue">
-              <Icon size={15} aria-hidden="true" className="shrink-0" />
-              <span className="min-w-0 break-words">{solicitud.servicio}</span>
-            </p>
-            : <span />}
-          <span className="max-w-full rounded-full bg-masi-blue-50 px-3 py-1 text-xs font-semibold break-words text-masi-navy">
-            {vista.etiqueta}
-          </span>
-        </div>
+        {Icon && solicitud && <p className="mb-3 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-masi-blue">
+          <Icon size={15} aria-hidden="true" className="shrink-0" />
+          <span className="min-w-0 break-words">{solicitud.servicio}</span>
+        </p>}
+
+        {/*
+          * La línea de etapas sustituye al chip de estado: decía exactamente lo mismo, y
+          * así la etiqueta queda situada dentro del recorrido en vez de suelta.
+          */}
+        <ProgresoDelServicio job={job} />
 
         <h2 className="mt-3 text-lg font-bold text-masi-navy">{vista.titulo}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-masi-text">{vista.detalle}</p>

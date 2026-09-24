@@ -418,3 +418,60 @@ describe('reseña con comentario', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
+
+describe('etapa del servicio en la pantalla', () => {
+  /** Lleva el trabajo hasta el estado pedido con operaciones reales del gateway. */
+  async function hasta(pasos: ('accept' | 'fund' | 'start' | 'submit')[]): Promise<bigint> {
+    const jobId = await crearTrabajo();
+    for (const paso of pasos) await escrow[paso](jobId);
+    return jobId;
+  }
+
+  it('el cliente ve la etapa y qué se está esperando', async () => {
+    const jobId = await hasta(['accept', 'fund']);
+    montar(jobId, 'client');
+
+    expect(await screen.findByText('En servicio')).toBeTruthy();
+    expect(screen.getByText(/Tu dinero está protegido/)).toBeTruthy();
+    // Esperar no es una acción: aquí no se le ofrece ningún botón de avance.
+    expect(screen.queryByRole('button', { name: 'Iniciar servicio' })).toBeNull();
+  });
+
+  it('el profesional ve la misma etapa con su propia acción, una sola vez', async () => {
+    const jobId = await hasta(['accept', 'fund']);
+    montar(jobId, 'provider');
+
+    expect(await screen.findByText('En servicio')).toBeTruthy();
+    expect(screen.getByText(/Puedes comenzar el servicio/)).toBeTruthy();
+    // La barra acompaña a la acción que ya existía; no añade un segundo botón igual.
+    expect(screen.getAllByRole('button', { name: 'Iniciar servicio' })).toHaveLength(1);
+  });
+
+  it('con la cotización recién aceptada no se da por confirmado nada', async () => {
+    const jobId = await crearTrabajo();
+    montar(jobId, 'client');
+
+    expect(await screen.findByText('Confirmación')).toBeTruthy();
+    expect(screen.getByText(/confirme el trabajo/)).toBeTruthy();
+  });
+
+  it('un servicio terminado muestra la última etapa', async () => {
+    const jobId = await hasta(['accept', 'fund', 'start', 'submit']);
+    await escrow.approve(jobId);
+    montar(jobId, 'client');
+
+    expect(await screen.findByText('Completado')).toBeTruthy();
+  });
+
+  it('un problema no se pinta como un paso más del camino', async () => {
+    const jobId = await hasta(['accept', 'fund', 'start']);
+    await escrow.dispute(jobId, CLIENTE);
+    montar(jobId, 'client');
+
+    expect(await screen.findByText('Problema en revisión')).toBeTruthy();
+    // Ninguna de las etapas del camino normal aparece.
+    for (const etapa of ['Confirmación', 'Pago protegido', 'En servicio', 'Revisión', 'Completado']) {
+      expect(screen.queryByText(etapa)).toBeNull();
+    }
+  });
+});

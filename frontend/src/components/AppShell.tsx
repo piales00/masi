@@ -1,6 +1,8 @@
 import { RefreshCw } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { useDemo } from '../demo/DemoContext';
+import type { Role } from '../demo/DemoContext';
+import { AvisoDeNovedades } from './AvisoDeNovedades';
 import { CLIENT_NAV, MainNav } from './MainNav';
 import type { NavItem } from './MainNav';
 
@@ -27,13 +29,15 @@ function AvisoDeSincronizacion() {
  * es un solo MainNav que cambia de forma. Cliente y profesional comparten el armazón
  * y solo cambian los ítems.
  */
-export function AppShell({ items = CLIENT_NAV }: { items?: readonly NavItem[] }) {
+export function AppShell({ items = CLIENT_NAV, role = 'client' }: { items?: readonly NavItem[]; role?: Role }) {
   return <div className="flex h-dvh justify-center bg-masi-bg sm:bg-masi-blue-50 md:px-6 lg:px-8">
     <div className="flex h-full w-full max-w-md flex-col overflow-hidden bg-masi-bg sm:max-w-lg sm:border-x sm:border-masi-gray md:max-w-3xl md:flex-row lg:max-w-4xl">
       <MainNav items={items} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* `relative` es el ancla del aviso flotante: cubre el contenido, no la navegación. */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <AvisoDeSincronizacion />
         <Outlet />
+        <AvisoDeNovedades role={role} />
       </div>
     </div>
   </div>;
