@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Info, Send, TriangleAlert } from 'lucide-react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -27,7 +27,7 @@ function aStroops(texto: string): bigint | null {
 export function ProviderQuoteScreen() {
   const { solicitudId } = useParams();
   const navigate = useNavigate();
-  const { providerProfile, clienteId, solicitudes, postulaciones, sendQuote } = useDemo();
+  const { providerProfile, clienteId, solicitudes, postulaciones, sendQuote, cargando } = useDemo();
 
   const solicitud = solicitudes.find(item => item.id === solicitudId);
   const elegida = postulaciones.find(item => item.id === solicitud?.postulacionElegidaId);
@@ -37,6 +37,38 @@ export function ProviderQuoteScreen() {
   const [materiales, setMateriales] = useState('');
   const [descripcion, setDescripcion] = useState(solicitud?.descripcion ?? '');
   const [enviando, setEnviando] = useState(false);
+  /** Si la descripción ya estaba en el primer render, `useState` la puso y no hay más que hacer. */
+  const sembrada = useRef(Boolean(solicitud?.descripcion));
+
+  /*
+   * La solicitud puede llegar después del primer render —abrir esta pantalla desde el
+   * aviso de «te eligieron» con el almacén compartido todavía respondiendo—, y entonces
+   * el borrador se quedaba vacío. Se siembra una sola vez y solo si el campo sigue
+   * intacto: lo que el profesional haya escrito no se pisa nunca, ni por una vuelta del
+   * polling ni por un rerender.
+   */
+  useEffect(() => {
+    const texto = solicitud?.descripcion;
+    if (sembrada.current || !texto) return;
+    sembrada.current = true;
+    setDescripcion(actual => (actual === '' ? texto : actual));
+  }, [solicitud?.descripcion]);
+
+  /*
+   * Mientras el almacén no ha contestado, que la solicitud no esté en la lista no
+   * significa que no exista. Mandar a Solicitudes en ese instante echaba de esta pantalla
+   * a quien abre el aviso con la pestaña recién cargada.
+   */
+  if (!solicitud && cargando) {
+    return <Screen header={<ScreenHeader title="Cotización final" />}>
+      <div aria-hidden="true" className="space-y-3 px-4 py-6">
+        <div className="h-12 animate-pulse rounded-masi-input bg-masi-gray" />
+        <div className="h-12 animate-pulse rounded-masi-input bg-masi-gray" />
+        <div className="h-28 animate-pulse rounded-masi-input bg-masi-gray" />
+      </div>
+      <p role="status" className="sr-only">Cargando la solicitud…</p>
+    </Screen>;
+  }
 
   if (!solicitud || !elegida || !esMia) return <Navigate to="/profesional/solicitudes" replace />;
 

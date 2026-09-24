@@ -46,6 +46,24 @@ async function trabajo(hasta: 'Released' | 'Resolved' | 'Started', soles = '1200
 
 const montar = () => render(<DemoProvider><MemoryRouter><ProviderHomeScreen /></MemoryRouter></DemoProvider>);
 
+/**
+ * Deja en el aire las dos lecturas de las que salen las cifras —los trabajos y la
+ * reputación— para poder mirar qué se pinta mientras tanto. `responder` las resuelve
+ * con lo de verdad.
+ */
+function cadenaEnSuspenso() {
+  const trabajosReales = escrow.jobsOf.bind(escrow);
+  const notaReal = ratingSource.rating_of.bind(ratingSource);
+  const sueltas: (() => void)[] = [];
+  vi.spyOn(escrow, 'jobsOf').mockImplementation(address => new Promise(resolve => {
+    sueltas.push(() => { resolve(trabajosReales(address)); });
+  }));
+  vi.spyOn(ratingSource, 'rating_of').mockImplementation(address => new Promise(resolve => {
+    sueltas.push(() => { resolve(notaReal(address)); });
+  }));
+  return () => { for (const soltar of sueltas) soltar(); };
+}
+
 /** Las tres tarjetas de estadísticas, en orden: trabajos, ganado y calificación. */
 function estadisticas() {
   return ['Trabajos', 'Ganado', 'Calificación'].map(etiqueta => {
@@ -139,5 +157,42 @@ describe('reputación en el Inicio', () => {
     await waitFor(() => expect(estadisticas()[2]).toBe('Nuevo en Masi'));
     expect(estadisticas()[2]).not.toContain('0.0');
     espia.mockRestore();
+  });
+});
+
+describe('volver al Inicio no lo hace parecer nuevo', () => {
+  it('mientras no se sabe, ni «Nuevo en Masi» ni ceros', async () => {
+    await trabajo('Released', '1200');
+    sembrarProfesional();
+    const responder = cadenaEnSuspenso();
+    montar();
+
+    // Primer pintado: las lecturas siguen en vuelo, así que no se afirma nada.
+    expect(screen.queryByText('Nuevo en Masi')).toBeNull();
+    expect(screen.queryByText('S/ 0')).toBeNull();
+    expect(screen.queryByText('· 0 trabajos')).toBeNull();
+
+    responder();
+
+    await waitFor(() => expect(estadisticas()).toEqual(['1', 'S/ 1,200', 'Nuevo en Masi']));
+  });
+
+  it('al volver a la pantalla tampoco parpadea el estado de recién llegado', async () => {
+    await trabajo('Released', '1200');
+    sembrarProfesional();
+    const primera = montar();
+    await waitFor(() => expect(estadisticas()[0]).toBe('1'));
+
+    // Se va a otra sección y vuelve: la pantalla se monta de nuevo y relee.
+    primera.unmount();
+    cleanup();
+    const responder = cadenaEnSuspenso();
+    montar();
+
+    expect(screen.queryByText('Nuevo en Masi')).toBeNull();
+    expect(screen.queryByText('· 0 trabajos')).toBeNull();
+
+    responder();
+    await waitFor(() => expect(estadisticas()[0]).toBe('1'));
   });
 });

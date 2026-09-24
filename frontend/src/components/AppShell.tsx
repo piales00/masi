@@ -2,6 +2,7 @@ import { RefreshCw } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { useDemo } from '../demo/DemoContext';
 import type { Role } from '../demo/DemoContext';
+import { AvisoDeEleccion } from './AvisoDeEleccion';
 import { AvisoDeNovedades } from './AvisoDeNovedades';
 import { CLIENT_NAV, MainNav } from './MainNav';
 import type { NavItem } from './MainNav';
@@ -37,6 +38,8 @@ export function AppShell({ items = CLIENT_NAV, role = 'client' }: { items?: read
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <AvisoDeSincronizacion />
         <Outlet />
+        {/* Arriba, «te eligieron»; abajo, las nuevas solicitudes. Dos avisos distintos. */}
+        {role === 'provider' && <AvisoDeEleccion />}
         <AvisoDeNovedades role={role} />
       </div>
     </div>
