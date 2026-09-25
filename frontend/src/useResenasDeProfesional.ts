@@ -15,7 +15,12 @@ export function useResenasDeProfesional(
 ): { resenas: Resena[]; cargando: boolean; error: boolean } {
   const { providerId, providerAddress } = profesional;
   const [resenas, setResenas] = useState<Resena[]>([]);
-  const [cargando, setCargando] = useState(false);
+  /*
+   * Arranca en «cargando» cuando hay a quién buscar: el efecto corre después del primer
+   * pintado, y sin esto habría un instante con la lista vacía y `cargando` en false, que
+   * es indistinguible de «no tiene ninguna opinión».
+   */
+  const [cargando, setCargando] = useState(Boolean(providerId || providerAddress));
   const [error, setError] = useState(false);
 
   useEffect(() => {

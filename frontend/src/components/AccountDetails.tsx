@@ -33,7 +33,7 @@ export function AccountDetails({ contractId, deploymentHash }: { contractId?: st
       <p className="break-all font-mono text-xs">{contractId}</p>
       <p className="mt-3 text-xs text-masi-muted">Últimos accesos en este navegador (no incluye otros dispositivos)</p>
       {logins.length ? <ul className="mt-2 space-y-1 text-xs">{logins.map((date, index) => <li key={`${date}-${index}`}>{new Date(date).toLocaleString('es-PE')}</li>)}</ul>
-        : <p className="mt-2 text-xs">Todavía no hay accesos guardados. Se registran desde esta versión.</p>}
+        : <p className="mt-2 text-xs">Todavía no hay accesos guardados.</p>}
       {deploymentHash && <a className="mt-3 block break-all text-xs text-masi-blue underline" target="_blank" rel="noreferrer"
         href={`https://stellar.expert/explorer/testnet/tx/${deploymentHash}`}>Ver comprobante de registro</a>}
     </details>

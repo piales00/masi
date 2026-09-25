@@ -129,11 +129,13 @@ describe('pantalla de recarga', () => {
     expect(boton().disabled).toBe(false);
   });
 
-  it('avisa de que es una demo sin gritarlo en la cabecera', () => {
+  it('no anuncia que sea una demostración, y sí que no guarda los datos de pago', () => {
     sembrar(CUENTA);
     pintar();
-    expect(screen.getByText(/no se realiza ningún cobro/)).toBeTruthy();
-    expect(screen.queryByText(/Simulación para la demo/)).toBeNull();
+    // Lo que se manda al servidor es solo la cuenta y el monto; la tarjeta no sale de aquí.
+    expect(screen.getByText(/Tus datos de pago no se guardan/)).toBeTruthy();
+    expect(screen.queryByText(/demo/i)).toBeNull();
+    expect(screen.queryByText(/no se realiza ningún cobro/)).toBeNull();
   });
 
   it('pide crear la cuenta si no hay ninguna', () => {
