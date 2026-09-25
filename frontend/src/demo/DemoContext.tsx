@@ -164,6 +164,13 @@ const parseProviderProfile = (value: unknown): ProviderProfile | null => {
     bio: typeof row.bio === 'string' ? row.bio : '',
     contractId: typeof row.contractId === 'string' ? row.contractId : undefined,
     deploymentHash: typeof row.deploymentHash === 'string' ? row.deploymentHash : undefined,
+    /*
+     * La foto sí se guardaba, pero este lector la dejaba fuera al reconstruir el perfil,
+     * así que el avatar volvía a las iniciales en cada recarga y cada vez que el
+     * profesional entraba de nuevo. Es una data URL acotada por `toStoredImage`, no una
+     * URL de objeto: sobrevive al cierre del navegador sin más.
+     */
+    photoUrl: typeof row.photoUrl === 'string' && row.photoUrl ? row.photoUrl : undefined,
   };
 };
 
