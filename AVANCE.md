@@ -4,7 +4,7 @@
 
 En una línea: **el producto está construido de punta a punta y desplegado contra el contrato real de testnet; lo que queda no es programar, es probarlo con huellas de verdad y prepararlo para el vídeo.**
 
-La referencia del flujo es [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md), del PO, con sus preguntas respondidas en [`RESPUESTAS_TPO.md`](./RESPUESTAS_TPO.md).
+La referencia del flujo y el alcance está en [`masi-scope.md`](./masi-scope.md).
 
 ---
 
@@ -201,14 +201,11 @@ sembrado. A tres días de la entrega no compensa.
 
 | Archivo | Para qué |
 |---|---|
-| [`MASI_flujos_para_TPO.md`](./MASI_flujos_para_TPO.md) | Flujo del PO |
-| [`RESPUESTAS_TPO.md`](./RESPUESTAS_TPO.md) | Respuestas a las diez preguntas del PO |
 | [`ARQUITECTURA.md`](./ARQUITECTURA.md) | Qué vive en la cadena y por qué |
 | [`INTEGRACION.md`](./INTEGRACION.md) | Cómo conectar el frontend al contrato |
 | [`DESPLIEGUE.md`](./DESPLIEGUE.md) | Contract ID, hashes, reproducción |
 | [`PRUEBA_E2E.md`](./PRUEBA_E2E.md) | Prueba de punta a punta con dos teléfonos |
 | [`RETIRO_ANCHOR.md`](./RETIRO_ANCHOR.md) | Cómo sale el dinero: retiro por anchor y ruta a Anclap |
-| [`TAREAS_23SEP.md`](./TAREAS_23SEP.md) | Fotos compartidas y panel del árbitro, para los tres programadores |
 | [`P2_PRUEBA_PASSKEYS.md`](./P2_PRUEBA_PASSKEYS.md) | Cómo probar las passkeys |
 | [`masi-scope.md`](./masi-scope.md) | Alcance y cronograma originales |
 | [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) | Obligatorio antes de tocar interfaz |

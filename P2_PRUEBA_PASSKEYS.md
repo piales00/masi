@@ -18,7 +18,7 @@ Si la respuesta es sí, seguimos. Si es no, el 22 pasamos a Blux y no se pierde 
 
 | Cosa | Decisión | Por qué |
 |---|---|---|
-| Librería | **`passkey-kit`** | Modelo de firmantes plano, que es lo que necesitamos. Ver `P2_PASSKEYS.md` |
+| Librería | **`passkey-kit`** | Modelo de firmantes plano, que es lo que necesitamos |
 | Dominio | **`https://masiapp.vercel.app`** | Fijo y no se cambia nunca |
 | Relayer | **OpenZeppelin Relayer** (Stellar Channels) | Verificado operativo el 20/09 |
 | Red | **testnet** | Protocolo 28 |
@@ -240,6 +240,6 @@ Lo que ya está vivo en testnet, por si quieres probar la firma contra nuestro c
 
 Eso es un extra, no parte de la prueba. La prueba es el demo de `passkey-kit`.
 
-Más detalle y las razones de cada decisión: [`P2_PASSKEYS.md`](./P2_PASSKEYS.md). Estado del despliegue: [`DESPLIEGUE.md`](./DESPLIEGUE.md).
+Estado del despliegue: [`DESPLIEGUE.md`](./DESPLIEGUE.md).
 
 > **Nota:** `passkey-kit` no tiene auditoría de seguridad independiente. Para un hackathon en testnet da igual, pero si alguna vez se habla de producción, va en las limitaciones del README.
