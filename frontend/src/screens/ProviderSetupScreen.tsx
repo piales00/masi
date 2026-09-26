@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { Button } from '../components/Button';
 import { Field, fieldBox } from '../components/Field';
+import { AvisoSinHuella } from '../components/AvisoSinHuella';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { cn } from '../cn';
@@ -136,6 +137,7 @@ export function ProviderSetupScreen() {
 
   return <Screen header={<ScreenHeader title="Completa tu perfil" subtitle="Así te conocen los clientes de tu zona" />}>
     <form onSubmit={submit} className="space-y-6 px-4 py-6">
+      <AvisoSinHuella />
       <div className="flex flex-col items-center">
         {photoUrl
           ? <img src={photoUrl} alt="" className="size-20 rounded-full border border-masi-gray object-cover" />
