@@ -4,6 +4,7 @@ import { ArrowRight, MapPin } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
+import { AvisoSinHuella } from '../components/AvisoSinHuella';
 import { Screen } from '../components/Screen';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useDemo } from '../demo/DemoContext';
@@ -48,6 +49,7 @@ export function SetupScreen() {
 
   return <Screen header={<ScreenHeader title="Cuéntanos un poco sobre ti" subtitle="Así te presentamos con los profesionales" />}>
     <form onSubmit={submit} className="space-y-4 px-4 py-6">
+      <AvisoSinHuella />
       <Field label="Nombre" value={firstName} onChange={event => setFirstName(event.target.value)} autoComplete="given-name" placeholder="Ej. María" required />
       <Field label="Apellido" value={lastName} onChange={event => setLastName(event.target.value)} autoComplete="family-name" placeholder="Ej. Torres" required />
       <Field label="Teléfono" type="tel" inputMode="tel" value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" placeholder="Ej. 999 888 777" hint="Opcional. Solo para coordinar la visita." />
