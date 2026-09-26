@@ -30,7 +30,7 @@ Vivo en **testnet** desde el 20 de septiembre:
 | SAC de PEN-test | `CBRGYUR2HARSELLPQV4THEERTJCCGLGBPDR6FIXHY5MZ5LB3D4ISPSCC` |
 | Red | `Test SDF Network ; September 2015` · RPC `https://soroban-testnet.stellar.org` |
 
-`CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` (sin `rate`) y `CAGC224PARRU3DZOCRUKOPCFGJU2ADOTNVETMDROKVT6QA5KYXBZ2DVL` (sin `dispute`) son despliegues **viejos y superados**; si lo encuentras en algún sitio, está mal.
+`CAV3YGS5Z5JIOHW7V6OAMLTZLFKR6CHZZJBHNEU3MGHT56FMCYTMELLO` (sin `rate`) y `CDBZRR356DZUXA66KP4FBL77ZVFYGQ7LYM3KFW5Q2OV352CV3BXYF3XV` (sin `dispute`) son despliegues **viejos y superados**; si lo encuentras en algún sitio, está mal.
 
 **Para conectar el frontend al contrato, lee [`INTEGRACION.md`](./INTEGRACION.md).** Los tipos están en `shared/escrow.ts` y son la referencia; el ABI real es el código Rust.
 
@@ -51,7 +51,6 @@ Si copias un ejemplo de pagos clásicos de Stellar, no va a funcionar. Detalle c
 - Activos y SAC → `stellar-dev:assets`
 - Datos que cambian (librerías mantenidas, proyectos, docs de hoy) → MCP `stellar-raven`
 
-Instalación en `SETUP_AGENTES.md`.
 
 ## Frentes
 

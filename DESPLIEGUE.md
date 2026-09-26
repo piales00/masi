@@ -218,7 +218,7 @@ rating_of(juan) → {"completed_jobs":1,"disputes":1,"rating_count":1,"stars_sum
 
 Para redesplegarlo, desde un clon de `stellar/passkey-kit`: ajustar `relayer-proxy/wrangler.toml` y ejecutar `wrangler deploy` con la cuenta dueña. **Pendiente de su dueño:** confirmar el valor actual de `ALLOWED_ORIGINS` y si el Worker lleva algún cambio respecto al oficial.
 
-El relayer de la app, el que patrocinará `fund`, `start`, `submit`, `approve`, `rate` y `dispute`, es la tarea B5 de `TAREAS_21SEP_BACKEND.md`, en Vercel.
+El relayer de la app, el que patrocinará `fund`, `start`, `submit`, `approve`, `rate` y `dispute`, corre en Vercel.
 
 ---
 
@@ -234,7 +234,7 @@ Usa la base Upstash **masi-pruebas**. No reemplaza el dominio del equipo descrit
 abajo. `VITE_STORE=api` activa datos y pedidos simulados compartidos; las claves
 adicionales `demo-trabajos/` almacenan únicamente simulaciones. Nunca se debe vaciar
 la base compartida sin aprobación del equipo. La revisión actual está en
-`REVISION_P2_ENTREGA.md`; los relatos históricos de este archivo no prueban la
+[`AVANCE.md`](./AVANCE.md); los relatos históricos de este archivo no prueban la
 integración actual de passkeys y pagos.
 
 El proyecto de Vercel usa `frontend` como **Root Directory** y publica en
